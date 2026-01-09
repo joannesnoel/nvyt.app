@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvyt-config
+  namespace: nvyt
+data:
+  APP_URL: "https://nvyt.app"
+  NODE_ENV: "production"

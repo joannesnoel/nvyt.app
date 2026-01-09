@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for nvyt */
+@layer base {
+  :root {
+    --nvyt-primary: 99 102 241; /* Indigo */
+  }
+}

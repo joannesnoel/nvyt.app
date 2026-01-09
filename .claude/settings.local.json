@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(kubectl get:*)",
+      "Bash(kubectl describe:*)",
+      "Bash(curl:*)",
+      "Bash(docker build:*)",
+      "Bash(docker push:*)",
+      "Bash(sudo mkdir:*)",
+      "Bash(sudo tee:*)",
+      "Bash(sudo -S mkdir:*)",
+      "Bash(sudo -S systemctl restart:*)",
+      "Bash(kubectl rollout:*)",
+      "Bash(find:*)",
+      "Bash(pnpm --filter @nvyt/db db:generate:*)",
+      "Bash(pnpm --filter @nvyt/db db:migrate:*)",
+      "Bash(ls:*)",
+      "Bash(source .env)",
+      "Bash(DATABASE_URL=\"postgresql://nvyt:nvyt@localhost:5432/nvyt\" pnpm db:migrate:*)",
+      "Bash(DATABASE_URL=\"postgresql://nvyt:nvyt-k3s-password@localhost:5432/nvyt\" pnpm db:migrate:*)",
+      "Bash(PGPASSWORD=nvyt-k3s-password psql:*)",
+      "Bash(DATABASE_URL=\"postgresql://nvyt:nvyt-k3s-password@localhost:5432/nvyt\" pnpm db:push:*)",
+      "Bash(yes:*)",
+      "Bash(DATABASE_URL=\"postgresql://nvyt:nvyt-k3s-password@localhost:5432/nvyt\" npx drizzle-kit push:*)"
+    ]
+  }
+}
