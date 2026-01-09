@@ -4,15 +4,32 @@ definePageMeta({
 })
 
 const route = useRoute()
+const { user } = useAuth()
 const orderNumber = computed(() => route.params.orderNumber as string)
+const token = computed(() => route.query.token as string | undefined)
 
-// Fetch order details
+// Fetch order details (include token for guest access)
 const { data: orderResponse, pending, error } = await useFetch(
   () => `/api/v1/orders/${orderNumber.value}`,
-  { watch: [orderNumber] }
+  {
+    query: { token: token.value },
+    watch: [orderNumber, token],
+  }
 )
 
 const order = computed(() => orderResponse.value?.data)
+
+// Determine if this is a guest user (has token but not logged in)
+const isGuest = computed(() => !!token.value && !user.value)
+
+// Where to redirect for viewing tickets
+const ticketsUrl = computed(() => {
+  if (isGuest.value) {
+    // Guest users need to set up their account first
+    return `/setup-account?token=${token.value}`
+  }
+  return '/tickets'
+})
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', {
@@ -152,6 +169,15 @@ function getStatusColor(status: string) {
 
         <!-- QR Code Note -->
         <UAlert
+          v-if="isGuest"
+          color="blue"
+          icon="i-heroicons-user-plus"
+          title="Set up your account"
+          description="Create a password to access your tickets anytime. You'll also receive your tickets via email."
+          class="mb-6"
+        />
+        <UAlert
+          v-else
           color="blue"
           icon="i-heroicons-qr-code"
           title="Show your QR code at the event"
@@ -162,13 +188,13 @@ function getStatusColor(status: string) {
         <!-- Actions -->
         <div class="flex flex-col sm:flex-row gap-3">
           <UButton
-            to="/tickets"
+            :to="ticketsUrl"
             color="primary"
             block
             size="lg"
-            icon="i-heroicons-ticket"
+            :icon="isGuest ? 'i-heroicons-user-plus' : 'i-heroicons-ticket'"
           >
-            View My Tickets
+            {{ isGuest ? 'Set Up Account to View Tickets' : 'View My Tickets' }}
           </UButton>
           <UButton
             :to="`/events/${order.event?.slug}`"

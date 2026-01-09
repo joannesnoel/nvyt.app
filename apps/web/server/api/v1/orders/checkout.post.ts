@@ -264,6 +264,12 @@ export default defineEventHandler(async (event) => {
   // Generate order number
   const orderNumber = generateOrderNumber()
 
+  // Generate setup token early for guest users (needed for success URL)
+  let setupToken: string | null = null
+  if (needsAccountSetup) {
+    setupToken = await createAccountSetupToken(user.id)
+  }
+
   // Create PayMongo checkout session (only for paid orders)
   let checkoutSession = null
   let checkoutUrl = null
@@ -271,9 +277,14 @@ export default defineEventHandler(async (event) => {
   if (!isFreeOrder) {
     const appUrl = config.public.appUrl as string
 
+    // Include setup token in success URL for guest users
+    const successUrl = setupToken
+      ? `${appUrl}/orders/${orderNumber}/success?token=${setupToken}`
+      : `${appUrl}/orders/${orderNumber}/success`
+
     checkoutSession = await createCheckoutSession({
       lineItems,
-      successUrl: `${appUrl}/orders/${orderNumber}/success`,
+      successUrl,
       cancelUrl: `${appUrl}/events/${eventRecord.slug}?checkout=cancelled`,
       referenceNumber: orderNumber,
       customerEmail: data.customerEmail,
@@ -337,9 +348,8 @@ export default defineEventHandler(async (event) => {
       .where(eq(ticketTypes.id, item.ticketTypeId))
   }
 
-  // Send account setup email for guest users
-  if (needsAccountSetup) {
-    const setupToken = await createAccountSetupToken(user.id)
+  // Send account setup email for guest users (reuse the token created earlier)
+  if (needsAccountSetup && setupToken) {
     const appUrl = config.public.appUrl as string
 
     await sendEmail({

@@ -1,5 +1,5 @@
 import { eq, and, sql } from 'drizzle-orm'
-import { events, attendees } from '@nvyt/db'
+import { events, attendees, users, type User } from '@nvyt/db'
 import { createRsvpSchema } from '@nvyt/shared'
 import { nanoid } from 'nanoid'
 import {
@@ -7,10 +7,11 @@ import {
   rsvpConfirmationEmail,
   rsvpPendingEmail,
   rsvpWaitlistEmail,
+  accountSetupEmail,
 } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
+  const body = await readBody(event)
   const eventId = getRouterParam(event, 'eventId')
 
   if (!eventId) {
@@ -20,7 +21,79 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Validate input
+  const result = createRsvpSchema.safeParse({ ...body, eventId })
+  if (!result.success) {
+    throw createError({
+      statusCode: 400,
+      message: 'Validation failed',
+      data: result.error.flatten(),
+    })
+  }
+
+  const data = result.data
   const db = useDatabase()
+  const config = useRuntimeConfig()
+
+  // Handle authentication - support both logged in users and guests
+  let user: User
+  let needsAccountSetup = false
+
+  // Try to get authenticated user first
+  const existingUser = await getUserFromEvent(event)
+
+  if (existingUser) {
+    // User is logged in
+    user = existingUser
+  } else if (data.isGuest && data.guestName && data.guestEmail) {
+    // Guest RSVP - find or create user
+    const [existingAccount] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, data.guestEmail.toLowerCase()))
+      .limit(1)
+
+    if (existingAccount) {
+      if (existingAccount.passwordHash) {
+        // Account exists with password - prompt to login
+        throw createError({
+          statusCode: 409,
+          message: 'An account with this email already exists. Please log in to RSVP.',
+          data: { code: 'ACCOUNT_EXISTS_WITH_PASSWORD' },
+        })
+      }
+      // Account exists without password - use it
+      user = existingAccount
+      needsAccountSetup = true
+    } else {
+      // Create new guest user
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          name: data.guestName,
+          email: data.guestEmail.toLowerCase(),
+          passwordHash: null,
+          emailVerified: false,
+        })
+        .returning()
+
+      if (!newUser) {
+        throw createError({
+          statusCode: 500,
+          message: 'Failed to create account',
+        })
+      }
+
+      user = newUser
+      needsAccountSetup = true
+    }
+  } else {
+    // Not logged in and not guest RSVP
+    throw createError({
+      statusCode: 401,
+      message: 'You must be logged in or provide guest details to RSVP',
+    })
+  }
 
   // Get event details
   const [eventData] = await db
@@ -127,7 +200,6 @@ export default defineEventHandler(async (event) => {
     .returning()
 
   // Send confirmation email (async, don't block response)
-  const config = useRuntimeConfig()
   const eventUrl = `${config.public.appUrl}/events/${eventData.slug}`
   const eventDate = new Date(eventData.startDate).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -168,12 +240,30 @@ export default defineEventHandler(async (event) => {
       .catch(err => console.error('[RSVP] Failed to send waitlist email:', err))
   }
 
+  // Send account setup email for guest users
+  if (needsAccountSetup) {
+    const setupToken = await createAccountSetupToken(user.id)
+    const appUrl = config.public.appUrl as string
+
+    sendEmail({
+      to: user.email,
+      ...accountSetupEmail({
+        userName: user.name,
+        setupUrl: `${appUrl}/setup-account?token=${setupToken}`,
+        eventTitle: eventData.title,
+      }),
+    }).catch(err => console.error('[RSVP] Failed to send account setup email:', err))
+  }
+
   return successResponse({
     ...rsvp,
+    accountSetupRequired: needsAccountSetup,
     message: status === 'waitlisted'
       ? 'You have been added to the waitlist'
       : status === 'pending'
         ? 'Your RSVP is pending approval from the organizer'
-        : 'Your RSVP has been confirmed',
+        : needsAccountSetup
+          ? 'Your RSVP has been confirmed! Check your email to set up your account.'
+          : 'Your RSVP has been confirmed',
   })
 })

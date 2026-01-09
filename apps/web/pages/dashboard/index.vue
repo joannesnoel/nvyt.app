@@ -6,20 +6,34 @@ definePageMeta({
 const { user } = useAuth()
 
 // Fetch my events
-const { data: eventsData, pending } = await useFetch('/api/v1/events/my-events')
+const { data: eventsData, pending: eventsPending } = await useFetch('/api/v1/events/my-events')
+
+// Fetch my tickets/registrations
+const { data: ticketsResponse, pending: ticketsPending } = await useFetch('/api/v1/tickets', {
+  query: {
+    limit: 5,
+    status: 'confirmed',
+  },
+})
 
 const myEvents = computed(() => eventsData.value?.data?.events ?? [])
-const totals = computed(() => eventsData.value?.data?.totals ?? {
-  events: 0,
-  attendees: 0,
-  pending: 0,
-})
+const myTickets = computed(() => ticketsResponse.value?.data ?? [])
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  })
+}
+
+function formatDateTime(date: string) {
+  return new Date(date).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   })
 }
 
@@ -31,6 +45,20 @@ function getStatusColor(status: string) {
     case 'completed': return 'gray'
     default: return 'gray'
   }
+}
+
+function getTicketStatusColor(status: string) {
+  switch (status) {
+    case 'confirmed': return 'green'
+    case 'pending': return 'yellow'
+    case 'checked_in': return 'blue'
+    case 'cancelled': return 'red'
+    default: return 'gray'
+  }
+}
+
+function isUpcoming(date: string) {
+  return new Date(date) > new Date()
 }
 </script>
 
@@ -53,55 +81,89 @@ function getStatusColor(status: string) {
         </UButton>
       </div>
 
-      <!-- Stats -->
-      <div class="grid md:grid-cols-4 gap-6 mb-8">
-        <UCard>
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-              <UIcon name="i-heroicons-calendar-days" class="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ totals.events }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Total Events</p>
-            </div>
-          </div>
-        </UCard>
+      <!-- My Registrations -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            My Registrations
+          </h2>
+          <UButton to="/tickets" color="gray" variant="ghost" size="sm">
+            View All
+          </UButton>
+        </div>
 
-        <UCard>
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <UIcon name="i-heroicons-users" class="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ totals.attendees }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Confirmed Attendees</p>
-            </div>
-          </div>
-        </UCard>
+        <!-- Loading -->
+        <div v-if="ticketsPending" class="space-y-3">
+          <USkeleton v-for="i in 3" :key="i" class="h-20" />
+        </div>
 
-        <UCard>
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-              <UIcon name="i-heroicons-clock" class="w-6 h-6 text-yellow-600" />
-            </div>
-            <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ totals.pending }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Pending RSVPs</p>
-            </div>
-          </div>
-        </UCard>
+        <!-- Empty State -->
+        <div v-else-if="myTickets.length === 0" class="text-center py-8 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+          <UIcon name="i-heroicons-ticket" class="w-10 h-10 text-gray-400 mx-auto mb-3" />
+          <h3 class="text-base font-medium text-gray-900 dark:text-white mb-1">
+            No registrations yet
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            When you register for events, they'll appear here.
+          </p>
+        </div>
 
-        <UCard>
-          <div class="flex items-center gap-4">
-            <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <UIcon name="i-heroicons-ticket" class="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">0</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Tickets Sold</p>
-            </div>
-          </div>
-        </UCard>
+        <!-- Tickets List -->
+        <div v-else class="space-y-3">
+          <NuxtLink
+            v-for="ticket in myTickets"
+            :key="ticket.id"
+            :to="`/tickets/${ticket.id}`"
+            class="block"
+          >
+            <UCard class="hover:ring-2 hover:ring-primary transition-all">
+              <div class="flex items-center gap-4">
+                <!-- Event Image -->
+                <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex-shrink-0 overflow-hidden">
+                  <img
+                    v-if="ticket.event?.coverImage"
+                    :src="ticket.event.coverImage"
+                    :alt="ticket.event.title"
+                    class="w-full h-full object-cover"
+                  >
+                  <div v-else class="w-full h-full flex items-center justify-center">
+                    <UIcon name="i-heroicons-calendar" class="w-6 h-6 text-gray-400" />
+                  </div>
+                </div>
+
+                <!-- Ticket Info -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-medium text-gray-900 dark:text-white truncate">
+                      {{ ticket.event?.title }}
+                    </h3>
+                    <UBadge
+                      v-if="ticket.event?.startDate && isUpcoming(ticket.event.startDate)"
+                      color="blue"
+                      variant="soft"
+                      size="xs"
+                    >
+                      Upcoming
+                    </UBadge>
+                  </div>
+                  <p class="text-sm text-gray-500 mt-1">
+                    <UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 inline mr-1" />
+                    {{ formatDateTime(ticket.event?.startDate) }}
+                    <span v-if="ticket.event?.location" class="ml-2">
+                      <UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5 inline mr-1" />
+                      {{ ticket.event.location }}
+                    </span>
+                  </p>
+                </div>
+
+                <!-- Status -->
+                <UBadge :color="getTicketStatusColor(ticket.status)" variant="soft" size="sm">
+                  {{ ticket.status.replace('_', ' ') }}
+                </UBadge>
+              </div>
+            </UCard>
+          </NuxtLink>
+        </div>
       </div>
 
       <!-- My Events -->
@@ -111,7 +173,7 @@ function getStatusColor(status: string) {
         </h2>
 
         <!-- Loading -->
-        <div v-if="pending" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-if="eventsPending" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <USkeleton v-for="i in 3" :key="i" class="h-48 rounded-xl" />
         </div>
 

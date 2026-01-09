@@ -5,7 +5,20 @@ export const rsvpStatus = z.enum(['pending', 'confirmed', 'declined', 'waitliste
 export const createRsvpSchema = z.object({
   eventId: z.string().uuid(),
   message: z.string().max(500).optional(), // Optional message to organizer
-})
+  // Guest checkout fields
+  isGuest: z.boolean().optional(),
+  guestName: z.string().min(2).max(100).optional(),
+  guestEmail: z.string().email().optional(),
+}).refine(
+  (data) => {
+    // If isGuest is true, guestName and guestEmail are required
+    if (data.isGuest) {
+      return !!data.guestName && !!data.guestEmail
+    }
+    return true
+  },
+  { message: 'Guest name and email are required for guest RSVP' }
+)
 
 export const updateRsvpStatusSchema = z.object({
   status: z.enum(['confirmed', 'declined', 'waitlisted']),

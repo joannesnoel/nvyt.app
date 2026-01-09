@@ -41,6 +41,16 @@ const userAttendee = computed(() => event.value?.userAttendee)
 
 // RSVP state
 const rsvpLoading = ref(false)
+const showRsvpModal = ref(false)
+const rsvpGuestForm = ref({
+  name: '',
+  email: '',
+})
+
+function openRsvpModal() {
+  rsvpGuestForm.value = { name: '', email: '' }
+  showRsvpModal.value = true
+}
 
 // Cancel RSVP confirmation modal
 const showCancelRsvpModal = ref(false)
@@ -230,23 +240,75 @@ function formatCurrency(amount: number) {
   }).format(amount)
 }
 
-async function handleRsvp() {
+async function handleRsvp(isGuest = false) {
   if (!event.value) return
+
+  // If guest and form not filled, validate
+  if (isGuest) {
+    if (!rsvpGuestForm.value.name || rsvpGuestForm.value.name.length < 2) {
+      toast.add({
+        title: 'Name Required',
+        description: 'Please enter your name (at least 2 characters).',
+        color: 'yellow',
+      })
+      return
+    }
+    if (!rsvpGuestForm.value.email || !rsvpGuestForm.value.email.includes('@')) {
+      toast.add({
+        title: 'Valid Email Required',
+        description: 'Please enter a valid email address.',
+        color: 'yellow',
+      })
+      return
+    }
+  }
 
   rsvpLoading.value = true
   try {
-    await $fetch(`/api/v1/events/${event.value.id}/rsvp`, {
+    const response = await $fetch(`/api/v1/events/${event.value.id}/rsvp`, {
       method: 'POST',
-    })
+      body: isGuest
+        ? {
+            isGuest: true,
+            guestName: rsvpGuestForm.value.name,
+            guestEmail: rsvpGuestForm.value.email,
+          }
+        : {},
+    }) as any
 
-    toast.add({
-      title: 'RSVP Successful',
-      description: 'You have successfully RSVP\'d to this event',
-      color: 'green',
-    })
+    // Close modal if open
+    showRsvpModal.value = false
+
+    if (response.data?.accountSetupRequired) {
+      toast.add({
+        title: 'RSVP Successful!',
+        description: 'Check your email to set up your account and view your RSVP.',
+        color: 'green',
+        timeout: 8000,
+      })
+    } else {
+      toast.add({
+        title: 'RSVP Successful',
+        description: 'You have successfully RSVP\'d to this event',
+        color: 'green',
+      })
+    }
 
     await refresh()
   } catch (e: any) {
+    // Handle account exists error
+    if (e.data?.data?.code === 'ACCOUNT_EXISTS_WITH_PASSWORD') {
+      toast.add({
+        title: 'Account Exists',
+        description: 'An account with this email already exists. Please log in.',
+        color: 'yellow',
+        timeout: 8000,
+      })
+      showRsvpModal.value = false
+      navigateTo(`/login?redirect=/events/${event.value?.slug}`)
+      return
+    }
+
     toast.add({
       title: 'RSVP Failed',
       description: e.data?.message || 'Failed to RSVP',
@@ -419,41 +481,32 @@ function getStatusColor(status: string) {
                   color="primary"
                   size="lg"
                   :loading="rsvpLoading"
-                  @click="handleRsvp"
+                  @click="handleRsvp(false)"
                 >
                   <UIcon name="i-heroicons-hand-raised" class="w-5 h-5 mr-2" />
                   RSVP to this Event
                 </UButton>
                 <UButton
                   v-else
-                  to="/login"
                   color="primary"
                   size="lg"
+                  @click="openRsvpModal"
                 >
                   <UIcon name="i-heroicons-hand-raised" class="w-5 h-5 mr-2" />
-                  Login to RSVP
+                  RSVP to this Event
                 </UButton>
               </template>
 
               <!-- Registration Mode: Tickets -->
               <template v-else-if="event.registrationMode === 'tickets'">
                 <UButton
-                  v-if="user && event.ticketTypes?.length"
+                  v-if="event.ticketTypes?.length"
                   color="primary"
                   size="lg"
                   @click="openTicketModal"
                 >
                   <UIcon name="i-heroicons-ticket" class="w-5 h-5 mr-2" />
                   Get Tickets
-                </UButton>
-                <UButton
-                  v-else-if="!user"
-                  to="/login"
-                  color="primary"
-                  size="lg"
-                >
-                  <UIcon name="i-heroicons-ticket" class="w-5 h-5 mr-2" />
-                  Login to Get Tickets
                 </UButton>
                 <p v-else class="text-sm text-gray-500 text-center">
                   No tickets available
@@ -478,19 +531,19 @@ function getStatusColor(status: string) {
                   color="primary"
                   size="lg"
                   :loading="rsvpLoading"
-                  @click="handleRsvp"
+                  @click="handleRsvp(false)"
                 >
                   <UIcon name="i-heroicons-hand-raised" class="w-5 h-5 mr-2" />
                   RSVP to this Event
                 </UButton>
                 <UButton
                   v-else
-                  to="/login"
                   color="primary"
                   size="lg"
+                  @click="openRsvpModal"
                 >
                   <UIcon name="i-heroicons-hand-raised" class="w-5 h-5 mr-2" />
-                  Login to RSVP
+                  RSVP to this Event
                 </UButton>
               </template>
             </template>
@@ -634,22 +687,12 @@ function getStatusColor(status: string) {
                 </div>
               </div>
               <template #footer>
-                <USkeleton v-if="authLoading" class="h-10 w-full" />
                 <UButton
-                  v-else-if="user"
                   color="primary"
                   block
                   @click="openTicketModal"
                 >
                   Get Tickets
-                </UButton>
-                <UButton
-                  v-else
-                  to="/login"
-                  color="primary"
-                  block
-                >
-                  Login to Get Tickets
                 </UButton>
               </template>
             </UCard>
@@ -831,6 +874,75 @@ function getStatusColor(status: string) {
               @click="confirmCancelRsvp"
             >
               Cancel RSVP
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Guest RSVP Modal -->
+    <UModal v-model="showRsvpModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              RSVP to {{ event?.title }}
+            </h3>
+            <UButton
+              color="gray"
+              variant="ghost"
+              icon="i-heroicons-x-mark"
+              @click="showRsvpModal = false"
+            />
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            Enter your details to RSVP. We'll send you an email to confirm your registration.
+          </p>
+
+          <UFormGroup label="Full Name" name="rsvpGuestName" required>
+            <UInput
+              v-model="rsvpGuestForm.name"
+              placeholder="Enter your full name"
+              icon="i-heroicons-user"
+            />
+          </UFormGroup>
+
+          <UFormGroup label="Email Address" name="rsvpGuestEmail" required>
+            <UInput
+              v-model="rsvpGuestForm.email"
+              type="email"
+              placeholder="Enter your email address"
+              icon="i-heroicons-envelope"
+            />
+          </UFormGroup>
+
+          <p class="text-xs text-gray-500">
+            Already have an account?
+            <NuxtLink :to="`/login?redirect=/events/${event?.slug}`" class="text-primary hover:underline">
+              Log in
+            </NuxtLink>
+          </p>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showRsvpModal = false"
+            >
+              Cancel
+            </UButton>
+            <UButton
+              color="primary"
+              :loading="rsvpLoading"
+              @click="handleRsvp(true)"
+            >
+              <UIcon name="i-heroicons-hand-raised" class="w-4 h-4 mr-2" />
+              Confirm RSVP
             </UButton>
           </div>
         </template>

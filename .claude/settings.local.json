@@ -21,7 +21,9 @@
       "Bash(PGPASSWORD=nvyt-k3s-password psql:*)",
       "Bash(DATABASE_URL=\"postgresql://nvyt:nvyt-k3s-password@localhost:5432/nvyt\" pnpm db:push:*)",
       "Bash(yes:*)",
-      "Bash(DATABASE_URL=\"postgresql://nvyt:nvyt-k3s-password@localhost:5432/nvyt\" npx drizzle-kit push:*)"
+      "Bash(DATABASE_URL=\"postgresql://nvyt:nvyt-k3s-password@localhost:5432/nvyt\" npx drizzle-kit push:*)",
+      "Bash(docker tag:*)",
+      "Bash(kubectl apply:*)"
     ]
   }
 }
