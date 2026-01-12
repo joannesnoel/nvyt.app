@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // First, try to find a paid ticket with this QR code
-  if (eventData.ticketingEnabled) {
+  if (eventData.registrationMode === 'tickets') {
     const [ticketResult] = await db
       .select({
         ticket: tickets,
