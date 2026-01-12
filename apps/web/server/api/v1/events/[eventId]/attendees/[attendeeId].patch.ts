@@ -9,7 +9,6 @@ import {
 } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const eventId = getRouterParam(event, 'eventId')
   const attendeeId = getRouterParam(event, 'attendeeId')
   const body = await readBody(event)
@@ -20,6 +19,9 @@ export default defineEventHandler(async (event) => {
       message: 'Event ID and Attendee ID are required',
     })
   }
+
+  // Require canManageAttendees permission (owner or collaborator)
+  await requireEventAccess(event, eventId, 'canManageAttendees')
 
   // Validate input
   const result = updateRsvpStatusSchema.safeParse(body)
@@ -34,7 +36,7 @@ export default defineEventHandler(async (event) => {
   const { status, notes } = result.data
   const db = useDatabase()
 
-  // Verify user is the organizer
+  // Get event data for capacity check and email
   const [eventData] = await db
     .select()
     .from(events)
@@ -45,13 +47,6 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 404,
       message: 'Event not found',
-    })
-  }
-
-  if (eventData.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'Only the organizer can update attendee status',
     })
   }
 

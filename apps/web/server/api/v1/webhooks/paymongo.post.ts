@@ -1,4 +1,4 @@
-import { orders, tickets } from '@nvyt/db'
+import { orders, tickets, events, users, ticketTypes } from '@nvyt/db'
 import { eq } from 'drizzle-orm'
 import {
   verifyWebhookSignature,
@@ -7,6 +7,10 @@ import {
   isPaymentSuccessful,
   getPaymentMethod,
 } from '~/server/utils/paymongo'
+import {
+  sendEmail,
+  ticketPurchaseConfirmationEmail,
+} from '~/server/utils/email'
 
 // PayMongo webhook event types we handle
 const HANDLED_EVENTS = [
@@ -136,8 +140,81 @@ export default defineEventHandler(async (event) => {
 
     console.log(`Order ${orderNumber} marked as paid`)
 
-    // TODO: Send confirmation email with tickets
-    // TODO: Generate PDF tickets
+    // Send confirmation email with tickets
+    try {
+      const config = useRuntimeConfig()
+
+      // Get order tickets with ticket type info
+      const orderTickets = await db
+        .select({
+          id: tickets.id,
+          attendeeName: tickets.attendeeName,
+          attendeeEmail: tickets.attendeeEmail,
+          qrCode: tickets.qrCode,
+          ticketTypeName: ticketTypes.name,
+        })
+        .from(tickets)
+        .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
+        .where(eq(tickets.orderId, order.id))
+
+      // Get event info
+      const [eventData] = await db
+        .select()
+        .from(events)
+        .where(eq(events.id, order.eventId))
+        .limit(1)
+
+      // Get customer info
+      const [customer] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, order.userId))
+        .limit(1)
+
+      if (eventData && customer) {
+        const eventDate = new Date(eventData.startDate).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        })
+
+        const orderUrl = `${config.public.appUrl}/orders/${orderNumber}`
+
+        // Format total amount (stored in PHP, not centavos)
+        const totalAmount = new Intl.NumberFormat('en-PH', {
+          style: 'currency',
+          currency: 'PHP',
+        }).format(Number(order.totalAmount))
+
+        // Send ticket confirmation email
+        const emailContent = ticketPurchaseConfirmationEmail({
+          userName: customer.name || 'there',
+          eventTitle: eventData.title,
+          eventDate,
+          eventLocation: eventData.location || undefined,
+          orderNumber,
+          tickets: orderTickets.map((t) => ({
+            ticketType: t.ticketTypeName,
+            attendeeName: t.attendeeName,
+            qrCode: t.qrCode,
+          })),
+          totalAmount,
+          orderUrl,
+        })
+
+        await sendEmail({ to: customer.email, ...emailContent })
+        console.log(`[PayMongo] Sent confirmation email for order ${orderNumber}`)
+
+        // Note: Account setup email is already sent during checkout (checkout.post.ts)
+        // We don't create a new token here to avoid invalidating the one in the redirect URL
+      }
+    } catch (emailErr) {
+      // Log but don't fail the webhook
+      console.error('[PayMongo] Failed to send confirmation email:', emailErr)
+    }
 
     return { received: true, handled: true, orderNumber }
   }

@@ -18,7 +18,7 @@ spec:
       containers:
         - name: web
           image: 192.168.0.20:30500/nvyt-web:latest
-          imagePullPolicy: Never
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           envFrom:

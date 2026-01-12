@@ -66,7 +66,7 @@ function isUpcoming(date: string) {
   <div class="py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Header -->
-      <div class="flex justify-between items-center mb-8">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
             Dashboard
@@ -81,8 +81,56 @@ function isUpcoming(date: string) {
         </UButton>
       </div>
 
-      <!-- My Registrations -->
-      <div class="mb-8">
+      <!-- Getting Started (shown for new users with no events) -->
+      <div v-if="!eventsPending && !ticketsPending && myEvents.length === 0 && myTickets.length === 0" class="mb-8">
+        <UCard class="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 border-primary-200 dark:border-primary-800">
+          <div class="text-center py-4">
+            <div class="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <UIcon name="i-heroicons-sparkles" class="w-8 h-8 text-primary" />
+            </div>
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Welcome to nvyt!
+            </h2>
+            <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-lg mx-auto">
+              nvyt makes it easy to create events, sell tickets, and manage attendees. Here's how to get started:
+            </p>
+
+            <div class="grid sm:grid-cols-3 gap-4 text-left max-w-3xl mx-auto">
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mb-3">
+                  <span class="text-primary font-bold text-sm">1</span>
+                </div>
+                <h3 class="font-medium text-gray-900 dark:text-white mb-1">Create an Event</h3>
+                <p class="text-sm text-gray-500">Set up your event with a title, date, location, and description.</p>
+              </div>
+
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mb-3">
+                  <span class="text-primary font-bold text-sm">2</span>
+                </div>
+                <h3 class="font-medium text-gray-900 dark:text-white mb-1">Add Tickets</h3>
+                <p class="text-sm text-gray-500">Create ticket types - free RSVPs or paid tickets with different tiers.</p>
+              </div>
+
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mb-3">
+                  <span class="text-primary font-bold text-sm">3</span>
+                </div>
+                <h3 class="font-medium text-gray-900 dark:text-white mb-1">Share & Manage</h3>
+                <p class="text-sm text-gray-500">Share your event link, track registrations, and check in attendees.</p>
+              </div>
+            </div>
+
+            <UButton to="/dashboard/events/new" color="primary" size="lg" class="mt-6">
+              <UIcon name="i-heroicons-plus" class="w-5 h-5 mr-2" />
+              Create Your First Event
+            </UButton>
+          </div>
+        </UCard>
+      </div>
+
+      <!-- My Registrations (only show if user has registrations) -->
+      <div v-if="myTickets.length > 0 || ticketsPending" class="mb-8">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
             My Registrations
@@ -95,17 +143,6 @@ function isUpcoming(date: string) {
         <!-- Loading -->
         <div v-if="ticketsPending" class="space-y-3">
           <USkeleton v-for="i in 3" :key="i" class="h-20" />
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="myTickets.length === 0" class="text-center py-8 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-          <UIcon name="i-heroicons-ticket" class="w-10 h-10 text-gray-400 mx-auto mb-3" />
-          <h3 class="text-base font-medium text-gray-900 dark:text-white mb-1">
-            No registrations yet
-          </h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400">
-            When you register for events, they'll appear here.
-          </p>
         </div>
 
         <!-- Tickets List -->

@@ -2,7 +2,6 @@ import { eq, and } from 'drizzle-orm'
 import { events, attendees, users } from '@nvyt/db'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const eventId = getRouterParam(event, 'eventId')
   const query = getQuery(event)
   const format = (query.format as string) || 'csv'
@@ -14,9 +13,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Require canManageAttendees permission (owner or collaborator)
+  await requireEventAccess(event, eventId, 'canManageAttendees')
+
   const db = useDatabase()
 
-  // Verify user is the organizer
+  // Get event data for export
   const [eventData] = await db
     .select()
     .from(events)
@@ -27,13 +29,6 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 404,
       message: 'Event not found',
-    })
-  }
-
-  if (eventData.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'Only the organizer can export attendees',
     })
   }
 

@@ -3,7 +3,6 @@ import { events, attendees, users } from '@nvyt/db'
 import { attendeeFiltersSchema } from '@nvyt/shared'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const eventId = getRouterParam(event, 'eventId')
   const query = getQuery(event)
 
@@ -13,6 +12,9 @@ export default defineEventHandler(async (event) => {
       message: 'Event ID is required',
     })
   }
+
+  // Require canManageAttendees permission (owner or collaborator)
+  await requireEventAccess(event, eventId, 'canManageAttendees')
 
   // Validate filters
   const result = attendeeFiltersSchema.safeParse(query)
@@ -27,27 +29,6 @@ export default defineEventHandler(async (event) => {
   const { status, search, page, limit } = result.data
   const db = useDatabase()
   const offset = (page - 1) * limit
-
-  // Verify user is the organizer
-  const [eventData] = await db
-    .select()
-    .from(events)
-    .where(eq(events.id, eventId))
-    .limit(1)
-
-  if (!eventData) {
-    throw createError({
-      statusCode: 404,
-      message: 'Event not found',
-    })
-  }
-
-  if (eventData.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'Only the organizer can view attendees',
-    })
-  }
 
   // Build conditions
   const conditions = [eq(attendees.eventId, eventId)]

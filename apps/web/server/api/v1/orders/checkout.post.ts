@@ -3,7 +3,7 @@ import { purchaseTicketsSchema } from '@nvyt/shared'
 import { eq, and, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
-import { sendEmail, accountSetupEmail } from '~/server/utils/email'
+import { sendEmail, accountSetupEmail, ticketPurchaseConfirmationEmail } from '~/server/utils/email'
 
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -363,8 +363,48 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // For free orders, confirm immediately
+  // For free orders, confirm immediately and send confirmation email
   if (isFreeOrder) {
+    // Send ticket confirmation email
+    try {
+      const eventDate = new Date(eventRecord.startDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+
+      const orderUrl = `${config.public.appUrl}/orders/${order.orderNumber}`
+
+      // Get tickets with ticket type info for email
+      const orderTickets = ticketsWithOrderId.map((t) => {
+        const ticketType = ticketTypeMap.get(t.ticketTypeId)!
+        return {
+          ticketType: ticketType.name,
+          attendeeName: t.attendeeName || user.name,
+          qrCode: t.qrCode,
+        }
+      })
+
+      const emailContent = ticketPurchaseConfirmationEmail({
+        userName: user.name || 'there',
+        eventTitle: eventRecord.title,
+        eventDate,
+        eventLocation: eventRecord.location || undefined,
+        orderNumber: order.orderNumber,
+        tickets: orderTickets,
+        totalAmount: 'Free',
+        orderUrl,
+      })
+
+      await sendEmail({ to: user.email, ...emailContent })
+      console.log(`[Checkout] Sent free ticket confirmation email for order ${order.orderNumber}`)
+    } catch (emailErr) {
+      console.error('[Checkout] Failed to send free ticket confirmation email:', emailErr)
+    }
+
     return successResponse({
       order,
       checkoutUrl: null,

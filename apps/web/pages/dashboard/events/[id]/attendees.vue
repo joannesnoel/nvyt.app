@@ -143,7 +143,7 @@ const statusOptions = [
   <div class="py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <NuxtLink
             :to="`/dashboard/events/${eventId}`"
@@ -163,7 +163,7 @@ const statusOptions = [
             ]]"
           >
             <UButton color="gray" variant="outline" icon="i-heroicons-arrow-down-tray">
-              Export
+              <span class="hidden sm:inline">Export</span>
             </UButton>
           </UDropdown>
 
@@ -172,7 +172,8 @@ const statusOptions = [
             color="primary"
             icon="i-heroicons-qr-code"
           >
-            Check-in Scanner
+            <span class="hidden sm:inline">Check-in Scanner</span>
+            <span class="sm:hidden">Scan</span>
           </UButton>
         </div>
       </div>
@@ -266,96 +267,192 @@ const statusOptions = [
           <p class="text-gray-600 dark:text-gray-400">No attendees found</p>
         </div>
 
-        <table v-else class="w-full">
-          <thead>
-            <tr class="border-b border-gray-200 dark:border-gray-700">
-              <th class="py-3 px-4 text-left">
-                <UCheckbox :model-value="allSelected" @change="toggleAll" />
-              </th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Attendee</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Status</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">RSVP Date</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Checked In</th>
-              <th class="py-3 px-4 text-right text-sm font-medium text-gray-500">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="attendee in attendees"
-              :key="attendee.id"
-              class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-            >
-              <td class="py-3 px-4">
+        <!-- Mobile Card View -->
+        <div v-else class="md:hidden space-y-4">
+          <!-- Select All for Mobile -->
+          <div class="flex items-center justify-between px-1 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <UCheckbox :model-value="allSelected" @change="toggleAll" />
+              Select all
+            </label>
+            <span class="text-sm text-gray-500">{{ attendees.length }} attendees</span>
+          </div>
+
+          <div
+            v-for="attendee in attendees"
+            :key="attendee.id"
+            class="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+            :class="{ 'ring-2 ring-primary': selectedIds.includes(attendee.id) }"
+          >
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
                 <UCheckbox
                   :model-value="selectedIds.includes(attendee.id)"
                   @change="selectedIds.includes(attendee.id)
                     ? selectedIds = selectedIds.filter(id => id !== attendee.id)
                     : selectedIds.push(attendee.id)"
                 />
-              </td>
-              <td class="py-3 px-4">
-                <div class="flex items-center gap-3">
-                  <UAvatar
-                    :src="attendee.user?.avatarUrl"
-                    :alt="attendee.user?.name"
-                    size="sm"
-                  />
-                  <div>
-                    <p class="font-medium text-gray-900 dark:text-white">
-                      {{ attendee.user?.name }}
-                    </p>
-                    <p class="text-sm text-gray-500">{{ attendee.user?.email }}</p>
-                  </div>
+                <UAvatar
+                  :src="attendee.user?.avatarUrl"
+                  :alt="attendee.user?.name"
+                  size="sm"
+                />
+                <div>
+                  <p class="font-medium text-gray-900 dark:text-white">
+                    {{ attendee.user?.name }}
+                  </p>
+                  <p class="text-sm text-gray-500 truncate max-w-[180px]">{{ attendee.user?.email }}</p>
                 </div>
-              </td>
-              <td class="py-3 px-4">
-                <UBadge :color="getStatusColor(attendee.status)" variant="soft">
-                  {{ attendee.status }}
-                </UBadge>
-              </td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                {{ attendee.respondedAt ? new Date(attendee.respondedAt).toLocaleDateString() : '-' }}
-              </td>
-              <td class="py-3 px-4">
-                <span v-if="attendee.checkedInAt" class="text-green-600 text-sm">
+              </div>
+              <UBadge :color="getStatusColor(attendee.status)" variant="soft">
+                {{ attendee.status }}
+              </UBadge>
+            </div>
+
+            <div class="space-y-2 mb-3 pl-9">
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">RSVP Date</span>
+                <span class="text-sm text-gray-900 dark:text-white">
+                  {{ attendee.respondedAt ? new Date(attendee.respondedAt).toLocaleDateString() : '-' }}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Checked In</span>
+                <span v-if="attendee.checkedInAt" class="text-sm text-green-600">
                   {{ new Date(attendee.checkedInAt).toLocaleTimeString() }}
                 </span>
-                <span v-else class="text-gray-400 text-sm">-</span>
-              </td>
-              <td class="py-3 px-4 text-right">
-                <UDropdown
-                  :items="[[
-                    {
-                      label: 'Confirm',
-                      icon: 'i-heroicons-check',
-                      disabled: attendee.status === 'confirmed',
-                      click: () => updateStatus(attendee.id, 'confirmed')
-                    },
-                    {
-                      label: 'Waitlist',
-                      icon: 'i-heroicons-clock',
-                      disabled: attendee.status === 'waitlisted',
-                      click: () => updateStatus(attendee.id, 'waitlisted')
-                    },
-                    {
-                      label: 'Decline',
-                      icon: 'i-heroicons-x-mark',
-                      disabled: attendee.status === 'declined',
-                      click: () => updateStatus(attendee.id, 'declined')
-                    },
-                  ]]"
-                >
-                  <UButton
-                    color="gray"
-                    variant="ghost"
-                    icon="i-heroicons-ellipsis-vertical"
-                    :loading="updateLoading"
+                <span v-else class="text-sm text-gray-400">-</span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-800 pl-9">
+              <UButton
+                v-if="attendee.status !== 'confirmed'"
+                color="green"
+                variant="soft"
+                size="xs"
+                :loading="updateLoading"
+                @click="updateStatus(attendee.id, 'confirmed')"
+              >
+                Confirm
+              </UButton>
+              <UButton
+                v-if="attendee.status !== 'waitlisted'"
+                color="yellow"
+                variant="soft"
+                size="xs"
+                :loading="updateLoading"
+                @click="updateStatus(attendee.id, 'waitlisted')"
+              >
+                Waitlist
+              </UButton>
+              <UButton
+                v-if="attendee.status !== 'declined'"
+                color="red"
+                variant="soft"
+                size="xs"
+                :loading="updateLoading"
+                @click="updateStatus(attendee.id, 'declined')"
+              >
+                Decline
+              </UButton>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200 dark:border-gray-700">
+                <th class="py-3 px-4 text-left">
+                  <UCheckbox :model-value="allSelected" @change="toggleAll" />
+                </th>
+                <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Attendee</th>
+                <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Status</th>
+                <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">RSVP Date</th>
+                <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Checked In</th>
+                <th class="py-3 px-4 text-right text-sm font-medium text-gray-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="attendee in attendees"
+                :key="attendee.id"
+                class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              >
+                <td class="py-3 px-4">
+                  <UCheckbox
+                    :model-value="selectedIds.includes(attendee.id)"
+                    @change="selectedIds.includes(attendee.id)
+                      ? selectedIds = selectedIds.filter(id => id !== attendee.id)
+                      : selectedIds.push(attendee.id)"
                   />
-                </UDropdown>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td class="py-3 px-4">
+                  <div class="flex items-center gap-3">
+                    <UAvatar
+                      :src="attendee.user?.avatarUrl"
+                      :alt="attendee.user?.name"
+                      size="sm"
+                    />
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">
+                        {{ attendee.user?.name }}
+                      </p>
+                      <p class="text-sm text-gray-500">{{ attendee.user?.email }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-3 px-4">
+                  <UBadge :color="getStatusColor(attendee.status)" variant="soft">
+                    {{ attendee.status }}
+                  </UBadge>
+                </td>
+                <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                  {{ attendee.respondedAt ? new Date(attendee.respondedAt).toLocaleDateString() : '-' }}
+                </td>
+                <td class="py-3 px-4">
+                  <span v-if="attendee.checkedInAt" class="text-green-600 text-sm">
+                    {{ new Date(attendee.checkedInAt).toLocaleTimeString() }}
+                  </span>
+                  <span v-else class="text-gray-400 text-sm">-</span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <UDropdown
+                    :items="[[
+                      {
+                        label: 'Confirm',
+                        icon: 'i-heroicons-check',
+                        disabled: attendee.status === 'confirmed',
+                        click: () => updateStatus(attendee.id, 'confirmed')
+                      },
+                      {
+                        label: 'Waitlist',
+                        icon: 'i-heroicons-clock',
+                        disabled: attendee.status === 'waitlisted',
+                        click: () => updateStatus(attendee.id, 'waitlisted')
+                      },
+                      {
+                        label: 'Decline',
+                        icon: 'i-heroicons-x-mark',
+                        disabled: attendee.status === 'declined',
+                        click: () => updateStatus(attendee.id, 'declined')
+                      },
+                    ]]"
+                  >
+                    <UButton
+                      color="gray"
+                      variant="ghost"
+                      icon="i-heroicons-ellipsis-vertical"
+                      :loading="updateLoading"
+                    />
+                  </UDropdown>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <!-- Pagination -->
         <div v-if="meta && meta.totalPages > 1" class="flex justify-center mt-6">

@@ -8,81 +8,93 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 
 ---
 
-## Phase 1: Foundation (Current)
+## Phase 1: Foundation ✅
 
-**Target: MVP Launch**
+**Status: COMPLETE**
 
 ### Core Infrastructure
-- [x] Monorepo setup (pnpm + Turborepo)
+- [x] Monorepo setup (pnpm workspaces)
 - [x] Nuxt 3 application with SSR
 - [x] PostgreSQL database with Drizzle ORM
-- [x] Docker + Kubernetes deployment configs
+- [x] Docker + Kubernetes deployment (k3s with local registry)
 - [x] Versioned API structure (`/api/v1`)
 
 ### Authentication
 - [x] Email/password registration & login
 - [x] JWT tokens (mobile-ready)
 - [x] Session management (web)
-- [ ] Email verification
-- [ ] Password reset flow
-- [ ] OAuth (Google, Facebook)
+- [x] SSR-compatible auth (useRequestFetch for cookie forwarding)
+- [x] Password reset flow (forgot password with email token)
+- [ ] Email verification (schema exists, flow not implemented)
+- [ ] OAuth - Google (schema exists, not implemented)
+- [ ] OAuth - Facebook (schema exists, not implemented)
 
 ### Event Management (Basic)
 - [x] Create events (public/private)
 - [x] Event listing with filters
-- [x] Event detail page
+- [x] Event detail page (by slug)
 - [x] Edit/update events
-- [x] Cancel events (with typed confirmation)
-- [ ] Event cover image upload
+- [x] Cancel events (with status management)
+- [x] Location autocomplete (Google Maps API)
+- [x] Event cover image upload (Garage S3 storage)
 - [ ] Rich text description (Markdown/WYSIWYG)
 
 ### User Dashboard
 - [x] Dashboard layout
 - [x] My events list
+- [x] My registrations/tickets list
 - [ ] Event analytics (basic)
-- [ ] Profile settings
+- [ ] Profile settings page
 
 ---
 
-## Phase 2: RSVP & Attendees
+## Phase 2: RSVP & Attendees ✅
 
-**Target: Free Events Launch**
+**Status: COMPLETE**
 
 ### RSVP System
 - [x] RSVP for free events
 - [x] Attendee limits (waitlist when full)
 - [x] Approval workflow for private events
-- [x] Cancel RSVP (with typed confirmation)
+- [x] Cancel RSVP
+- [x] QR code generation for attendees
 
 ### Invitations
 - [x] Generate invite links (private events)
-- [ ] Email invitations (endpoint exists, sending not implemented)
+- [x] Invite endpoint exists (`/api/v1/events/[eventId]/invite`)
+- [x] Email invitations (RSVP invitations with custom messages)
+- [x] Track invitation status (eventInvitations table)
 - [ ] Bulk invite via CSV
-- [ ] Track invitation status
 
 ### Check-in
 - [x] QR code generation for attendees
-- [ ] Web-based QR scanner (camera-based)
+- [x] Web-based QR scanner (html5-qrcode, camera-based)
 - [x] Manual check-in (USB scanner / text input)
-- [x] Check-in statistics
+- [x] Check-in statistics (total, checked-in, rate)
+- [x] Real-time check-in status updates (Pusher)
 
-### Notifications
-- [ ] Email confirmations
-- [ ] Event reminders (24h, 1h before)
-- [ ] Event updates/changes
+### Notifications (Email Infrastructure)
+- [x] Email service with dual providers (SMTP/Mailtrap + Resend)
+- [x] 11 email templates created
+- [x] Account setup emails sending
+- [ ] RSVP confirmation emails (templates exist, not triggered)
+- [ ] Event reminders (templates exist, not triggered)
+- [ ] Event updates/changes notifications
 - [ ] Cancellation notices
 
 ---
 
-## Phase 3: Ticketing & Payments
+## Phase 3: Ticketing & Payments ✅
 
-**Target: Paid Events Launch**
+**Status: COMPLETE (98%)**
 
 ### Ticket Types
 - [x] Multiple ticket tiers (VIP, General, Early Bird)
 - [x] Quantity limits per tier
 - [x] Sale period (start/end dates)
 - [x] Per-order limits (min/max)
+- [x] Ticket status management (active/inactive)
+- [x] Ticket type reordering
 
 ### PayMongo Integration
 - [x] Checkout session creation
@@ -91,56 +103,61 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
   - [x] Maya (PayMaya)
   - [x] Credit/Debit cards
   - [x] GrabPay
-- [x] Webhook handling
-- [ ] Payment confirmation emails
-- [ ] Refund processing
+- [x] Webhook handling (payment confirmation)
+- [x] Payment confirmation emails (paid & free orders)
+- [x] Refund processing via PayMongo API
 
 ### Order Management
 - [x] Order history
-- [ ] Receipt generation (PDF)
-- [ ] Ticket PDF with QR code
-- [ ] Resend tickets
+- [x] Guest checkout (no account required)
+- [x] Order access via URL (no login needed)
+- [x] Account setup from guest order (token-based)
+- [x] Order success page with real-time ticket status
+- [x] Ticket PDF with QR code (downloadable)
+- [x] Orders management page for organizers
+- [ ] Resend tickets functionality
 
 ### Organizer Payouts
-- [ ] Revenue dashboard
+- [x] Revenue dashboard (basic - in Orders page)
 - [ ] Payout requests
 - [ ] Transaction history
 - [ ] Tax documents (BIR 2307)
 
 ---
 
-## Phase 4: Contribution Lists
+## Phase 4: Contribution Lists 📋
 
-**Target: Social Events Enhancement**
+**Status: SCHEMA ONLY (20% complete)**
 
 ### Contribution Items
 - [x] Database schema for contribution lists
-- [ ] CRUD API for contribution items
-- [ ] Categories (food, drinks, supplies, equipment)
 - [x] Quantity needed per item (schema)
+- [x] Categories defined (food, drinks, supplies, equipment, other)
+- [ ] CRUD API for contribution items
+- [ ] UI for managing contribution items
 - [ ] Custom items (attendee suggestions)
 
 ### Claiming System
 - [x] Database schema for claims
 - [ ] Claim items API
 - [ ] Partial claims (bring 2 of 5)
-- [ ] Claim notes ("I'll bring homemade lumpia")
+- [ ] Claim notes
 - [ ] Unclaim items
 
 ### Visibility
-- [x] Public contribution list display (UI exists)
-- [ ] Who's bringing what
-- [x] Progress tracking (X/Y items claimed - UI exists)
+- [ ] Public contribution list display
+- [ ] Who's bringing what view
+- [ ] Progress tracking (X/Y items claimed)
 
 ---
 
-## Phase 5: Mobile Apps
+## Phase 5: Mobile Apps 📱
 
-**Target: Native Experience**
+**Status: NOT STARTED**
 
 ### Flutter App Development
 - [ ] Project setup
-- [ ] Authentication flow
+- [ ] Authentication flow (JWT ready on backend)
 - [ ] Event browsing
 - [ ] Event details
 - [ ] RSVP & ticketing
@@ -156,9 +173,9 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 
 ---
 
-## Phase 6: Advanced Features
+## Phase 6: Advanced Features ⚡
 
-**Target: Platform Maturity**
+**Status: PARTIALLY COMPLETE (Team Management done)**
 
 ### Event Discovery
 - [ ] Location-based search
@@ -174,10 +191,12 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 - [ ] Comments/discussions
 
 ### Analytics & Insights
+- [x] Basic attendee stats in API (total, checked-in, by status)
+- [ ] Analytics dashboard UI
 - [ ] Attendance trends
 - [ ] Revenue reports
 - [ ] Conversion funnels
-- [ ] Export to CSV/Excel
+- [ ] Export to CSV/Excel (attendee export exists)
 
 ### Organizer Tools
 - [ ] Custom branding
@@ -186,17 +205,25 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 - [ ] API access for integrations
 
 ### Enterprise Features
-- [ ] Team management
-- [ ] Role-based permissions
+- [x] Team management (Event Collaborators)
+- [x] Invitation flow (invite by email, accept on login)
+- [x] Granular role-based permissions:
+  - [x] canEdit
+  - [x] canPublish
+  - [x] canManageTickets
+  - [x] canCheckIn
+  - [x] canManageAttendees
+  - [x] canViewAnalytics
+- [x] Permission checks in API endpoints
 - [ ] Audit logs
 - [ ] SSO integration
 - [ ] White-label option
 
 ---
 
-## Phase 7: Growth & Scale
+## Phase 7: Growth & Scale 🚀
 
-**Target: Market Leadership**
+**Status: INFRASTRUCTURE STARTED**
 
 ### Platform Expansion
 - [ ] Multi-language support (Filipino, Cebuano)
@@ -210,62 +237,55 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 - [ ] Eventbrite import
 
 ### Performance & Scale
+- [x] Local Docker registry with PVC (survives restarts)
+- [x] Real-time updates (Pusher WebSocket)
 - [ ] CDN for assets
 - [ ] Database read replicas
-- [ ] Redis caching optimization
-- [ ] Real-time updates (WebSocket)
 
 ---
 
-## Success Metrics
+## Priority Backlog (Recommended Next Steps)
 
-### Phase 1-2 (Foundation)
-- [ ] 100 events created
-- [ ] 1,000 registered users
-- [ ] 99.9% uptime
+### High Priority
+1. **Email Verification Flow** - Security & trust
+2. **Resend Tickets Functionality** - User convenience
+3. **Profile Settings Page** - User management
 
-### Phase 3-4 (Monetization)
-- [ ] PHP 100,000 in ticket sales
-- [ ] 50 paid events
-- [ ] < 2% payment failure rate
+### Medium Priority (User Experience)
+4. **Contribution List APIs** - Complete Phase 4
+5. **OAuth Integration** - Reduce signup friction (Google/Facebook)
+6. **RSVP/Event Confirmation Emails** - Trigger existing templates
 
-### Phase 5-6 (Growth)
-- [ ] 10,000 MAU
-- [ ] 500 monthly events
-- [ ] 4.5+ app store rating
-
-### Phase 7 (Scale)
-- [ ] PHP 10M annual GMV
-- [ ] 100,000 MAU
-- [ ] Regional presence
+### Lower Priority (Feature Enhancement)
+7. **Analytics Dashboard UI** - Visualize organizer insights
+8. **Bulk CSV Invitations** - Large event management
+9. **Rich Text Event Descriptions** - Better formatting
 
 ---
 
 ## Technical Debt & Maintenance
-
-Ongoing tasks to maintain code quality:
 
 - [ ] Unit test coverage > 80%
 - [ ] E2E tests for critical flows
 - [ ] Performance monitoring (Core Web Vitals)
 - [ ] Security audits (quarterly)
 - [ ] Dependency updates (monthly)
-- [ ] Documentation updates
+- [x] SSR hydration fix (auth state)
 
 ---
 
 ## Release Schedule
 
-| Phase | Target Date | Status |
-|-------|-------------|--------|
-| Phase 1 | Q1 2026 | Nearly Complete |
-| Phase 2 | Q1 2026 | Nearly Complete |
-| Phase 3 | Q2 2026 | In Progress |
-| Phase 4 | Q2 2026 | In Progress (Schema Only) |
-| Phase 5 | Q3 2026 | Planned |
-| Phase 6 | Q4 2026 | Planned |
-| Phase 7 | 2027 | Planned |
+| Phase | Target | Status | Completion |
+|-------|--------|--------|------------|
+| Phase 1 | Q1 2026 | ✅ Complete | 95% |
+| Phase 2 | Q1 2026 | ✅ Complete | 98% |
+| Phase 3 | Q2 2026 | ✅ Complete | 98% |
+| Phase 4 | Q2 2026 | 📋 Schema Only | 20% |
+| Phase 5 | Q3 2026 | ⏳ Planned | 0% |
+| Phase 6 | Q4 2026 | 🔄 Partial | 45% |
+| Phase 7 | 2027 | 🔄 Started | 15% |
 
 ---
 
-*Last updated: January 8, 2026*
+*Last updated: January 12, 2026*

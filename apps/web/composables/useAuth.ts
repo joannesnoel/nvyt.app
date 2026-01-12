@@ -14,7 +14,9 @@ export const useAuth = () => {
   async function fetchUser() {
     isLoading.value = true
     try {
-      const response = await $fetch('/api/v1/auth/me')
+      // Use useRequestFetch to forward cookies during SSR
+      const requestFetch = import.meta.server ? useRequestFetch() : $fetch
+      const response = await requestFetch('/api/v1/auth/me')
       if (response.success && response.data) {
         user.value = response.data as User
       } else {
@@ -43,7 +45,7 @@ export const useAuth = () => {
   }
 
   // Register
-  async function register(data: { name: string; email: string; password: string; confirmPassword: string }) {
+  async function register(data: { name: string; email: string; password: string; confirmPassword: string; inviteToken?: string }) {
     const response = await $fetch('/api/v1/auth/register', {
       method: 'POST',
       body: data,

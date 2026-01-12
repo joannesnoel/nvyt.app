@@ -4,6 +4,7 @@ definePageMeta({
 })
 
 const route = useRoute()
+const toast = useToast()
 const { user } = useAuth()
 const orderNumber = computed(() => route.params.orderNumber as string)
 const token = computed(() => route.query.token as string | undefined)
@@ -30,6 +31,35 @@ const ticketsUrl = computed(() => {
   }
   return '/tickets'
 })
+
+// Subscribe to real-time updates for this order
+const { ticketUpdates } = useOrderUpdates(orderNumber)
+
+// Watch for ticket updates and apply them in real-time
+watch(ticketUpdates, (updates) => {
+  if (updates.length === 0 || !orderResponse.value?.data?.tickets) return
+
+  const latestUpdate = updates[updates.length - 1]
+
+  // Find and update the ticket in the order data
+  const ticketIndex = orderResponse.value.data.tickets.findIndex(
+    (t: any) => t.id === latestUpdate.ticketId
+  )
+
+  if (ticketIndex !== -1) {
+    // Update the ticket status reactively
+    orderResponse.value.data.tickets[ticketIndex].status = latestUpdate.status
+    orderResponse.value.data.tickets[ticketIndex].checkedInAt = latestUpdate.checkedInAt
+
+    // Show toast notification
+    toast.add({
+      title: 'Ticket Checked In',
+      description: `Ticket ${latestUpdate.ticketNumber} has been checked in.`,
+      color: 'blue',
+      icon: 'i-heroicons-check-circle',
+    })
+  }
+}, { deep: true })
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', {
@@ -59,6 +89,50 @@ function getStatusColor(status: string) {
     default: return 'gray'
   }
 }
+
+// Download tickets
+const downloading = ref(false)
+
+async function downloadAllTickets() {
+  if (!order.value) return
+
+  downloading.value = true
+  try {
+    const response = await $fetch(`/api/v1/orders/${order.value.orderNumber}/tickets/download`, {
+      responseType: 'blob',
+    })
+
+    // Create download link
+    const url = window.URL.createObjectURL(response as Blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `tickets-${order.value.orderNumber}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    toast.add({
+      title: 'Download started',
+      description: 'Your tickets PDF is being downloaded.',
+      color: 'green',
+    })
+  } catch (e: any) {
+    toast.add({
+      title: 'Download failed',
+      description: e.data?.message || 'Failed to download tickets',
+      color: 'red',
+    })
+  } finally {
+    downloading.value = false
+  }
+}
+
+// Check if tickets can be downloaded
+const canDownload = computed(() => {
+  return order.value?.paymentStatus === 'paid' &&
+    order.value?.tickets?.some((t: any) => t.status === 'confirmed' || t.status === 'checked_in')
+})
 </script>
 
 <template>
@@ -186,10 +260,22 @@ function getStatusColor(status: string) {
         />
 
         <!-- Actions -->
-        <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex flex-col gap-3">
+          <UButton
+            v-if="canDownload && !isGuest"
+            color="primary"
+            block
+            size="lg"
+            icon="i-heroicons-arrow-down-tray"
+            :loading="downloading"
+            @click="downloadAllTickets"
+          >
+            Download Tickets (PDF)
+          </UButton>
           <UButton
             :to="ticketsUrl"
-            color="primary"
+            :color="canDownload && !isGuest ? 'gray' : 'primary'"
+            :variant="canDownload && !isGuest ? 'outline' : 'solid'"
             block
             size="lg"
             :icon="isGuest ? 'i-heroicons-user-plus' : 'i-heroicons-ticket'"
@@ -197,6 +283,7 @@ function getStatusColor(status: string) {
             {{ isGuest ? 'Set Up Account to View Tickets' : 'View My Tickets' }}
           </UButton>
           <UButton
+            v-if="!isGuest"
             :to="`/events/${order.event?.slug}`"
             color="gray"
             variant="outline"

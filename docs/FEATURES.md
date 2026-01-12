@@ -8,14 +8,17 @@
 
 1. [User Management](#user-management)
 2. [Event Management](#event-management)
-3. [RSVP & Attendance](#rsvp--attendance)
-4. [Ticketing System](#ticketing-system)
-5. [Contribution Lists](#contribution-lists)
-6. [Check-in System](#check-in-system)
-7. [Payments](#payments)
-8. [Notifications](#notifications)
-9. [Analytics](#analytics)
-10. [API Reference](#api-reference)
+3. [Event Collaborators](#event-collaborators)
+4. [RSVP & Attendance](#rsvp--attendance)
+5. [Ticketing System](#ticketing-system)
+6. [Guest Checkout](#guest-checkout)
+7. [Contribution Lists](#contribution-lists)
+8. [Check-in System](#check-in-system)
+9. [Real-time Updates](#real-time-updates)
+10. [Payments](#payments)
+11. [Notifications](#notifications)
+12. [Analytics](#analytics)
+13. [API Reference](#api-reference)
 
 ---
 
@@ -130,6 +133,66 @@ Users can create accounts using:
 
 ---
 
+## Event Collaborators
+
+### Overview
+
+Event organizers can invite team members to help manage events with granular permissions. This enables teams to work together on events without sharing account credentials.
+
+### Collaborator Permissions
+
+| Permission | Description |
+|------------|-------------|
+| `canEdit` | Edit event details (title, description, date, location) |
+| `canPublish` | Publish or unpublish the event |
+| `canManageTickets` | Create, edit, and delete ticket types |
+| `canCheckIn` | Check in attendees at the event |
+| `canManageAttendees` | Approve/reject RSVPs, manage guest list |
+| `canViewAnalytics` | View event statistics and reports |
+
+### Invitation Flow
+
+```
+Owner invites collaborator by email
+              ↓
+   Invitation created (pending)
+              ↓
+   Collaborator logs in and sees invitation
+              ↓
+   Collaborator accepts invitation
+              ↓
+   Access granted with specified permissions
+```
+
+### Access Levels
+
+| Role | Access |
+|------|--------|
+| **Owner** | Full access to all event features |
+| **Collaborator** | Access based on granted permissions |
+| **Attendee** | View public event details only |
+
+### Team Management UI
+
+Located at `/dashboard/events/{id}/team`:
+- View all team members
+- Invite new members by email
+- Edit collaborator permissions
+- Remove collaborators
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/events/:id/collaborators` | Invite collaborator |
+| GET | `/events/:id/collaborators` | List collaborators |
+| PATCH | `/events/:id/collaborators/:id` | Update permissions |
+| DELETE | `/events/:id/collaborators/:id` | Remove collaborator |
+| POST | `/events/:id/collaborators/accept` | Accept invitation |
+| GET | `/me/invitations` | List pending invitations |
+
+---
+
 ## RSVP & Attendance
 
 ### RSVP Flow (Free Events)
@@ -231,6 +294,56 @@ Select Tickets → Enter Attendee Info → Payment → Confirmation
 
 ---
 
+## Guest Checkout
+
+### Overview
+
+Users can purchase tickets without creating an account, making the checkout process faster and reducing friction.
+
+### Guest Checkout Flow
+
+```
+Select Tickets → Enter Customer Info → Payment → Confirmation
+      ↓                  ↓                ↓           ↓
+   Quantity         Name/Email        PayMongo    Email + QR
+   Selection        (no password)     Checkout    + Setup Link
+```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **No Registration Required** | Purchase tickets with just name and email |
+| **Account Setup Link** | Optional link to create account after purchase |
+| **Order Access** | View order via unique order number URL |
+| **Email Tickets** | QR codes sent to customer email |
+
+### Account Setup Token
+
+After guest checkout, users receive:
+- Order confirmation email with tickets
+- Optional account setup link (valid for 7 days)
+- Can set password to claim their account and tickets
+
+### Order Access
+
+Guests can access their order at:
+```
+https://nvyt.app/orders/{orderNumber}
+```
+
+No login required - order details displayed with ticket QR codes.
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/orders/checkout` | Create order (supports guest checkout) |
+| GET | `/orders/:orderNumber` | Get order details (public) |
+| POST | `/auth/setup-account` | Complete account setup |
+
+---
+
 ## Contribution Lists
 
 ### Overview
@@ -302,9 +415,28 @@ Each ticket/RSVP generates a unique QR code containing:
 
 | Method | Description |
 |--------|-------------|
-| **QR Scan** | Scan attendee's QR code |
+| **Camera QR Scan** | Use phone camera to scan QR codes (iOS/Android) |
+| **USB Scanner** | Connect USB barcode scanner for faster scanning |
+| **Manual Entry** | Enter ticket code manually |
 | **Manual Search** | Search by name/email/ticket number |
-| **Bulk Import** | Upload checked-in list (offline events) |
+
+### Camera-Based QR Scanner
+
+The web app includes a built-in camera scanner using `html5-qrcode`:
+- Works on iOS Safari and Android Chrome
+- Uses rear camera by default (`facingMode: 'environment'`)
+- Real-time QR code detection
+- Instant feedback on scan success/failure
+
+**Scanner Modes:**
+```
+┌─────────────────┐   ┌─────────────────┐
+│  Camera Mode    │   │  Scanner Mode   │
+├─────────────────┤   ├─────────────────┤
+│ Uses phone cam  │   │ USB scanner +   │
+│ for QR scanning │   │ text input      │
+└─────────────────┘   └─────────────────┘
+```
 
 ### Check-in States
 
@@ -313,6 +445,7 @@ Not Checked In → Checked In → (Cannot undo via app)
                      ↓
               Timestamp recorded
               Check-in count updated
+              Real-time notification sent
 ```
 
 ### Check-in Dashboard
@@ -322,6 +455,58 @@ Real-time statistics:
 - Checked-in count
 - Check-in rate (%)
 - Recent check-ins feed
+- Success/error feedback per scan
+
+---
+
+## Real-time Updates
+
+### Overview
+
+nvyt.app uses Pusher for real-time updates, providing instant feedback to users without page refreshes.
+
+### Pusher Integration
+
+| Channel Type | Purpose |
+|--------------|---------|
+| **Private** | User-specific updates (requires auth) |
+| **Public** | Broadcast updates (no auth required) |
+
+### Real-time Events
+
+**Order/Ticket Updates:**
+```
+Channel: order-{orderNumber}
+Events:
+  - ticket:checked_in (when ticket is scanned)
+```
+
+**Attendee Updates:**
+```
+Channel: user-{userId}
+Events:
+  - attendee:checked_in (when RSVP is checked in)
+```
+
+### Use Cases
+
+| Feature | Real-time Update |
+|---------|------------------|
+| **Ticket Check-in** | Attendee sees "Checked In" status instantly |
+| **Order Success Page** | Ticket status updates live |
+| **Dashboard** | Check-in counts update in real-time |
+
+### Client Integration
+
+```typescript
+// Using usePusher composable
+const { subscribe, unsubscribe } = usePusher()
+
+// Subscribe to order updates
+subscribe(`order-${orderNumber}`, 'ticket:checked_in', (data) => {
+  // Update ticket status in UI
+})
+```
 
 ---
 
@@ -419,6 +604,23 @@ Refund policies set by organizer:
 - Social media
 - Search
 - Referrals
+
+### User Dashboard
+
+The dashboard provides a personalized view for users:
+
+**My Registrations:**
+- View all tickets/registrations in one place
+- Event thumbnail, title, date, and location
+- Upcoming event indicators
+- Ticket status badges (confirmed, pending, checked_in, cancelled)
+- Quick navigation to ticket details
+
+**My Events (Organizers):**
+- List of events you've created
+- Event status (draft, published, cancelled, completed)
+- Attendee statistics (confirmed, pending counts)
+- Quick access to event management
 
 ### Dashboard Stats
 
@@ -544,4 +746,4 @@ Features can be toggled per environment:
 
 ---
 
-*Last updated: January 2026*
+*Last updated: January 10, 2026*

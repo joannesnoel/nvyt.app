@@ -167,7 +167,7 @@ const statusOptions = [
               </div>
 
               <!-- Actions -->
-              <div class="flex items-center gap-2 mt-4">
+              <div class="flex flex-wrap items-center gap-2 mt-4">
                 <UButton
                   :to="`/tickets/${ticket.id}`"
                   color="primary"

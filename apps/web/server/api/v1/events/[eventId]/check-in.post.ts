@@ -1,9 +1,9 @@
 import { eq, and } from 'drizzle-orm'
 import { events, attendees, users, tickets, ticketTypes, orders } from '@nvyt/db'
 import { attendeeCheckInSchema } from '@nvyt/shared'
+import { broadcastTicketCheckIn, broadcastAttendeeCheckIn } from '~/server/utils/pusher'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const eventId = getRouterParam(event, 'eventId')
   const body = await readBody(event)
 
@@ -13,6 +13,9 @@ export default defineEventHandler(async (event) => {
       message: 'Event ID is required',
     })
   }
+
+  // Require canCheckIn permission (owner or collaborator)
+  await requireEventAccess(event, eventId, 'canCheckIn')
 
   // Validate input
   const result = attendeeCheckInSchema.safeParse(body)
@@ -24,10 +27,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { qrCode } = result.data
+  // Trim whitespace and normalize the QR code
+  const qrCode = result.data.qrCode.trim()
   const db = useDatabase()
 
-  // Verify user is the organizer
+  console.log(`[Check-in] Event: ${eventId}, QR Code: "${qrCode}" (length: ${qrCode.length})`)
+
+  // Get event data
   const [eventData] = await db
     .select()
     .from(events)
@@ -38,13 +44,6 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 404,
       message: 'Event not found',
-    })
-  }
-
-  if (eventData.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'Only the organizer can check in attendees',
     })
   }
 
@@ -140,6 +139,15 @@ export default defineEventHandler(async (event) => {
         })
         .where(eq(tickets.id, ticket.id))
 
+      // Broadcast real-time update via Pusher
+      broadcastTicketCheckIn({
+        orderNumber: order.orderNumber,
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        status: 'checked_in',
+        checkedInAt,
+      })
+
       return successResponse({
         message: 'Check-in successful',
         type: 'ticket',
@@ -177,9 +185,29 @@ export default defineEventHandler(async (event) => {
     .limit(1)
 
   if (!attendee) {
+    // Debug: Check if ticket exists for ANY event
+    const [anyTicket] = await db
+      .select({
+        id: tickets.id,
+        eventId: tickets.eventId,
+        status: tickets.status,
+      })
+      .from(tickets)
+      .where(eq(tickets.qrCode, qrCode))
+      .limit(1)
+
+    if (anyTicket) {
+      console.log(`[Check-in] Ticket found but for different event. Ticket eventId: ${anyTicket.eventId}, Current eventId: ${eventId}`)
+      throw createError({
+        statusCode: 404,
+        message: `This ticket belongs to a different event.`,
+        data: { ticketEventId: anyTicket.eventId, currentEventId: eventId },
+      })
+    }
+
     throw createError({
       statusCode: 404,
-      message: 'Invalid QR code. Attendee not found for this event.',
+      message: `Invalid QR code. No ticket or attendee found. Scanned: "${qrCode.substring(0, 20)}..."`,
     })
   }
 
@@ -218,6 +246,17 @@ export default defineEventHandler(async (event) => {
       updatedAt: checkedInAt,
     })
     .where(eq(attendees.id, attendee.id))
+
+  // Broadcast real-time update via Pusher
+  if (attendee.user) {
+    broadcastAttendeeCheckIn({
+      eventId,
+      attendeeId: attendee.id,
+      userId: attendee.user.id,
+      status: 'checked_in',
+      checkedInAt,
+    })
+  }
 
   return successResponse({
     message: 'Check-in successful',

@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
       registrationMode: data.registrationMode,
       maxAttendees: data.maxAttendees,
       requiresApproval: data.requiresApproval,
-      ticketingEnabled: data.ticketingEnabled,
+      ticketingEnabled: data.ticketingEnabled ?? data.registrationMode === 'tickets',
       contributionsEnabled: data.contributionsEnabled,
       inviteToken,
       status: 'draft',

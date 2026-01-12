@@ -11,17 +11,24 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.966.0",
+    "@aws-sdk/s3-request-presigner": "^3.966.0",
     "@nuxt/ui": "^2.21.0",
     "@nvyt/db": "workspace:*",
     "@nvyt/shared": "workspace:*",
     "@pinia/nuxt": "^0.5.5",
     "@vueuse/nuxt": "^11.3.0",
     "dotenv": "^16.4.7",
+    "html5-qrcode": "^2.3.8",
     "jose": "^5.9.6",
     "nanoid": "^5.0.9",
     "nodemailer": "^7.0.12",
     "nuxt": "^3.14.0",
+    "pdfkit": "^0.17.2",
     "pinia": "^2.2.8",
+    "pusher": "^5.3.2",
+    "pusher-js": "^8.4.0",
+    "qrcode": "^1.5.4",
     "vue": "^3.5.13",
     "zod": "^3.24.1"
   },
@@ -31,6 +38,7 @@
     "@types/google.maps": "^3.58.1",
     "@types/node": "^22.10.2",
     "@types/nodemailer": "^7.0.4",
+    "@types/pdfkit": "^0.17.4",
     "typescript": "^5.7.2",
     "vue-tsc": "^2.2.0"
   }

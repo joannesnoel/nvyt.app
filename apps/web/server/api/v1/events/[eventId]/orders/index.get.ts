@@ -1,0 +1,161 @@
+import { eq, desc, and, ilike, or, sql, inArray } from 'drizzle-orm'
+import { orders, tickets, ticketTypes, users, events } from '@nvyt/db'
+
+export default defineEventHandler(async (event) => {
+  const eventId = getRouterParam(event, 'eventId')
+  const query = getQuery(event)
+
+  if (!eventId) {
+    throw createError({
+      statusCode: 400,
+      message: 'Event ID is required',
+    })
+  }
+
+  const db = useDatabase()
+  const user = await requireAuth(event)
+
+  // Verify event exists and user is organizer
+  const [eventData] = await db
+    .select()
+    .from(events)
+    .where(eq(events.id, eventId))
+    .limit(1)
+
+  if (!eventData) {
+    throw createError({
+      statusCode: 404,
+      message: 'Event not found',
+    })
+  }
+
+  if (eventData.organizerId !== user.id) {
+    throw createError({
+      statusCode: 403,
+      message: 'Only the event organizer can view orders',
+    })
+  }
+
+  // Parse query params
+  const page = parseInt(query.page as string) || 1
+  const limit = Math.min(parseInt(query.limit as string) || 20, 100)
+  const offset = (page - 1) * limit
+  const status = query.status as string | undefined
+  const search = query.search as string | undefined
+
+  // Build where conditions
+  const conditions = [eq(orders.eventId, eventId)]
+
+  if (status) {
+    conditions.push(eq(orders.paymentStatus, status as any))
+  }
+
+  // Get orders with customer info
+  let orderQuery = db
+    .select({
+      order: orders,
+      customer: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      },
+    })
+    .from(orders)
+    .innerJoin(users, eq(orders.userId, users.id))
+    .where(and(...conditions))
+    .orderBy(desc(orders.createdAt))
+
+  // Apply search if provided
+  if (search) {
+    const searchLower = `%${search.toLowerCase()}%`
+    orderQuery = db
+      .select({
+        order: orders,
+        customer: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        },
+      })
+      .from(orders)
+      .innerJoin(users, eq(orders.userId, users.id))
+      .where(
+        and(
+          ...conditions,
+          or(
+            ilike(orders.orderNumber, searchLower),
+            ilike(users.name, searchLower),
+            ilike(users.email, searchLower)
+          )
+        )
+      )
+      .orderBy(desc(orders.createdAt))
+  }
+
+  // Execute with pagination
+  const results = await orderQuery.limit(limit).offset(offset)
+
+  // Get ticket counts for each order
+  const orderIds = results.map((r) => r.order.id)
+
+  let ticketCounts: Record<string, number> = {}
+  if (orderIds.length > 0) {
+    const counts = await db
+      .select({
+        orderId: tickets.orderId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(tickets)
+      .where(inArray(tickets.orderId, orderIds))
+      .groupBy(tickets.orderId)
+
+    ticketCounts = counts.reduce(
+      (acc, c) => {
+        acc[c.orderId] = c.count
+        return acc
+      },
+      {} as Record<string, number>
+    )
+  }
+
+  // Count total for pagination
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(orders)
+    .where(and(...conditions))
+
+  // Calculate stats
+  const [stats] = await db
+    .select({
+      totalOrders: sql<number>`count(*)::int`,
+      paidOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} = 'paid')::int`,
+      pendingOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} = 'pending')::int`,
+      refundedOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} = 'refunded')::int`,
+      totalRevenue: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.totalAmount}::numeric else 0 end), 0)`,
+    })
+    .from(orders)
+    .where(eq(orders.eventId, eventId))
+
+  return successResponse(
+    {
+      orders: results.map(({ order, customer }) => ({
+        ...order,
+        customer,
+        ticketCount: ticketCounts[order.id] || 0,
+      })),
+      stats: {
+        totalOrders: stats?.totalOrders || 0,
+        paidOrders: stats?.paidOrders || 0,
+        pendingOrders: stats?.pendingOrders || 0,
+        refundedOrders: stats?.refundedOrders || 0,
+        totalRevenue: parseFloat(String(stats?.totalRevenue || 0)),
+      },
+    },
+    {
+      page,
+      limit,
+      total: total || 0,
+      totalPages: Math.ceil((total || 0) / limit),
+    }
+  )
+})

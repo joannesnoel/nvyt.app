@@ -1,11 +1,14 @@
-import { eq } from 'drizzle-orm'
-import { events } from '@nvyt/db'
+import { eq, and, inArray } from 'drizzle-orm'
+import { events, eventInvitations, users } from '@nvyt/db'
 import { inviteAttendeesSchema } from '@nvyt/shared'
+import { randomBytes } from 'crypto'
+import { sendEmail, rsvpInvitationEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const eventId = getRouterParam(event, 'eventId')
   const body = await readBody(event)
+  const config = useRuntimeConfig()
 
   if (!eventId) {
     throw createError({
@@ -27,9 +30,20 @@ export default defineEventHandler(async (event) => {
   const { emails, message } = result.data
   const db = useDatabase()
 
-  // Verify user is the organizer
+  // Verify user is the organizer or has permission
   const [eventData] = await db
-    .select()
+    .select({
+      id: events.id,
+      title: events.title,
+      slug: events.slug,
+      description: events.description,
+      startDate: events.startDate,
+      location: events.location,
+      visibility: events.visibility,
+      inviteToken: events.inviteToken,
+      organizerId: events.organizerId,
+      organizationName: events.organizationName,
+    })
     .from(events)
     .where(eq(events.id, eventId))
     .limit(1)
@@ -48,30 +62,113 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Generate invite URL
-  const config = useRuntimeConfig()
-  const baseUrl = config.public.appUrl
-  const inviteUrl = eventData.visibility === 'private' && eventData.inviteToken
-    ? `${baseUrl}/events/${eventData.slug}?token=${eventData.inviteToken}`
-    : `${baseUrl}/events/${eventData.slug}`
+  // Normalize emails to lowercase
+  const normalizedEmails = emails.map(e => e.toLowerCase())
 
-  // TODO: Send emails using Resend
-  // For now, just return the invite details
-  const invitations = emails.map(email => ({
-    email,
-    inviteUrl,
-    status: 'pending' as const, // Would be 'sent' after email is sent
-  }))
+  // Check for already invited emails
+  const existingInvitations = await db
+    .select({ email: eventInvitations.email })
+    .from(eventInvitations)
+    .where(
+      and(
+        eq(eventInvitations.eventId, eventId),
+        inArray(eventInvitations.email, normalizedEmails)
+      )
+    )
 
-  // In production, this would:
-  // 1. Queue emails for sending via BullMQ
-  // 2. Track invitation status in a separate invitations table
-  // 3. Handle bounces and delivery status
+  const alreadyInvitedEmails = new Set(existingInvitations.map(i => i.email))
+  const newEmails = normalizedEmails.filter(e => !alreadyInvitedEmails.has(e))
+
+  if (newEmails.length === 0) {
+    return successResponse({
+      message: 'All recipients have already been invited',
+      sent: 0,
+      alreadyInvited: normalizedEmails.length,
+      invitations: [],
+    })
+  }
+
+  // Generate base URL for invitations
+  const baseUrl = config.public?.appUrl || 'https://nvyt.app'
+
+  // Format event date
+  const eventDate = eventData.startDate
+    ? new Date(eventData.startDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : 'TBD'
+
+  // Create invitation records and send emails
+  const invitations = []
+  const emailResults = []
+
+  for (const email of newEmails) {
+    const inviteToken = randomBytes(32).toString('hex')
+
+    // Build RSVP URL - include invite token for tracking
+    // For private events, also include the event access token
+    let rsvpUrl = `${baseUrl}/events/${eventData.slug}?invite=${inviteToken}`
+    if (eventData.visibility === 'private' && eventData.inviteToken) {
+      rsvpUrl += `&token=${eventData.inviteToken}`
+    }
+
+    // Create invitation record
+    const [invitation] = await db
+      .insert(eventInvitations)
+      .values({
+        eventId,
+        email,
+        inviteToken,
+        invitedBy: user.id,
+        message: message || null,
+      })
+      .returning()
+
+    invitations.push(invitation)
+
+    // Send invitation email
+    const emailContent = rsvpInvitationEmail({
+      organizerName: eventData.organizationName || user.name || 'Event Organizer',
+      eventTitle: eventData.title,
+      eventDate,
+      eventLocation: eventData.location || undefined,
+      eventDescription: eventData.description || undefined,
+      customMessage: message,
+      rsvpUrl,
+    })
+
+    const emailResult = await sendEmail({
+      to: email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+    })
+
+    emailResults.push({
+      email,
+      success: emailResult.success,
+      error: emailResult.error,
+    })
+  }
+
+  const successCount = emailResults.filter(r => r.success).length
+  const failedEmails = emailResults.filter(r => !r.success).map(r => r.email)
 
   return successResponse({
-    message: `Invitations prepared for ${emails.length} recipients`,
-    inviteUrl,
-    invitations,
-    customMessage: message,
+    message: `Invitations sent to ${successCount} of ${newEmails.length} recipients`,
+    sent: successCount,
+    failed: failedEmails.length,
+    failedEmails: failedEmails.length > 0 ? failedEmails : undefined,
+    alreadyInvited: alreadyInvitedEmails.size,
+    invitations: invitations.map(i => ({
+      id: i.id,
+      email: i.email,
+      status: i.status,
+      invitedAt: i.invitedAt,
+    })),
   })
 })

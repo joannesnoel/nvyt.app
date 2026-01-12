@@ -8,7 +8,6 @@ const updateStatusSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const eventId = getRouterParam(event, 'eventId')
   const ticketTypeId = getRouterParam(event, 'ticketTypeId')
   const body = await readBody(event)
@@ -20,28 +19,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Require canManageTickets permission (owner or collaborator)
+  await requireEventAccess(event, eventId, 'canManageTickets')
+
   const db = useDatabase()
-
-  // Verify event exists and user owns it
-  const [eventRecord] = await db
-    .select()
-    .from(events)
-    .where(eq(events.id, eventId))
-    .limit(1)
-
-  if (!eventRecord) {
-    throw createError({
-      statusCode: 404,
-      message: 'Event not found',
-    })
-  }
-
-  if (eventRecord.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'You are not authorized to manage this event',
-    })
-  }
 
   // Verify ticket type exists
   const [existingTicketType] = await db

@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm'
-import { users } from '@nvyt/db'
+import { eq, and, isNull, isNotNull } from 'drizzle-orm'
+import { users, eventCollaborators } from '@nvyt/db'
 import { registerSchema } from '@nvyt/shared'
 
 export default defineEventHandler(async (event) => {
@@ -15,7 +15,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { name, email, password } = result.data
+  const { name, email, password, inviteToken } = result.data as {
+    name: string
+    email: string
+    password: string
+    inviteToken?: string
+  }
   const db = useDatabase()
 
   // Check if user already exists
@@ -30,6 +35,33 @@ export default defineEventHandler(async (event) => {
       statusCode: 409,
       message: 'An account with this email already exists',
     })
+  }
+
+  // If invite token provided, validate it
+  let pendingInvitation = null
+  if (inviteToken) {
+    pendingInvitation = await db.query.eventCollaborators.findFirst({
+      where: and(
+        eq(eventCollaborators.inviteToken, inviteToken),
+        isNull(eventCollaborators.userId),
+        isNotNull(eventCollaborators.invitedEmail)
+      ),
+    })
+
+    if (!pendingInvitation) {
+      throw createError({
+        statusCode: 400,
+        message: 'Invalid or expired invitation token',
+      })
+    }
+
+    // Verify the email matches
+    if (pendingInvitation.invitedEmail?.toLowerCase() !== email.toLowerCase()) {
+      throw createError({
+        statusCode: 400,
+        message: 'Email does not match the invitation',
+      })
+    }
   }
 
   // Create user
@@ -50,6 +82,37 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Link pending invitation if provided
+  if (pendingInvitation) {
+    await db
+      .update(eventCollaborators)
+      .set({
+        userId: user.id,
+        invitedEmail: null,
+        inviteToken: null,
+        acceptedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(eventCollaborators.id, pendingInvitation.id))
+  }
+
+  // Also link any other pending invitations for this email
+  await db
+    .update(eventCollaborators)
+    .set({
+      userId: user.id,
+      invitedEmail: null,
+      inviteToken: null,
+      acceptedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(eventCollaborators.invitedEmail, email.toLowerCase()),
+        isNull(eventCollaborators.userId)
+      )
+    )
+
   // Create session
   const sessionToken = await createSession(event, user)
   const accessToken = await createAccessToken(user)
@@ -63,5 +126,8 @@ export default defineEventHandler(async (event) => {
     },
     accessToken, // For mobile apps
     sessionToken, // For reference (cookie is also set)
+    linkedInvitation: pendingInvitation ? {
+      eventId: pendingInvitation.eventId,
+    } : null,
   })
 })

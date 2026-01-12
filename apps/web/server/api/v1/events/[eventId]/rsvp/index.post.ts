@@ -1,5 +1,5 @@
 import { eq, and, sql } from 'drizzle-orm'
-import { events, attendees, users, type User } from '@nvyt/db'
+import { events, attendees, users, eventInvitations, type User } from '@nvyt/db'
 import { createRsvpSchema } from '@nvyt/shared'
 import { nanoid } from 'nanoid'
 import {
@@ -12,7 +12,9 @@ import {
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
+  const query = getQuery(event)
   const eventId = getRouterParam(event, 'eventId')
+  const inviteToken = (query.invite || body.inviteToken) as string | undefined
 
   if (!eventId) {
     throw createError({
@@ -159,6 +161,30 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Check for invitation - either by token or by email
+  let invitation = null
+  if (inviteToken) {
+    // Look up by token
+    invitation = await db.query.eventInvitations.findFirst({
+      where: and(
+        eq(eventInvitations.inviteToken, inviteToken),
+        eq(eventInvitations.eventId, eventId),
+        eq(eventInvitations.status, 'pending')
+      ),
+    })
+  }
+
+  // Also check by email if no token match
+  if (!invitation) {
+    invitation = await db.query.eventInvitations.findFirst({
+      where: and(
+        eq(eventInvitations.email, user.email.toLowerCase()),
+        eq(eventInvitations.eventId, eventId),
+        eq(eventInvitations.status, 'pending')
+      ),
+    })
+  }
+
   // Check capacity
   let status: 'pending' | 'confirmed' | 'waitlisted' = 'confirmed'
 
@@ -196,8 +222,23 @@ export default defineEventHandler(async (event) => {
       status,
       qrCode,
       respondedAt: new Date(),
+      // Link invitation if found
+      invitedBy: invitation?.invitedBy || null,
+      invitedAt: invitation?.invitedAt || null,
     })
     .returning()
+
+  // Mark invitation as accepted
+  if (invitation) {
+    await db
+      .update(eventInvitations)
+      .set({
+        status: 'accepted',
+        acceptedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(eventInvitations.id, invitation.id))
+  }
 
   // Send confirmation email (async, don't block response)
   const eventUrl = `${config.public.appUrl}/events/${eventData.slug}`

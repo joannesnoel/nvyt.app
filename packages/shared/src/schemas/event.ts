@@ -32,6 +32,7 @@ export const createEventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
   description: z.string().max(5000).optional(),
   coverImage: z.string().url().optional(),
+  organizationName: z.string().max(100).optional(), // Override "Organized by" display
 
   startDate: dateTimeString,
   endDate: dateTimeString.optional().or(z.literal('')).transform(val => val || undefined),

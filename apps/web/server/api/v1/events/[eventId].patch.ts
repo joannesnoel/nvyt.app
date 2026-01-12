@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm'
-import { events } from '@nvyt/db'
+import { eq, and, inArray } from 'drizzle-orm'
+import { events, attendees, users, tickets, orders } from '@nvyt/db'
 import { updateEventSchema } from '@nvyt/shared'
+import { sendEmail, eventCancelledEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const eventId = getRouterParam(event, 'eventId')
   const body = await readBody(event)
 
@@ -13,6 +13,9 @@ export default defineEventHandler(async (event) => {
       message: 'Event ID is required',
     })
   }
+
+  // Require canEdit permission (owner or collaborator)
+  await requireEventAccess(event, eventId, 'canEdit')
 
   const db = useDatabase()
 
@@ -27,14 +30,6 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 404,
       message: 'Event not found',
-    })
-  }
-
-  // Verify ownership
-  if (existingEvent.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'You can only edit your own events',
     })
   }
 
@@ -87,7 +82,79 @@ export default defineEventHandler(async (event) => {
     .where(eq(events.id, eventId))
     .returning()
 
-  // TODO: If status changed to cancelled, notify all attendees
+  // If status changed to cancelled, notify all attendees
+  if (statusUpdate.status === 'cancelled' && existingEvent.status !== 'cancelled') {
+    // Get organizer name
+    const [organizer] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, existingEvent.organizerId))
+      .limit(1)
+
+    const organizerName = organizer?.name || 'The organizer'
+    const eventDate = new Date(existingEvent.startDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+
+    // Get all confirmed/pending RSVP attendees
+    const rsvpAttendees = await db
+      .select({
+        email: users.email,
+        name: users.name,
+      })
+      .from(attendees)
+      .innerJoin(users, eq(attendees.userId, users.id))
+      .where(
+        and(
+          eq(attendees.eventId, eventId),
+          inArray(attendees.status, ['confirmed', 'pending', 'waitlisted'])
+        )
+      )
+
+    // Get all ticket holders
+    const ticketHolders = await db
+      .select({
+        email: tickets.attendeeEmail,
+        name: tickets.attendeeName,
+      })
+      .from(tickets)
+      .innerJoin(orders, eq(tickets.orderId, orders.id))
+      .where(
+        and(
+          eq(orders.eventId, eventId),
+          inArray(tickets.status, ['confirmed', 'pending'])
+        )
+      )
+
+    // Combine and deduplicate by email
+    const allAttendees = new Map<string, string>()
+    for (const a of rsvpAttendees) {
+      allAttendees.set(a.email, a.name || 'there')
+    }
+    for (const t of ticketHolders) {
+      if (!allAttendees.has(t.email)) {
+        allAttendees.set(t.email, t.name || 'there')
+      }
+    }
+
+    // Send cancellation emails (async, don't block response)
+    for (const [email, name] of allAttendees) {
+      const emailContent = eventCancelledEmail({
+        userName: name,
+        eventTitle: existingEvent.title,
+        eventDate,
+        organizerName,
+      })
+
+      sendEmail({ to: email, ...emailContent })
+        .catch(err => console.error(`[Event] Failed to send cancellation email to ${email}:`, err))
+    }
+
+    console.log(`[Event] Sent cancellation emails to ${allAttendees.size} attendees for event ${eventId}`)
+  }
 
   return successResponse(updated)
 })

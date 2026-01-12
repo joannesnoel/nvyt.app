@@ -8,6 +8,8 @@ definePageMeta({
 const form = reactive<Partial<CreateEventInput>>({
   title: '',
   description: '',
+  coverImage: '',
+  organizationName: '',
   startDate: '',
   endDate: '',
   location: '',
@@ -124,6 +126,22 @@ async function handleSubmit() {
                 v-model="form.description"
                 placeholder="Tell people about your event..."
                 :rows="4"
+              />
+            </UFormGroup>
+
+            <UFormGroup label="Cover Image" name="coverImage">
+              <ImageUpload
+                v-model="form.coverImage"
+                folder="events"
+                placeholder="Click or drag to upload a cover image"
+              />
+            </UFormGroup>
+
+            <UFormGroup label="Organization Name" name="organizationName" hint="Optional - overrides your name as organizer">
+              <UInput
+                v-model="form.organizationName"
+                placeholder="e.g., Tech Meetup PH, Company Name"
+                icon="i-heroicons-building-office"
               />
             </UFormGroup>
           </div>
@@ -258,7 +276,7 @@ async function handleSubmit() {
             </template>
 
             <UCheckbox
-              v-if="form.registrationMode !== 'open'"
+              v-if="form.registrationMode === 'rsvp'"
               v-model="form.contributionsEnabled"
               label="Enable contribution list"
               help="Let attendees sign up to bring items"

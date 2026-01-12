@@ -30,10 +30,10 @@
 │                                    │                                │
 │  ┌─────────────────────────────────┼───────────────────────────┐   │
 │  │                                 ▼                            │   │
-│  │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐  │   │
-│  │  │ PostgreSQL  │    │    Redis    │    │  Object Storage │  │   │
-│  │  │  (Primary)  │    │   (Cache)   │    │     (S3/MinIO)  │  │   │
-│  │  └─────────────┘    └─────────────┘    └─────────────────┘  │   │
+│  │  ┌─────────────┐    ┌─────────────────┐                      │   │
+│  │  │ PostgreSQL  │    │  Object Storage │                      │   │
+│  │  │  (Primary)  │    │     (S3/MinIO)  │                      │   │
+│  │  └─────────────┘    └─────────────────┘                      │   │
 │  │         DATA LAYER                                           │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
@@ -41,8 +41,8 @@
          ┌─────────────────┼─────────────────┐
          ▼                 ▼                 ▼
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  PayMongo   │    │   Resend    │    │  External   │
-│  (Payments) │    │   (Email)   │    │   APIs      │
+│  PayMongo   │    │   Resend    │    │   Pusher    │
+│  (Payments) │    │   (Email)   │    │ (Real-time) │
 └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
@@ -76,7 +76,6 @@
 | Technology | Purpose |
 |------------|---------|
 | **PostgreSQL 16** | Primary database |
-| **Redis 7** | Caching, sessions, queues |
 
 ### Infrastructure
 
@@ -94,6 +93,7 @@
 | **PayMongo** | Payment processing |
 | **Resend** | Transactional emails |
 | **S3/MinIO** | File storage |
+| **Pusher** | Real-time WebSocket updates |
 
 ---
 
@@ -209,6 +209,24 @@ nvyt.app/
 │ quantity_needed   │       │ notes             │
 │ ...               │       │ ...               │
 └───────────────────┘       └───────────────────┘
+
+┌─────────────────────┐
+│ event_collaborators │
+├─────────────────────┤
+│ id (PK)             │
+│ event_id            │◄── references events
+│ user_id             │◄── references users
+│ can_edit            │
+│ can_publish         │
+│ can_manage_tickets  │
+│ can_check_in        │
+│ can_manage_attendees│
+│ can_view_analytics  │
+│ invited_by          │◄── references users
+│ invited_at          │
+│ accepted_at         │
+│ ...                 │
+└─────────────────────┘
 ```
 
 ### Key Tables
@@ -218,7 +236,9 @@ nvyt.app/
 | `users` | User accounts |
 | `sessions` | Active sessions (web) |
 | `refresh_tokens` | JWT refresh tokens (mobile) |
+| `account_setup_tokens` | Guest checkout account setup |
 | `events` | Event listings |
+| `event_collaborators` | Team members with permissions |
 | `attendees` | RSVPs for free events |
 | `ticket_types` | Ticket tiers for paid events |
 | `tickets` | Individual purchased tickets |
@@ -305,7 +325,9 @@ API is versioned via URL path:
 Namespace: nvyt
 ├── Deployment: nvyt-web (2-10 replicas)
 │   └── Container: web
-│       ├── Image: ghcr.io/org/nvyt-web:latest
+│       ├── Image: <registry>/nvyt-web:latest
+│       │   # Options: ghcr.io/org/nvyt-web:latest (GHCR)
+│       │   #          192.168.0.20:30500/nvyt-web:latest (local registry)
 │       ├── Port: 3000
 │       ├── Resources: 256Mi-512Mi RAM, 100m-500m CPU
 │       ├── Probes: /api/health
@@ -347,12 +369,12 @@ Namespace: nvyt
            │              │              │
            └──────────────┼──────────────┘
                           │
-            ┌─────────────┴─────────────┐
-            ▼                           ▼
-      ┌──────────┐               ┌──────────┐
-      │ Postgres │               │  Redis   │
-      │ (Primary)│               │ (Cluster)│
-      └──────────┘               └──────────┘
+                          │
+                          ▼
+                    ┌──────────┐
+                    │ Postgres │
+                    │ (Primary)│
+                    └──────────┘
 ```
 
 ---
@@ -381,7 +403,7 @@ Namespace: nvyt
 
 ### API Security
 
-- Rate limiting (Redis-based)
+- Rate limiting (planned)
 - Input validation (Zod)
 - SQL injection prevention (Drizzle ORM)
 - XSS prevention (Vue auto-escaping)
@@ -395,8 +417,7 @@ Namespace: nvyt
 | Layer | Cache | TTL |
 |-------|-------|-----|
 | CDN | Static assets | 1 year |
-| Redis | Session data | 7 days |
-| Redis | Event listings | 5 minutes |
+| PostgreSQL | Session data | 7 days |
 | Browser | API responses | Varies |
 
 ### Database Optimization
@@ -433,7 +454,6 @@ GET /api/health
 - Request count by status code
 - Active connections
 - Database query latency
-- Redis operations
 
 ### Logging
 
@@ -456,7 +476,6 @@ GET /api/health
 ### Scaling
 
 - Database read replicas
-- Redis cluster mode
 - CDN for media files
 - Edge functions for API
 
@@ -469,4 +488,4 @@ GET /api/health
 
 ---
 
-*Last updated: January 2026*
+*Last updated: January 10, 2026*

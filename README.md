@@ -27,7 +27,7 @@
 |-------|------------|
 | Frontend | Nuxt 3, Vue 3, Tailwind CSS, Nuxt UI |
 | Backend | Nitro (H3), Drizzle ORM |
-| Database | PostgreSQL, Redis |
+| Database | PostgreSQL |
 | Payments | PayMongo |
 | Infrastructure | Docker, Kubernetes |
 
@@ -99,9 +99,6 @@ nvyt.app/
 ```env
 # Database
 DATABASE_URL=postgresql://nvyt:nvyt@localhost:5432/nvyt
-
-# Redis
-REDIS_URL=redis://localhost:6379
 
 # Auth
 JWT_SECRET=your-secret-key

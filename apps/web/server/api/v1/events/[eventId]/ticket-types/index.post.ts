@@ -3,7 +3,6 @@ import { createTicketTypeSchema } from '@nvyt/shared'
 import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const eventId = getRouterParam(event, 'eventId')
   const body = await readBody(event)
 
@@ -14,9 +13,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Require canManageTickets permission (owner or collaborator)
+  await requireEventAccess(event, eventId, 'canManageTickets')
+
   const db = useDatabase()
 
-  // Verify event exists, user owns it, and ticketing is enabled
+  // Get event data to check registration mode
   const [eventRecord] = await db
     .select()
     .from(events)
@@ -27,13 +29,6 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 404,
       message: 'Event not found',
-    })
-  }
-
-  if (eventRecord.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'You are not authorized to manage this event',
     })
   }
 

@@ -21,6 +21,7 @@ export const events = pgTable('events', {
   slug: text('slug').notNull().unique(),
   description: text('description'),
   coverImage: text('cover_image'),
+  organizationName: text('organization_name'), // Optional: override "Organized by" display
 
   // Date & Location
   startDate: timestamp('start_date', { withTimezone: true }).notNull(),

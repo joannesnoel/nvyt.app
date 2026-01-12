@@ -6,6 +6,7 @@ definePageMeta({
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 const token = computed(() => route.query.token as string | undefined)
+const inviteToken = computed(() => route.query.invite as string | undefined)
 
 const toast = useToast()
 const { user, isLoading: authLoading } = useAuth()
@@ -272,8 +273,11 @@ async function handleRsvp(isGuest = false) {
             isGuest: true,
             guestName: rsvpGuestForm.value.name,
             guestEmail: rsvpGuestForm.value.email,
+            inviteToken: inviteToken.value,
           }
-        : {},
+        : {
+            inviteToken: inviteToken.value,
+          },
     }) as any
 
     // Close modal if open
@@ -369,6 +373,109 @@ function getStatusColor(status: string) {
     default: return 'gray'
   }
 }
+
+// Contribution claiming state
+const showClaimModal = ref(false)
+const claimingItem = ref<any>(null)
+const claimForm = ref({
+  quantity: 1,
+  notes: '',
+})
+const isClaimLoading = ref(false)
+
+// Check if user can claim contributions (must be confirmed attendee)
+const canClaimContributions = computed(() => {
+  return user.value && userAttendee.value?.status === 'confirmed' && !isOrganizer.value
+})
+
+// Fetch contributions for this event
+const { data: contributionsResponse, refresh: refreshContributions } = await useFetch(
+  () => event.value?.id ? `/api/v1/events/${event.value.id}/contributions` : null,
+  {
+    watch: [event],
+    immediate: false,
+  }
+)
+const contributions = computed(() => contributionsResponse.value?.data ?? event.value?.contributionItems ?? [])
+
+// Refresh contributions when event loads
+watch(event, (e) => {
+  if (e?.contributionsEnabled) {
+    refreshContributions()
+  }
+}, { immediate: true })
+
+function openClaimModal(item: any) {
+  claimingItem.value = item
+  claimForm.value = {
+    quantity: 1,
+    notes: '',
+  }
+  showClaimModal.value = true
+}
+
+async function claimContribution() {
+  if (!event.value || !claimingItem.value) return
+
+  isClaimLoading.value = true
+  try {
+    await $fetch(`/api/v1/events/${event.value.id}/contributions/${claimingItem.value.id}/claim`, {
+      method: 'POST',
+      body: claimForm.value,
+    })
+    toast.add({
+      title: 'Claimed!',
+      description: `You signed up to bring ${claimingItem.value.name}`,
+      color: 'green',
+    })
+    showClaimModal.value = false
+    await refreshContributions()
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to claim item',
+      color: 'red',
+    })
+  } finally {
+    isClaimLoading.value = false
+  }
+}
+
+async function unclaimContribution(item: any) {
+  if (!event.value) return
+
+  isClaimLoading.value = true
+  try {
+    await $fetch(`/api/v1/events/${event.value.id}/contributions/${item.id}/claim`, {
+      method: 'DELETE',
+    })
+    toast.add({
+      title: 'Removed',
+      description: 'Your contribution claim has been removed',
+      color: 'green',
+    })
+    await refreshContributions()
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to remove claim',
+      color: 'red',
+    })
+  } finally {
+    isClaimLoading.value = false
+  }
+}
+
+function getCategoryColor(category: string) {
+  const colors: Record<string, string> = {
+    food: 'orange',
+    drinks: 'blue',
+    supplies: 'green',
+    equipment: 'purple',
+    other: 'gray',
+  }
+  return colors[category] || 'gray'
+}
 </script>
 
 <template>
@@ -410,20 +517,20 @@ function getStatusColor(status: string) {
         <!-- Event Header -->
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
           <div>
-            <div class="flex items-center gap-2 mb-2">
+            <div v-if="event.visibility === 'private' || event.status === 'cancelled'" class="flex items-center gap-2 mb-2">
               <UBadge v-if="event.visibility === 'private'" color="gray" variant="soft">
                 <UIcon name="i-heroicons-lock-closed" class="w-3 h-3 mr-1" />
                 Private
               </UBadge>
-              <UBadge :color="event.status === 'published' ? 'green' : 'yellow'" variant="soft">
-                {{ event.status }}
+              <UBadge v-if="event.status === 'cancelled'" color="red" variant="soft">
+                Cancelled
               </UBadge>
             </div>
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
               {{ event.title }}
             </h1>
             <p class="text-gray-600 dark:text-gray-400 mt-2">
-              Organized by {{ event.organizer?.name }}
+              Organized by {{ event.organizationName || event.organizer?.name }}
             </p>
           </div>
 
@@ -566,27 +673,109 @@ function getStatusColor(status: string) {
             </UCard>
 
             <!-- Contribution List -->
-            <UCard v-if="event.contributionsEnabled && event.contributionItems?.length">
+            <UCard v-if="event.contributionsEnabled && contributions?.length">
               <template #header>
-                <h2 class="font-semibold text-gray-900 dark:text-white">Contribution List</h2>
+                <div class="flex items-center justify-between">
+                  <h2 class="font-semibold text-gray-900 dark:text-white">Contribution List</h2>
+                  <p v-if="canClaimContributions" class="text-sm text-gray-500">
+                    Sign up to bring something!
+                  </p>
+                </div>
               </template>
               <div class="space-y-3">
                 <div
-                  v-for="item in event.contributionItems"
+                  v-for="item in contributions"
                   :key="item.id"
-                  class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                  class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                  :class="{ 'opacity-60': item.isFullyClaimed }"
                 >
-                  <div>
-                    <p class="font-medium text-gray-900 dark:text-white">{{ item.name }}</p>
-                    <p v-if="item.description" class="text-sm text-gray-500">{{ item.description }}</p>
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <p class="font-medium text-gray-900 dark:text-white">{{ item.name }}</p>
+                        <UBadge :color="getCategoryColor(item.category)" variant="soft" size="xs">
+                          {{ item.category }}
+                        </UBadge>
+                        <UBadge v-if="item.isFullyClaimed" color="green" variant="soft" size="xs">
+                          Complete
+                        </UBadge>
+                      </div>
+                      <p v-if="item.description" class="text-sm text-gray-500 mb-2">{{ item.description }}</p>
+                      <div class="flex items-center gap-3 text-sm">
+                        <span :class="item.isFullyClaimed ? 'text-green-600' : 'text-gray-600 dark:text-gray-400'">
+                          {{ item.quantityClaimed }}/{{ item.quantityNeeded }} claimed
+                        </span>
+                      </div>
+                      <!-- User's claim indicator -->
+                      <p v-if="item.userClaim" class="text-sm text-primary mt-1">
+                        You're bringing {{ item.userClaim.quantity }}x
+                        <span v-if="item.userClaim.notes" class="text-gray-500">- "{{ item.userClaim.notes }}"</span>
+                      </p>
+                    </div>
+                    <div class="flex-shrink-0">
+                      <!-- Claim/Unclaim buttons -->
+                      <template v-if="canClaimContributions">
+                        <UButton
+                          v-if="item.userClaim"
+                          color="red"
+                          variant="outline"
+                          size="sm"
+                          :loading="isClaimLoading"
+                          @click="unclaimContribution(item)"
+                        >
+                          Remove
+                        </UButton>
+                        <UButton
+                          v-else-if="!item.isFullyClaimed"
+                          color="primary"
+                          size="sm"
+                          :loading="isClaimLoading"
+                          @click="openClaimModal(item)"
+                        >
+                          I'll bring this
+                        </UButton>
+                      </template>
+                    </div>
                   </div>
-                  <div class="text-right">
-                    <span class="text-sm text-gray-600 dark:text-gray-400">
-                      {{ item.quantityClaimed }}/{{ item.quantityNeeded }} claimed
-                    </span>
+                  <!-- Progress bar -->
+                  <UProgress
+                    :value="(item.quantityClaimed / item.quantityNeeded) * 100"
+                    :color="item.isFullyClaimed ? 'green' : 'primary'"
+                    size="xs"
+                    class="mt-2"
+                  />
+                  <!-- Claims list (show who's bringing what) -->
+                  <div v-if="item.claims?.length > 0" class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <p class="text-xs text-gray-500 mb-1">Who's bringing this:</p>
+                    <div class="flex flex-wrap gap-2">
+                      <div
+                        v-for="claim in item.claims"
+                        :key="claim.id"
+                        class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400"
+                      >
+                        <UAvatar :src="claim.user?.avatarUrl" :alt="claim.user?.name" size="2xs" />
+                        <span>{{ claim.user?.name }}</span>
+                        <span v-if="claim.quantity > 1">({{ claim.quantity }}x)</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+              <!-- Info for non-attendees -->
+              <template v-if="!canClaimContributions && !isOrganizer" #footer>
+                <p class="text-sm text-gray-500 text-center">
+                  <template v-if="!user">
+                    <NuxtLink :to="`/login?redirect=/events/${event.slug}`" class="text-primary hover:underline">Log in</NuxtLink>
+                    and RSVP to sign up for contributions
+                  </template>
+                  <template v-else-if="!userAttendee">
+                    RSVP to this event to sign up for contributions
+                  </template>
+                  <template v-else-if="userAttendee.status !== 'confirmed'">
+                    Your RSVP must be confirmed to sign up for contributions
+                  </template>
+                </p>
+              </template>
             </UCard>
           </div>
 
@@ -943,6 +1132,81 @@ function getStatusColor(status: string) {
             >
               <UIcon name="i-heroicons-hand-raised" class="w-4 h-4 mr-2" />
               Confirm RSVP
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Claim Contribution Modal -->
+    <UModal v-model="showClaimModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+              <UIcon name="i-heroicons-gift" class="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Sign Up to Bring
+              </h3>
+              <p class="text-sm text-gray-500">{{ claimingItem?.name }}</p>
+            </div>
+          </div>
+        </template>
+
+        <div v-if="claimingItem" class="space-y-4">
+          <p v-if="claimingItem.description" class="text-sm text-gray-600 dark:text-gray-400">
+            {{ claimingItem.description }}
+          </p>
+
+          <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <p class="text-sm">
+              <span class="font-medium">{{ claimingItem.remainingNeeded }}</span> more needed
+              <span class="text-gray-500">
+                ({{ claimingItem.quantityClaimed }}/{{ claimingItem.quantityNeeded }} claimed)
+              </span>
+            </p>
+          </div>
+
+          <UFormGroup label="How many will you bring?">
+            <UInput
+              v-model.number="claimForm.quantity"
+              type="number"
+              min="1"
+              :max="claimingItem.remainingNeeded"
+            />
+            <template #hint>
+              <span class="text-gray-500">Max: {{ claimingItem.remainingNeeded }}</span>
+            </template>
+          </UFormGroup>
+
+          <UFormGroup label="Notes (optional)">
+            <UTextarea
+              v-model="claimForm.notes"
+              placeholder="e.g., I'll bring homemade pasta salad"
+              :rows="2"
+            />
+          </UFormGroup>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showClaimModal = false"
+            >
+              Cancel
+            </UButton>
+            <UButton
+              color="primary"
+              :loading="isClaimLoading"
+              :disabled="!claimForm.quantity || claimForm.quantity < 1 || claimForm.quantity > (claimingItem?.remainingNeeded || 1)"
+              @click="claimContribution"
+            >
+              <UIcon name="i-heroicons-check" class="w-4 h-4 mr-2" />
+              Confirm
             </UButton>
           </div>
         </template>

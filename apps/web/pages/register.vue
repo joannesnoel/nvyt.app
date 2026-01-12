@@ -5,8 +5,39 @@ definePageMeta({
   layout: 'default',
 })
 
+const route = useRoute()
 const { register, isAuthenticated } = useAuth()
 const toast = useToast()
+
+// Check for invite token in URL
+const inviteToken = computed(() => route.query.invite as string | undefined)
+const inviteData = ref<{ email: string; eventTitle: string; eventId: string } | null>(null)
+const loadingInvite = ref(false)
+
+// Fetch invite data if token present
+async function fetchInviteData() {
+  if (!inviteToken.value) return
+
+  loadingInvite.value = true
+  try {
+    const response = await $fetch('/api/v1/auth/verify-invite', {
+      query: { token: inviteToken.value },
+    })
+    if (response.success) {
+      inviteData.value = response.data
+      form.email = response.data.email || ''
+    }
+  } catch {
+    // Invalid token, ignore and let user register normally
+    inviteData.value = null
+  } finally {
+    loadingInvite.value = false
+  }
+}
+
+onMounted(() => {
+  fetchInviteData()
+})
 
 // Redirect if already logged in
 watch(isAuthenticated, (value) => {
@@ -27,7 +58,10 @@ const error = ref('')
 
 async function handleSubmit() {
   // Validate
-  const result = registerSchema.safeParse(form)
+  const result = registerSchema.safeParse({
+    ...form,
+    inviteToken: inviteToken.value,
+  })
   if (!result.success) {
     error.value = result.error.errors[0]?.message || 'Validation failed'
     return
@@ -37,15 +71,25 @@ async function handleSubmit() {
   error.value = ''
 
   try {
-    await register(form)
+    const response = await register({
+      ...form,
+      inviteToken: inviteToken.value,
+    })
 
     toast.add({
       title: 'Account created!',
-      description: 'Welcome to nvyt.',
+      description: inviteData.value
+        ? `Welcome to nvyt! You're now a collaborator on "${inviteData.value.eventTitle}".`
+        : 'Welcome to nvyt.',
       color: 'green',
     })
 
-    await navigateTo('/dashboard')
+    // Redirect to the event if coming from an invite, otherwise dashboard
+    if (response?.linkedInvitation?.eventId) {
+      await navigateTo(`/dashboard/events/${response.linkedInvitation.eventId}`)
+    } else {
+      await navigateTo('/dashboard')
+    }
   } catch (e: any) {
     error.value = e.data?.message || 'Registration failed'
   } finally {
@@ -59,16 +103,30 @@ async function handleSubmit() {
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Create your account
+          {{ inviteData ? 'Accept Invitation' : 'Create your account' }}
         </h1>
         <p class="text-gray-600 dark:text-gray-400 mt-2">
-          Start creating amazing events
+          {{ inviteData ? `Join as a collaborator on "${inviteData.eventTitle}"` : 'Start creating amazing events' }}
         </p>
       </div>
 
       <UCard>
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <template v-if="loadingInvite">
+          <div class="flex items-center justify-center py-8">
+            <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary" />
+          </div>
+        </template>
+
+        <form v-else @submit.prevent="handleSubmit" class="space-y-4">
           <UAlert v-if="error" color="red" :title="error" />
+
+          <UAlert
+            v-if="inviteData"
+            color="blue"
+            icon="i-heroicons-user-plus"
+            title="You've been invited!"
+            :description="`Create an account to collaborate on '${inviteData.eventTitle}'.`"
+          />
 
           <UFormGroup label="Name" name="name">
             <UInput
@@ -87,7 +145,11 @@ async function handleSubmit() {
               placeholder="you@example.com"
               icon="i-heroicons-envelope"
               size="lg"
+              :disabled="!!inviteData"
             />
+            <template v-if="inviteData" #hint>
+              <span class="text-xs text-gray-500">Email is pre-filled from the invitation</span>
+            </template>
           </UFormGroup>
 
           <UFormGroup label="Password" name="password" hint="At least 8 characters with uppercase, lowercase, and number">
@@ -117,7 +179,7 @@ async function handleSubmit() {
             block
             :loading="loading"
           >
-            Create Account
+            {{ inviteData ? 'Create Account & Accept' : 'Create Account' }}
           </UButton>
         </form>
 

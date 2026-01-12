@@ -9,7 +9,6 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://nvyt:nvyt@postgres:5432/nvyt
-      - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
       - APP_URL=${APP_URL:-http://localhost:3000}
       - PAYMONGO_PUBLIC_KEY=${PAYMONGO_PUBLIC_KEY:-}
@@ -17,8 +16,6 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY:-}
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
 
   postgres:
@@ -37,18 +34,5 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
 volumes:
   postgres_data:
-  redis_data:

@@ -38,7 +38,6 @@ docker compose -f docker/docker-compose.dev.yml up -d
 
 This starts:
 - PostgreSQL on port 5432
-- Redis on port 6379
 
 ### 4. Configure Environment
 
@@ -52,14 +51,17 @@ Edit `.env` with your settings:
 # Database (default works with docker-compose.dev.yml)
 DATABASE_URL=postgresql://nvyt:nvyt@localhost:5432/nvyt
 
-# Redis
-REDIS_URL=redis://localhost:6379
-
 # Auth (change in production!)
 JWT_SECRET=your-super-secret-jwt-key
 
 # App
 APP_URL=http://localhost:3000
+
+# Pusher (for real-time updates - optional in dev)
+NUXT_PUBLIC_PUSHER_KEY=your-pusher-key
+NUXT_PUBLIC_PUSHER_CLUSTER=ap1
+PUSHER_APP_ID=your-app-id
+PUSHER_SECRET=your-pusher-secret
 ```
 
 ### 5. Run Database Migrations
@@ -147,6 +149,7 @@ nvyt.app/
 |------|---------|
 | `packages/db/src/schema/users.ts` | User & auth tables |
 | `packages/db/src/schema/events.ts` | Events table |
+| `packages/db/src/schema/eventCollaborators.ts` | Team members & permissions |
 | `packages/db/src/schema/tickets.ts` | Ticketing tables |
 | `packages/db/src/schema/attendees.ts` | RSVP table |
 | `packages/db/src/schema/contributions.ts` | Contribution tables |
@@ -374,4 +377,4 @@ Recommended extensions:
 
 ---
 
-*Last updated: January 2026*
+*Last updated: January 10, 2026*

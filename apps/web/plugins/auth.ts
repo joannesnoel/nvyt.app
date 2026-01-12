@@ -1,8 +1,6 @@
 export default defineNuxtPlugin(async () => {
   const { fetchUser } = useAuth()
-  
-  // Fetch user on app initialization (only on client)
-  if (import.meta.client) {
-    await fetchUser()
-  }
+
+  // Fetch user on app initialization (both server and client)
+  await fetchUser()
 })

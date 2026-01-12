@@ -21,6 +21,8 @@ const event = computed(() => eventResponse.value?.data)
 const form = reactive<Partial<UpdateEventInput>>({
   title: '',
   description: '',
+  coverImage: '',
+  organizationName: '',
   startDate: '',
   endDate: '',
   location: '',
@@ -59,6 +61,8 @@ watch(event, (newEvent) => {
   if (newEvent) {
     form.title = newEvent.title || ''
     form.description = newEvent.description || ''
+    form.coverImage = newEvent.coverImage || ''
+    form.organizationName = newEvent.organizationName || ''
     form.startDate = formatDateTimeLocal(newEvent.startDate)
     form.endDate = newEvent.endDate ? formatDateTimeLocal(newEvent.endDate) : ''
     form.location = newEvent.location || ''
@@ -181,11 +185,19 @@ async function handleSubmit() {
                 />
               </UFormGroup>
 
-              <UFormGroup label="Cover Image URL" name="coverImage">
-                <UInput
+              <UFormGroup label="Cover Image" name="coverImage">
+                <ImageUpload
                   v-model="form.coverImage"
-                  placeholder="https://example.com/image.jpg"
-                  icon="i-heroicons-photo"
+                  folder="events"
+                  placeholder="Click or drag to upload a cover image"
+                />
+              </UFormGroup>
+
+              <UFormGroup label="Organization Name" name="organizationName" hint="Optional - overrides your name as organizer">
+                <UInput
+                  v-model="form.organizationName"
+                  placeholder="e.g., Tech Meetup PH, Company Name"
+                  icon="i-heroicons-building-office"
                 />
               </UFormGroup>
             </div>
@@ -320,7 +332,7 @@ async function handleSubmit() {
               </template>
 
               <UCheckbox
-                v-if="form.registrationMode !== 'open'"
+                v-if="form.registrationMode === 'rsvp'"
                 v-model="form.contributionsEnabled"
                 label="Enable contribution list"
                 help="Let attendees sign up to bring items"

@@ -26,6 +26,8 @@
 
 ### Step 1: Build and Push Image
 
+**Using GitHub Container Registry (GHCR):**
+
 ```bash
 # Build the image
 docker build -t ghcr.io/your-org/nvyt-web:latest -f docker/Dockerfile .
@@ -33,6 +35,18 @@ docker build -t ghcr.io/your-org/nvyt-web:latest -f docker/Dockerfile .
 # Push to registry
 docker push ghcr.io/your-org/nvyt-web:latest
 ```
+
+**Using Local/Private Registry:**
+
+```bash
+# Build the image for local registry
+docker build -t 192.168.0.20:30500/nvyt-web:latest -f docker/Dockerfile .
+
+# Push to local registry
+docker push 192.168.0.20:30500/nvyt-web:latest
+```
+
+Note: When using a local registry, you can comment out `imagePullSecrets` in the deployment manifest.
 
 ### Step 2: Configure Secrets
 
@@ -47,11 +61,14 @@ metadata:
 type: Opaque
 stringData:
   DATABASE_URL: "postgresql://user:pass@host:5432/nvyt"
-  REDIS_URL: "redis://host:6379"
   JWT_SECRET: "your-production-secret-min-32-chars"
   PAYMONGO_SECRET_KEY: "sk_live_xxx"
   PAYMONGO_PUBLIC_KEY: "pk_live_xxx"
   RESEND_API_KEY: "re_xxx"
+  PUSHER_APP_ID: "your-pusher-app-id"
+  PUSHER_KEY: "your-pusher-key"
+  PUSHER_SECRET: "your-pusher-secret"
+  PUSHER_CLUSTER: "ap1"
 ```
 
 **Important:** For production, use:
@@ -61,15 +78,29 @@ stringData:
 
 ### Step 3: Update Deployment Image
 
-Edit `k8s/deployment.yaml`:
+Edit `k8s/deployment.yaml` with your registry:
 
+**For GHCR:**
 ```yaml
 spec:
   template:
     spec:
       containers:
         - name: web
-          image: ghcr.io/your-org/nvyt-web:latest  # Your image
+          image: ghcr.io/your-org/nvyt-web:latest
+      imagePullSecrets:
+        - name: ghcr-secret
+```
+
+**For Local/Private Registry:**
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          image: 192.168.0.20:30500/nvyt-web:latest
+      # imagePullSecrets not needed for local registry
 ```
 
 ### Step 4: Configure Ingress
@@ -276,53 +307,6 @@ spec:
 
 ---
 
-## Redis Setup
-
-### Managed Redis
-
-**Options:**
-- [Upstash](https://upstash.com/) - Serverless Redis
-- [Redis Cloud](https://redis.com/cloud/)
-- [AWS ElastiCache](https://aws.amazon.com/elasticache/)
-
-### Self-Hosted Redis
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redis
-  namespace: nvyt
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: redis
-  template:
-    metadata:
-      labels:
-        app: redis
-    spec:
-      containers:
-        - name: redis
-          image: redis:7-alpine
-          ports:
-            - containerPort: 6379
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis-service
-  namespace: nvyt
-spec:
-  selector:
-    app: redis
-  ports:
-    - port: 6379
-```
-
----
-
 ## Environment Variables
 
 ### Required
@@ -330,7 +314,6 @@ spec:
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection string |
 | `JWT_SECRET` | Secret for signing JWTs (min 32 chars) |
 | `APP_URL` | Public URL (https://nvyt.app) |
 
@@ -341,6 +324,10 @@ spec:
 | `PAYMONGO_PUBLIC_KEY` | PayMongo public key | - |
 | `PAYMONGO_SECRET_KEY` | PayMongo secret key | - |
 | `RESEND_API_KEY` | Resend email API key | - |
+| `PUSHER_APP_ID` | Pusher application ID | - |
+| `PUSHER_KEY` | Pusher public key | - |
+| `PUSHER_SECRET` | Pusher secret key | - |
+| `PUSHER_CLUSTER` | Pusher cluster region | ap1 |
 | `NODE_ENV` | Environment | production |
 
 ---
@@ -510,4 +497,4 @@ kubectl exec nvyt-web-xxx -n nvyt -- env
 
 ---
 
-*Last updated: January 2026*
+*Last updated: January 10, 2026*

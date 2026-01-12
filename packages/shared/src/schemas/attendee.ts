@@ -9,6 +9,8 @@ export const createRsvpSchema = z.object({
   isGuest: z.boolean().optional(),
   guestName: z.string().min(2).max(100).optional(),
   guestEmail: z.string().email().optional(),
+  // Invitation tracking
+  inviteToken: z.string().optional(),
 }).refine(
   (data) => {
     // If isGuest is true, guestName and guestEmail are required

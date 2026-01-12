@@ -523,6 +523,88 @@ export function eventCancelledEmail(data: {
   }
 }
 
+export function ticketPurchaseConfirmationEmail(data: {
+  userName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  orderNumber: string
+  tickets: Array<{ ticketType: string; attendeeName: string; qrCode: string }>
+  totalAmount: string
+  orderUrl: string
+}): { subject: string; html: string } {
+  const ticketRows = data.tickets
+    .map(
+      (t) => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #eee;">${t.ticketType}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #eee;">${t.attendeeName}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #eee; font-family: monospace;">${t.qrCode}</td>
+        </tr>
+      `
+    )
+    .join('')
+
+  return {
+    subject: `Your tickets for ${data.eventTitle} - Order ${data.orderNumber}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">Your Tickets Are Confirmed!</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>Thank you for your purchase! Your tickets for <strong>${data.eventTitle}</strong> are now confirmed.</p>
+
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Order Number:</strong> ${data.orderNumber}</p>
+          <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+          ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+          <p style="margin: 0;"><strong>Total:</strong> ${data.totalAmount}</p>
+        </div>
+
+        <h3 style="color: #111; margin-top: 30px;">Your Tickets</h3>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+          <thead>
+            <tr style="background: #6366f1; color: white;">
+              <th style="padding: 12px; text-align: left;">Ticket Type</th>
+              <th style="padding: 12px; text-align: left;">Attendee</th>
+              <th style="padding: 12px; text-align: left;">QR Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ticketRows}
+          </tbody>
+        </table>
+
+        <p style="color: #666; font-size: 14px;">Show your QR code at the event for check-in. You can also access your tickets anytime from your order page.</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.orderUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">View Your Tickets</a>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          See you at the event!<br>
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
 export function accountSetupEmail(data: {
   userName: string
   setupUrl: string
@@ -601,6 +683,186 @@ export function accountSetupReminderEmail(data: {
         <p style="color: #666; font-size: 14px;">This link will expire in 7 days.</p>
 
         <p style="color: #666; font-size: 14px;">If you didn't request this link, you can safely ignore this email.</p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function collaboratorInvitationEmail(data: {
+  inviterName: string
+  eventTitle: string
+  eventDate: string
+  permissions: string[]
+  acceptUrl: string
+  isNewUser: boolean
+}): { subject: string; html: string } {
+  const permissionList = data.permissions.length > 0
+    ? data.permissions.map(p => `<li>${p}</li>`).join('')
+    : '<li>View event analytics</li>'
+
+  return {
+    subject: `You've been invited to collaborate on "${data.eventTitle}"`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">You're Invited to Collaborate!</h2>
+
+        <p>Hi there,</p>
+
+        <p><strong>${data.inviterName}</strong> has invited you to help manage the event <strong>${data.eventTitle}</strong>.</p>
+
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+          <p style="margin: 0;"><strong>Date:</strong> ${data.eventDate}</p>
+        </div>
+
+        <p><strong>Your permissions:</strong></p>
+        <ul style="color: #666;">
+          ${permissionList}
+        </ul>
+
+        ${data.isNewUser ? `
+        <p style="color: #666; font-size: 14px;">
+          You don't have an nvyt account yet. Click the button below to create your account and accept the invitation.
+        </p>
+        ` : `
+        <p style="color: #666; font-size: 14px;">
+          Click the button below to accept the invitation and start collaborating.
+        </p>
+        `}
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.acceptUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">
+            ${data.isNewUser ? 'Create Account & Accept' : 'Accept Invitation'}
+          </a>
+        </p>
+
+        <p style="color: #666; font-size: 14px;">This invitation link will expire in 7 days.</p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function rsvpInvitationEmail(data: {
+  organizerName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  eventDescription?: string
+  customMessage?: string
+  rsvpUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `You're invited to ${data.eventTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">You're Invited!</h2>
+
+        <p>Hi there,</p>
+
+        <p><strong>${data.organizerName}</strong> has invited you to:</p>
+
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px 0; color: #111;">${data.eventTitle}</h3>
+          <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+          ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+          ${data.eventDescription ? `<p style="margin: 15px 0 0 0; color: #666; font-size: 14px;">${data.eventDescription.substring(0, 200)}${data.eventDescription.length > 200 ? '...' : ''}</p>` : ''}
+        </div>
+
+        ${data.customMessage ? `
+        <div style="background: #eff6ff; border-left: 4px solid #6366f1; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; color: #444; font-style: italic;">"${data.customMessage}"</p>
+          <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">- ${data.organizerName}</p>
+        </div>
+        ` : ''}
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.rsvpUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">
+            View Event & RSVP
+          </a>
+        </p>
+
+        <p style="color: #666; font-size: 14px; text-align: center;">
+          Click the button above to view the full event details and let us know if you can make it.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function passwordResetEmail(data: {
+  userName: string
+  resetUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: 'Reset your nvyt password',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">Reset Your Password</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>We received a request to reset the password for your nvyt account. Click the button below to create a new password:</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.resetUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">
+            Reset Password
+          </a>
+        </p>
+
+        <p style="color: #666; font-size: 14px;">This link will expire in 1 hour for security reasons.</p>
+
+        <p style="color: #666; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
 
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
