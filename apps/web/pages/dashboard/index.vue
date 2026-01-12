@@ -8,11 +8,10 @@ const { user } = useAuth()
 // Fetch my events
 const { data: eventsData, pending: eventsPending } = await useFetch('/api/v1/events/my-events')
 
-// Fetch my tickets/registrations
+// Fetch my tickets/registrations (confirmed or checked-in)
 const { data: ticketsResponse, pending: ticketsPending } = await useFetch('/api/v1/tickets', {
   query: {
     limit: 5,
-    status: 'confirmed',
   },
 })
 
