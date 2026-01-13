@@ -6,3 +6,5 @@ metadata:
 data:
   APP_URL: "https://nvyt.app"
   NODE_ENV: "production"
+  # Comma-separated list of admin emails
+  ADMIN_EMAILS: "jon@creativelogik.net"

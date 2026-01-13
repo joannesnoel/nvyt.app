@@ -32,6 +32,8 @@ export default defineNuxtConfig({
     // Private keys (server-side only)
     jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
     databaseUrl: process.env.DATABASE_URL,
+    // Admin access (comma-separated list of emails)
+    adminEmails: process.env.ADMIN_EMAILS || '',
     paymongoSecretKey: process.env.PAYMONGO_SECRET_KEY,
     paymongoWebhookSecret: process.env.PAYMONGO_WEBHOOK_SECRET,
     // Email - SMTP (Mailtrap in development)

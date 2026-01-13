@@ -82,11 +82,32 @@ export default defineEventHandler(async (event) => {
   // Get ticket types if registration mode is 'tickets'
   let tickets: typeof ticketTypes.$inferSelect[] = []
   if (eventData.registrationMode === 'tickets') {
-    tickets = await db
-      .select()
-      .from(ticketTypes)
-      .where(eq(ticketTypes.eventId, eventData.id))
-      .orderBy(ticketTypes.sortOrder)
+    const now = new Date()
+
+    if (isOrganizer) {
+      // Organizers see all tickets for management
+      tickets = await db
+        .select()
+        .from(ticketTypes)
+        .where(eq(ticketTypes.eventId, eventData.id))
+        .orderBy(ticketTypes.sortOrder)
+    } else {
+      // Public users only see active tickets within sales period
+      tickets = await db
+        .select()
+        .from(ticketTypes)
+        .where(
+          and(
+            eq(ticketTypes.eventId, eventData.id),
+            eq(ticketTypes.status, 'active'),
+            // Sales must have started (or no start date set)
+            sql`(${ticketTypes.salesStart} IS NULL OR ${ticketTypes.salesStart} <= ${now})`,
+            // Sales must not have ended (or no end date set)
+            sql`(${ticketTypes.salesEnd} IS NULL OR ${ticketTypes.salesEnd} >= ${now})`
+          )
+        )
+        .orderBy(ticketTypes.sortOrder)
+    }
   }
 
   // Get contribution items if enabled

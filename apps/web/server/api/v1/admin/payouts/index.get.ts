@@ -8,20 +8,12 @@ const querySchema = z.object({
   status: z.enum(['pending', 'processing', 'completed', 'rejected']).optional(),
 })
 
-// Admin emails (in production, use env variable or database role)
-const ADMIN_EMAILS = ['jon@creativelogik.net']
-
 export default defineEventHandler(async (event) => {
   // Require authentication
   const user = await requireAuth(event)
 
   // Check if user is admin
-  if (!ADMIN_EMAILS.includes(user.email)) {
-    throw createError({
-      statusCode: 403,
-      message: 'Admin access required',
-    })
-  }
+  requireAdmin(user.email)
 
   const db = useDatabase()
 
