@@ -11,6 +11,8 @@ import {
   sendEmail,
   ticketPurchaseConfirmationEmail,
 } from '~/server/utils/email'
+import { getExistingSetupToken } from '~/server/utils/auth'
+import { processPaymentReceived } from '~/server/utils/wallet'
 
 // PayMongo webhook event types we handle
 const HANDLED_EVENTS = [
@@ -140,6 +142,41 @@ export default defineEventHandler(async (event) => {
 
     console.log(`Order ${orderNumber} marked as paid`)
 
+    // Record financial transaction for the event organizer
+    try {
+      // Get event info to find organizer
+      const [eventInfo] = await db
+        .select({
+          id: events.id,
+          title: events.title,
+          organizerId: events.organizerId,
+        })
+        .from(events)
+        .where(eq(events.id, order.eventId))
+        .limit(1)
+
+      if (eventInfo && eventInfo.organizerId) {
+        const grossAmount = Number(order.totalAmount)
+
+        // Process payment and record transaction
+        const walletResult = await processPaymentReceived({
+          userId: eventInfo.organizerId,
+          orderId: order.id,
+          eventId: order.eventId,
+          grossAmount,
+          eventTitle: eventInfo.title,
+        })
+
+        console.log(
+          `[PayMongo] Recorded transaction for organizer ${eventInfo.organizerId}: ` +
+            `Gross=${grossAmount}, Fee=${walletResult.platformFee}, Net=${walletResult.netAmount}`
+        )
+      }
+    } catch (walletErr) {
+      // Log but don't fail the webhook
+      console.error('[PayMongo] Failed to record wallet transaction:', walletErr)
+    }
+
     // Send confirmation email with tickets
     try {
       const config = useRuntimeConfig()
@@ -189,6 +226,14 @@ export default defineEventHandler(async (event) => {
           currency: 'PHP',
         }).format(Number(order.totalAmount))
 
+        // For guest users (no password), get existing setup token for email link
+        // We reuse the token created during checkout to avoid invalidating the success URL token
+        let setupToken: string | undefined
+        if (!customer.passwordHash) {
+          const existingToken = await getExistingSetupToken(customer.id)
+          setupToken = existingToken ?? undefined
+        }
+
         // Send ticket confirmation email
         const emailContent = ticketPurchaseConfirmationEmail({
           userName: customer.name || 'there',
@@ -198,18 +243,16 @@ export default defineEventHandler(async (event) => {
           orderNumber,
           tickets: orderTickets.map((t) => ({
             ticketType: t.ticketTypeName,
-            attendeeName: t.attendeeName,
+            attendeeName: t.attendeeName || order.customerName || customer.name || 'Guest',
             qrCode: t.qrCode,
           })),
           totalAmount,
           orderUrl,
+          setupToken,
         })
 
         await sendEmail({ to: customer.email, ...emailContent })
         console.log(`[PayMongo] Sent confirmation email for order ${orderNumber}`)
-
-        // Note: Account setup email is already sent during checkout (checkout.post.ts)
-        // We don't create a new token here to avoid invalidating the one in the redirect URL
       }
     } catch (emailErr) {
       // Log but don't fail the webhook

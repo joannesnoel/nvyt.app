@@ -532,15 +532,30 @@ export function ticketPurchaseConfirmationEmail(data: {
   tickets: Array<{ ticketType: string; attendeeName: string; qrCode: string }>
   totalAmount: string
   orderUrl: string
+  setupToken?: string
 }): { subject: string; html: string } {
-  const ticketRows = data.tickets
+  // For guest users (with setup token), link to success page with token
+  // For logged-in users, link to standard order page
+  const ticketViewUrl = data.setupToken
+    ? `${data.orderUrl}/success?token=${data.setupToken}`
+    : data.orderUrl
+
+  const ticketCards = data.tickets
     .map(
-      (t) => `
-        <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #eee;">${t.ticketType}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #eee;">${t.attendeeName}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #eee; font-family: monospace;">${t.qrCode}</td>
-        </tr>
+      (t, index) => `
+        <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+            <span style="background: #6366f1; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">Ticket ${index + 1}</span>
+            <span style="color: #6b7280; font-size: 12px;">${t.ticketType}</span>
+          </div>
+          <div style="text-align: center; margin: 16px 0;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(t.qrCode)}" alt="QR Code" style="width: 180px; height: 180px; border-radius: 8px;">
+          </div>
+          <div style="text-align: center; margin-top: 12px;">
+            <p style="margin: 0; font-weight: 600; color: #111827;">${t.attendeeName}</p>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: #9ca3af; font-family: monospace; word-break: break-all;">${t.qrCode}</p>
+          </div>
+        </div>
       `
     )
     .join('')
@@ -554,51 +569,42 @@ export function ticketPurchaseConfirmationEmail(data: {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
+        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #6366f1; margin: 0; font-size: 28px;">nvyt</h1>
+          </div>
+
+          <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Your Tickets Are Confirmed!</h2>
+
+          <p style="text-align: center;">Hi ${data.userName},</p>
+
+          <p style="text-align: center;">Thank you for your purchase! Your tickets for <strong>${data.eventTitle}</strong> are now confirmed.</p>
+
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Order Number:</strong> ${data.orderNumber}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+            ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+            <p style="margin: 0;"><strong>Total:</strong> ${data.totalAmount}</p>
+          </div>
+
+          <h3 style="color: #111; margin-top: 30px; text-align: center;">Your Tickets</h3>
+
+          ${ticketCards}
+
+          <p style="color: #666; font-size: 14px; text-align: center;">Show your QR code at the event for check-in. You can also access your tickets anytime from your order page.</p>
+
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${ticketViewUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">View Your Tickets</a>
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+          <p style="color: #666; font-size: 14px; text-align: center;">
+            See you at the event!<br>
+            The nvyt Team
+          </p>
         </div>
-
-        <h2 style="color: #111; margin-bottom: 10px;">Your Tickets Are Confirmed!</h2>
-
-        <p>Hi ${data.userName},</p>
-
-        <p>Thank you for your purchase! Your tickets for <strong>${data.eventTitle}</strong> are now confirmed.</p>
-
-        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
-          <p style="margin: 0 0 10px 0;"><strong>Order Number:</strong> ${data.orderNumber}</p>
-          <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
-          ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
-          <p style="margin: 0;"><strong>Total:</strong> ${data.totalAmount}</p>
-        </div>
-
-        <h3 style="color: #111; margin-top: 30px;">Your Tickets</h3>
-
-        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-          <thead>
-            <tr style="background: #6366f1; color: white;">
-              <th style="padding: 12px; text-align: left;">Ticket Type</th>
-              <th style="padding: 12px; text-align: left;">Attendee</th>
-              <th style="padding: 12px; text-align: left;">QR Code</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ticketRows}
-          </tbody>
-        </table>
-
-        <p style="color: #666; font-size: 14px;">Show your QR code at the event for check-in. You can also access your tickets anytime from your order page.</p>
-
-        <p style="text-align: center; margin: 30px 0;">
-          <a href="${data.orderUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">View Your Tickets</a>
-        </p>
-
-        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-
-        <p style="color: #666; font-size: 14px;">
-          See you at the event!<br>
-          The nvyt Team
-        </p>
       </body>
       </html>
     `,

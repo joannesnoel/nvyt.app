@@ -397,6 +397,7 @@ export default defineEventHandler(async (event) => {
         tickets: orderTickets,
         totalAmount: 'Free',
         orderUrl,
+        setupToken: needsAccountSetup ? setupToken ?? undefined : undefined,
       })
 
       await sendEmail({ to: user.email, ...emailContent })

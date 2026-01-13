@@ -187,3 +187,29 @@ export async function markSetupTokenUsed(token: string): Promise<void> {
     .set({ usedAt: new Date() })
     .where(eq(accountSetupTokens.token, token))
 }
+
+export async function getExistingSetupToken(userId: string): Promise<string | null> {
+  const db = useDatabase()
+
+  const [record] = await db
+    .select()
+    .from(accountSetupTokens)
+    .where(
+      and(
+        eq(accountSetupTokens.userId, userId),
+        isNull(accountSetupTokens.usedAt)
+      )
+    )
+    .limit(1)
+
+  if (!record) {
+    return null
+  }
+
+  // Check if token is expired
+  if (new Date(record.expiresAt) < new Date()) {
+    return null
+  }
+
+  return record.token
+}

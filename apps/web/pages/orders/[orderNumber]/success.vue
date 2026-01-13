@@ -4,17 +4,21 @@ definePageMeta({
 })
 
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 const { user } = useAuth()
 const orderNumber = computed(() => route.params.orderNumber as string)
 const token = computed(() => route.query.token as string | undefined)
 
-// Fetch order details (include token for guest access)
+// Only use token if user is not logged in
+const queryToken = computed(() => user.value ? undefined : token.value)
+
+// Fetch order details (include token only for guest access)
 const { data: orderResponse, pending, error } = await useFetch(
   () => `/api/v1/orders/${orderNumber.value}`,
   {
-    query: { token: token.value },
-    watch: [orderNumber, token],
+    query: { token: queryToken.value },
+    watch: [orderNumber, queryToken],
   }
 )
 
@@ -22,6 +26,29 @@ const order = computed(() => orderResponse.value?.data)
 
 // Determine if this is a guest user (has token but not logged in)
 const isGuest = computed(() => !!token.value && !user.value)
+
+// Handle auth errors for guests with invalid/used tokens
+// If user is not logged in and we have a token but got an error, redirect to login
+const shouldRedirectToLogin = computed(() => {
+  if (!error.value) return false
+  if (user.value) return false // Logged in users shouldn't redirect
+  if (!token.value) return false // No token means they came here without one
+  // Token was provided but failed - likely used/expired, redirect to login
+  return error.value.statusCode === 401
+})
+
+// Redirect to login if needed
+watchEffect(() => {
+  if (shouldRedirectToLogin.value) {
+    toast.add({
+      title: 'Please log in',
+      description: 'Your account has been set up. Please log in to view your order.',
+      color: 'blue',
+      icon: 'i-heroicons-information-circle',
+    })
+    router.push(`/login?redirect=/orders/${orderNumber.value}`)
+  }
+})
 
 // Where to redirect for viewing tickets
 const ticketsUrl = computed(() => {
@@ -142,6 +169,12 @@ const canDownload = computed(() => {
       <div v-if="pending" class="text-center py-20">
         <UIcon name="i-heroicons-arrow-path" class="w-12 h-12 text-primary mx-auto mb-4 animate-spin" />
         <p class="text-gray-600 dark:text-gray-400">Loading order details...</p>
+      </div>
+
+      <!-- Redirecting to login (don't show error) -->
+      <div v-else-if="shouldRedirectToLogin" class="text-center py-20">
+        <UIcon name="i-heroicons-arrow-path" class="w-12 h-12 text-primary mx-auto mb-4 animate-spin" />
+        <p class="text-gray-600 dark:text-gray-400">Redirecting to login...</p>
       </div>
 
       <!-- Error -->

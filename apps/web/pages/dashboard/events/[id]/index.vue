@@ -17,13 +17,36 @@ const event = computed(() => eventResponse.value?.data)
 // Fetch attendees stats
 const { data: attendeesData } = await useFetch(
   () => `/api/v1/events/${eventId.value}/attendees`,
-  { 
+  {
     query: { limit: 5 },
     watch: [eventId],
   }
 )
 const stats = computed(() => attendeesData.value?.data?.stats)
 const recentAttendees = computed(() => attendeesData.value?.data?.attendees ?? [])
+
+// Fetch orders stats for ticket-mode events (to get revenue)
+const { data: ordersData } = await useFetch(
+  () => `/api/v1/events/${eventId.value}/orders`,
+  {
+    query: { limit: 1 },
+    watch: [eventId],
+  }
+)
+const orderStats = computed(() => ordersData.value?.data?.stats)
+
+// Helper to check if event is ticket-based
+const isTicketMode = computed(() => event.value?.registrationMode === 'tickets')
+
+// Format currency
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
 
 // Publish/Unpublish
 const isUpdating = ref(false)
@@ -225,14 +248,32 @@ function getStatusColor(status: string) {
 
           <UCard>
             <div class="flex items-center gap-3">
-              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <UIcon name="i-heroicons-queue-list" class="w-5 h-5 text-orange-600" />
+              <div :class="[
+                'p-2 rounded-lg',
+                isTicketMode
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                  : 'bg-orange-100 dark:bg-orange-900/30'
+              ]">
+                <UIcon
+                  :name="isTicketMode ? 'i-heroicons-currency-dollar' : 'i-heroicons-queue-list'"
+                  :class="[
+                    'w-5 h-5',
+                    isTicketMode ? 'text-emerald-600' : 'text-orange-600'
+                  ]"
+                />
               </div>
               <div>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                  {{ stats?.waitlisted ?? 0 }}
+                  <template v-if="isTicketMode">
+                    {{ formatCurrency(orderStats?.totalRevenue ?? 0) }}
+                  </template>
+                  <template v-else>
+                    {{ stats?.waitlisted ?? 0 }}
+                  </template>
                 </p>
-                <p class="text-sm text-gray-500">Waitlisted</p>
+                <p class="text-sm text-gray-500">
+                  {{ isTicketMode ? 'Revenue' : 'Waitlisted' }}
+                </p>
               </div>
             </div>
           </UCard>
