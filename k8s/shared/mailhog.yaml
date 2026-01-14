@@ -1,6 +1,6 @@
 # Shared Mailhog service for email testing across all projects
 # SMTP: mailhog.mailhog.svc.cluster.local:1025
-# Web UI: mail.local.nvyt.app (or via NodePort 30825)
+# Web UI: mailhog.creativelogik.net (or via NodePort 30825)
 ---
 apiVersion: v1
 kind: Namespace
@@ -92,7 +92,7 @@ metadata:
     kubernetes.io/ingress.class: "traefik"
 spec:
   rules:
-    - host: mail.staging.nvyt.app
+    - host: mailhog.creativelogik.net
       http:
         paths:
           - path: /
