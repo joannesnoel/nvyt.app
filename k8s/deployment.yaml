@@ -2,9 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nvyt-web
-  namespace: nvyt
+  namespace: nvyt-staging
   labels:
     app: nvyt-web
+    environment: staging
 spec:
   replicas: 2
   selector:

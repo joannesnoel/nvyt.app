@@ -2,9 +2,11 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nvyt-config
-  namespace: nvyt
+  namespace: nvyt-staging
+  labels:
+    environment: staging
 data:
-  APP_URL: "https://nvyt.app"
-  NODE_ENV: "production"
+  APP_URL: "https://staging.nvyt.app"
+  NODE_ENV: "staging"
   # Comma-separated list of admin emails
-  ADMIN_EMAILS: "jon@creativelogik.net"
+  ADMIN_EMAILS: "jon@creativelogik.net,hello@nvyt.app"

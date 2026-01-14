@@ -2,7 +2,9 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
-  namespace: nvyt
+  namespace: nvyt-staging
+  labels:
+    environment: staging
 spec:
   accessModes:
     - ReadWriteOnce
@@ -14,7 +16,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
-  namespace: nvyt
+  namespace: nvyt-staging
+  labels:
+    environment: staging
 spec:
   replicas: 1
   selector:
@@ -60,7 +64,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres-service
-  namespace: nvyt
+  namespace: nvyt-staging
+  labels:
+    environment: staging
 spec:
   selector:
     app: postgres

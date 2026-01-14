@@ -2,9 +2,10 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: db-migrate
-  namespace: nvyt
+  namespace: nvyt-staging
   labels:
     app: nvyt-migrate
+    environment: staging
 spec:
   # Job will be cleaned up 5 minutes after completion
   ttlSecondsAfterFinished: 300

@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: nvyt
+  name: nvyt-staging
   labels:
     app.kubernetes.io/name: nvyt
+    environment: staging
