@@ -48,12 +48,6 @@ const userMenuItems = computed(() => [
           <!-- Navigation -->
           <nav class="hidden md:flex items-center gap-6">
             <NuxtLink
-              to="/events"
-              class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors"
-            >
-              Explore Events
-            </NuxtLink>
-            <NuxtLink
               v-if="isAuthenticated"
               to="/dashboard"
               class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors"

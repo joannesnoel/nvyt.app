@@ -29,14 +29,58 @@ const recentAttendees = computed(() => attendeesData.value?.data?.attendees ?? [
 const { data: ordersData } = await useFetch(
   () => `/api/v1/events/${eventId.value}/orders`,
   {
-    query: { limit: 1 },
+    query: { limit: 5 },
     watch: [eventId],
   }
 )
 const orderStats = computed(() => ordersData.value?.data?.stats)
+const recentOrders = computed(() => ordersData.value?.data?.orders ?? [])
+
+// Fetch verification status for ticket-mode events
+const { data: verificationResponse, refresh: refreshVerification } = await useFetch(
+  () => `/api/v1/events/${eventId.value}/verification`,
+  { 
+    watch: [eventId],
+    immediate: true,
+  }
+)
+const verification = computed(() => verificationResponse.value?.data)
 
 // Helper to check if event is ticket-based
 const isTicketMode = computed(() => event.value?.registrationMode === 'tickets')
+
+// Check if verification is required and not approved
+const needsVerification = computed(() => {
+  if (!verification.value) return false
+  return verification.value.required && verification.value.status !== 'approved'
+})
+
+const verificationStatusColor = computed(() => {
+  const status = verification.value?.status
+  switch (status) {
+    case 'approved': return 'green'
+    case 'pending': return 'yellow'
+    case 'under_review': return 'blue'
+    case 'rejected': return 'red'
+    case 'draft': return 'gray'
+    case 'not_submitted': return 'gray'
+    default: return 'gray'
+  }
+})
+
+const verificationStatusLabel = computed(() => {
+  const status = verification.value?.status
+  switch (status) {
+    case 'approved': return 'Verified'
+    case 'pending': return 'Pending Review'
+    case 'under_review': return 'Under Review'
+    case 'rejected': return 'Rejected'
+    case 'draft': return 'Draft - Upload Documents'
+    case 'not_submitted': return 'Not Submitted'
+    case 'not_required': return 'Not Required'
+    default: return status
+  }
+})
 
 // Format currency
 function formatCurrency(amount: number) {
@@ -72,6 +116,31 @@ async function confirmCancelEvent() {
   await updateEventStatus('cancelled')
 }
 
+// Verification modal
+const showVerificationModal = ref(false)
+
+// Publish/Unpublish confirmation modals
+const showPublishModal = ref(false)
+const showUnpublishModal = ref(false)
+
+function openPublishModal() {
+  showPublishModal.value = true
+}
+
+function openUnpublishModal() {
+  showUnpublishModal.value = true
+}
+
+async function confirmPublish() {
+  showPublishModal.value = false
+  await updateEventStatus('published')
+}
+
+async function confirmUnpublish() {
+  showUnpublishModal.value = false
+  await updateEventStatus('draft')
+}
+
 async function updateEventStatus(status: 'draft' | 'published' | 'cancelled') {
   isUpdating.value = true
   try {
@@ -86,6 +155,11 @@ async function updateEventStatus(status: 'draft' | 'published' | 'cancelled') {
     })
     await refresh()
   } catch (e: any) {
+    // Check if this is a verification error
+    if (e.data?.data?.code === 'VERIFICATION_REQUIRED' || e.data?.data?.code === 'VERIFICATION_NOT_APPROVED') {
+      showVerificationModal.value = true
+      await refreshVerification()
+    }
     toast.add({
       title: 'Error',
       description: e.data?.message || 'Failed to update event',
@@ -199,7 +273,7 @@ function getStatusColor(status: string) {
               color="green"
               icon="i-heroicons-rocket-launch"
               :loading="isUpdating"
-              @click="updateEventStatus('published')"
+              @click="openPublishModal"
             >
               Publish
             </UButton>
@@ -209,7 +283,7 @@ function getStatusColor(status: string) {
               variant="outline"
               icon="i-heroicons-pause"
               :loading="isUpdating"
-              @click="updateEventStatus('draft')"
+              @click="openUnpublishModal"
             >
               Unpublish
             </UButton>
@@ -381,13 +455,15 @@ function getStatusColor(status: string) {
               </div>
             </UCard>
 
-            <!-- Recent Attendees -->
+            <!-- Recent Attendees/Orders -->
             <UCard>
               <template #header>
                 <div class="flex items-center justify-between">
-                  <h2 class="font-semibold text-gray-900 dark:text-white">Recent RSVPs</h2>
+                  <h2 class="font-semibold text-gray-900 dark:text-white">
+                    {{ isTicketMode ? 'Recent Orders' : 'Recent RSVPs' }}
+                  </h2>
                   <UButton
-                    :to="`/dashboard/events/${eventId}/attendees`"
+                    :to="isTicketMode ? `/dashboard/events/${eventId}/orders` : `/dashboard/events/${eventId}/attendees`"
                     color="gray"
                     variant="ghost"
                     size="sm"
@@ -397,45 +473,132 @@ function getStatusColor(status: string) {
                 </div>
               </template>
 
-              <div v-if="recentAttendees.length === 0" class="text-center py-8">
-                <UIcon name="i-heroicons-users" class="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                <p class="text-gray-500">No RSVPs yet</p>
-              </div>
+              <!-- For RSVP-based events -->
+              <template v-if="!isTicketMode">
+                <div v-if="recentAttendees.length === 0" class="text-center py-8">
+                  <UIcon name="i-heroicons-users" class="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                  <p class="text-gray-500">No RSVPs yet</p>
+                </div>
 
-              <div v-else class="space-y-3">
-                <div
-                  v-for="attendee in recentAttendees"
-                  :key="attendee.id"
-                  class="flex items-center justify-between"
-                >
-                  <div class="flex items-center gap-3">
-                    <UAvatar
-                      :src="attendee.user?.avatarUrl"
-                      :alt="attendee.user?.name"
+                <div v-else class="space-y-3">
+                  <div
+                    v-for="attendee in recentAttendees"
+                    :key="attendee.id"
+                    class="flex items-center justify-between"
+                  >
+                    <div class="flex items-center gap-3">
+                      <UAvatar
+                        :src="attendee.user?.avatarUrl"
+                        :alt="attendee.user?.name"
+                        size="sm"
+                      />
+                      <div>
+                        <p class="font-medium text-gray-900 dark:text-white">
+                          {{ attendee.user?.name }}
+                        </p>
+                        <p class="text-sm text-gray-500">{{ attendee.user?.email }}</p>
+                      </div>
+                    </div>
+                    <UBadge
+                      :color="attendee.status === 'confirmed' ? 'green' :
+                              attendee.status === 'pending' ? 'yellow' : 'gray'"
+                      variant="soft"
                       size="sm"
-                    />
+                    >
+                      {{ attendee.status }}
+                    </UBadge>
+                  </div>
+                </div>
+              </template>
+
+              <!-- For ticket-based events -->
+              <template v-else>
+                <div v-if="!recentOrders || recentOrders.length === 0" class="text-center py-8">
+                  <UIcon name="i-heroicons-ticket" class="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                  <p class="text-gray-500">No orders yet</p>
+                </div>
+
+                <div v-else class="space-y-3">
+                  <div
+                    v-for="order in recentOrders"
+                    :key="order.id"
+                    class="flex items-center justify-between"
+                  >
                     <div>
                       <p class="font-medium text-gray-900 dark:text-white">
-                        {{ attendee.user?.name }}
+                        {{ order.customerName || order.customerEmail }}
                       </p>
-                      <p class="text-sm text-gray-500">{{ attendee.user?.email }}</p>
+                      <p class="text-sm text-gray-500">{{ order.orderNumber }} · {{ order.ticketCount }} ticket{{ order.ticketCount > 1 ? 's' : '' }}</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-medium text-gray-900 dark:text-white">
+                        {{ formatCurrency(order.totalAmount) }}
+                      </p>
+                      <UBadge
+                        :color="order.status === 'completed' ? 'green' :
+                                order.status === 'pending' ? 'yellow' : 'gray'"
+                        variant="soft"
+                        size="xs"
+                      >
+                        {{ order.status }}
+                      </UBadge>
                     </div>
                   </div>
-                  <UBadge
-                    :color="attendee.status === 'confirmed' ? 'green' :
-                            attendee.status === 'pending' ? 'yellow' : 'gray'"
-                    variant="soft"
-                    size="sm"
-                  >
-                    {{ attendee.status }}
-                  </UBadge>
                 </div>
-              </div>
+              </template>
             </UCard>
           </div>
 
           <!-- Sidebar -->
           <div class="space-y-6">
+            <!-- Verification Status (for paid ticket events) -->
+            <UCard v-if="verification?.required">
+              <template #header>
+                <div class="flex items-center justify-between">
+                  <h2 class="font-semibold text-gray-900 dark:text-white">Verification Status</h2>
+                  <UBadge :color="verificationStatusColor" variant="soft">
+                    {{ verificationStatusLabel }}
+                  </UBadge>
+                </div>
+              </template>
+
+              <div class="space-y-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  {{ verification.message }}
+                </p>
+
+                <div v-if="verification.verification" class="space-y-2">
+                  <div>
+                    <p class="text-sm text-gray-500">Business Name</p>
+                    <p class="font-medium text-gray-900 dark:text-white">
+                      {{ verification.verification.businessName }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-sm text-gray-500">Country</p>
+                    <p class="font-medium text-gray-900 dark:text-white">
+                      {{ verification.verification.country }}
+                    </p>
+                  </div>
+                  <div v-if="verification.documents?.length > 0">
+                    <p class="text-sm text-gray-500">Documents</p>
+                    <p class="font-medium text-gray-900 dark:text-white">
+                      {{ verification.documents.length }} uploaded
+                    </p>
+                  </div>
+                </div>
+
+                <UButton
+                  v-if="verification.status !== 'approved'"
+                  :to="`/dashboard/events/${eventId}/verification`"
+                  color="primary"
+                  block
+                >
+                  {{ verification.status === 'not_submitted' ? 'Submit Verification' : 'View Verification' }}
+                </UButton>
+              </div>
+            </UCard>
+
             <!-- Event Details -->
             <UCard>
               <template #header>
@@ -572,6 +735,169 @@ function getStatusColor(status: string) {
               @click="confirmCancelEvent"
             >
               Cancel Event
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Verification Required Modal -->
+    <UModal v-model="showVerificationModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-yellow-600" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Verification Required
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Events selling paid tickets require business verification before they can be published.
+            This helps ensure a safe and trustworthy experience for ticket buyers.
+          </p>
+
+          <div v-if="verification?.status === 'rejected'" class="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <p class="text-sm font-medium text-red-800 dark:text-red-200">
+              Your verification was rejected:
+            </p>
+            <p class="text-sm text-red-600 dark:text-red-300 mt-1">
+              {{ verification?.verification?.rejectionReason || 'Please resubmit with valid documents.' }}
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <h4 class="font-medium text-gray-900 dark:text-white">What you'll need:</h4>
+            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li>Business registration documents (DTI/SEC for Philippines)</li>
+              <li>Valid government-issued business license</li>
+              <li>Business registration number</li>
+            </ul>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showVerificationModal = false"
+            >
+              Close
+            </UButton>
+            <UButton
+              :to="`/dashboard/events/${eventId}/verification`"
+              color="primary"
+              @click="showVerificationModal = false"
+            >
+              {{ verification?.status === 'not_submitted' ? 'Start Verification' : 'View Verification' }}
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Publish Confirmation Modal -->
+    <UModal v-model="showPublishModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 text-green-600" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Publish Event
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Are you ready to publish <span class="font-semibold text-gray-900 dark:text-white">{{ event?.title }}</span>?
+          </p>
+
+          <div class="space-y-2">
+            <h4 class="font-medium text-gray-900 dark:text-white">Once published:</h4>
+            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li v-if="event?.visibility === 'public'">Your event will be visible to the public</li>
+              <li v-else>Your event will be accessible via invite link</li>
+              <li v-if="event?.registrationMode === 'tickets'">Attendees will be able to purchase tickets</li>
+              <li v-else>Attendees will be able to RSVP</li>
+              <li>You can still edit event details after publishing</li>
+            </ul>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showPublishModal = false"
+            >
+              Cancel
+            </UButton>
+            <UButton
+              color="green"
+              :loading="isUpdating"
+              @click="confirmPublish"
+            >
+              Publish Event
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Unpublish Confirmation Modal -->
+    <UModal v-model="showUnpublishModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <UIcon name="i-heroicons-pause" class="w-5 h-5 text-yellow-600" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Unpublish Event
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Are you sure you want to unpublish <span class="font-semibold text-gray-900 dark:text-white">{{ event?.title }}</span>?
+          </p>
+
+          <div class="space-y-2">
+            <h4 class="font-medium text-gray-900 dark:text-white">What happens when you unpublish:</h4>
+            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li>The public event page will no longer be accessible</li>
+              <li>New RSVPs and ticket purchases will be disabled</li>
+              <li>Existing attendees will keep their tickets/RSVPs</li>
+              <li>You can republish the event at any time</li>
+            </ul>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showUnpublishModal = false"
+            >
+              Keep Published
+            </UButton>
+            <UButton
+              color="yellow"
+              :loading="isUpdating"
+              @click="confirmUnpublish"
+            >
+              Unpublish Event
             </UButton>
           </div>
         </template>

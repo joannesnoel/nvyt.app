@@ -1,5 +1,5 @@
 import { eq, and, inArray } from 'drizzle-orm'
-import { events, attendees, users, tickets, orders } from '@nvyt/db'
+import { events, attendees, users, tickets, orders, ticketTypes, eventVerifications } from '@nvyt/db'
 import { updateEventSchema } from '@nvyt/shared'
 import { sendEmail, eventCancelledEmail } from '~/server/utils/email'
 
@@ -38,6 +38,56 @@ export default defineEventHandler(async (event) => {
   const statusUpdate = body.status && allowedStatusValues.includes(body.status)
     ? { status: body.status as typeof allowedStatusValues[number] }
     : {}
+
+  // Check verification requirement when publishing
+  if (statusUpdate.status === 'published' && existingEvent.status !== 'published') {
+    // Check if this event has paid tickets
+    const eventTickets = await db
+      .select()
+      .from(ticketTypes)
+      .where(eq(ticketTypes.eventId, eventId))
+
+    const hasPaidTickets =
+      existingEvent.registrationMode === 'tickets' &&
+      eventTickets.some((t) => parseFloat(t.price) > 0)
+
+    if (hasPaidTickets) {
+      // Check verification status
+      const [verification] = await db
+        .select()
+        .from(eventVerifications)
+        .where(eq(eventVerifications.eventId, eventId))
+        .limit(1)
+
+      if (!verification) {
+        throw createError({
+          statusCode: 400,
+          message: 'Events selling paid tickets require verification before publishing. Please submit your business documents for verification.',
+          data: { code: 'VERIFICATION_REQUIRED', verificationStatus: 'not_submitted' },
+        })
+      }
+
+      if (verification.status !== 'approved') {
+        const statusMessages: Record<string, string> = {
+          pending: 'Your verification is pending review. Please wait for approval before publishing.',
+          under_review: 'Your verification is currently under review. Please wait for approval before publishing.',
+          rejected: verification.rejectionReason 
+            ? `Your verification was rejected: ${verification.rejectionReason}. Please resubmit with valid documents.`
+            : 'Your verification was rejected. Please resubmit with valid documents.',
+        }
+
+        throw createError({
+          statusCode: 400,
+          message: statusMessages[verification.status] || 'Verification required to publish paid events.',
+          data: { 
+            code: 'VERIFICATION_NOT_APPROVED', 
+            verificationStatus: verification.status,
+            rejectionReason: verification.rejectionReason,
+          },
+        })
+      }
+    }
+  }
 
   // Validate other fields
   const result = updateEventSchema.safeParse(body)

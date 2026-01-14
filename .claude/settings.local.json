@@ -70,7 +70,11 @@
       "Bash(pnpm -w run build:*)",
       "Bash(pkill:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: implement contributions list feature and various improvements\n\n- Add full contributions list feature for RSVP events\n  - API endpoints for CRUD operations on contribution items\n  - API endpoints for claiming/unclaiming items\n  - Dashboard page for organizers to manage contribution items\n  - Public event page enhanced with claim functionality\n  - Category support \\(food, drinks, supplies, equipment, other\\)\n\n- Add authentication middleware for dashboard protection\n- Add password reset flow\n- Add collaborator/team management\n- Add orders management page\n- Remove Redis \\(not being used\\)\n- Various mobile responsiveness fixes\n- Dashboard improvements for new users\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pnpm install)",
+      "Bash(npx tsx:*)",
+      "Bash(pnpm run reset:dev:*)",
+      "Bash(npx drizzle-kit:*)"
     ]
   }
 }

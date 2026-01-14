@@ -111,13 +111,12 @@ async function handleSubmit() {
       </div>
 
       <UCard>
-        <template v-if="loadingInvite">
-          <div class="flex items-center justify-center py-8">
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+          <div v-if="loadingInvite" class="flex items-center justify-center py-8">
             <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary" />
           </div>
-        </template>
 
-        <form v-else @submit.prevent="handleSubmit" class="space-y-4">
+          <template v-else>
           <UAlert v-if="error" color="red" :title="error" />
 
           <UAlert
@@ -178,9 +177,11 @@ async function handleSubmit() {
             size="lg"
             block
             :loading="loading"
+            :disabled="loadingInvite"
           >
             {{ inviteData ? 'Create Account & Accept' : 'Create Account' }}
           </UButton>
+          </template>
         </form>
 
         <template #footer>

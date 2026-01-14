@@ -39,6 +39,7 @@ docker compose -f docker/docker-compose.dev.yml up -d
 This starts:
 - **PostgreSQL** on port 5432 - Database
 - **Mailhog** on port 8025 - Email testing UI (SMTP on 1025)
+- **MinIO** on port 9001 - S3 storage console (API on 9000)
 
 ### 4. Configure Environment
 

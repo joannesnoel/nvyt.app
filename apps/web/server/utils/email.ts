@@ -880,3 +880,242 @@ export function passwordResetEmail(data: {
     `,
   }
 }
+
+// Verification Email Templates
+
+export function verificationApprovedEmail(data: {
+  userName: string
+  eventTitle: string
+  businessName: string
+  eventUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `Your event "${data.eventTitle}" is now verified!`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div style="display: inline-block; background: #dcfce7; border-radius: 50%; padding: 16px;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Verification Approved!</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>Great news! Your business verification for <strong>${data.eventTitle}</strong> has been approved.</p>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+          <p style="margin: 0;"><strong>Business:</strong> ${data.businessName}</p>
+        </div>
+
+        <p>You can now publish your event and start selling tickets!</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.eventUrl}" style="display: inline-block; background: #16a34a; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">
+            Publish Your Event
+          </a>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          Thank you for verifying your business with nvyt.<br>
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function verificationRejectedEmail(data: {
+  userName: string
+  eventTitle: string
+  businessName: string
+  rejectionReason: string
+  verificationUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `Action needed: Verification for "${data.eventTitle}"`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">Verification Update</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>Unfortunately, we were unable to approve the verification for your event <strong>${data.eventTitle}</strong>.</p>
+
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0; color: #dc2626; font-weight: 600;">Reason:</p>
+          <p style="margin: 0; color: #7f1d1d;">${data.rejectionReason}</p>
+        </div>
+
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+          <p style="margin: 0;"><strong>Business:</strong> ${data.businessName}</p>
+        </div>
+
+        <p><strong>What to do next:</strong></p>
+        <ol style="color: #666;">
+          <li>Review the rejection reason above</li>
+          <li>Prepare the correct documentation</li>
+          <li>Resubmit your verification</li>
+        </ol>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.verificationUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">
+            Resubmit Verification
+          </a>
+        </p>
+
+        <p style="color: #666; font-size: 14px;">If you have questions about the verification requirements, please contact our support team.</p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function verificationUnderReviewEmail(data: {
+  userName: string
+  eventTitle: string
+  businessName: string
+}): { subject: string; html: string } {
+  return {
+    subject: `Your verification for "${data.eventTitle}" is under review`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div style="display: inline-block; background: #dbeafe; border-radius: 50%; padding: 16px;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Verification Under Review</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>Good news! Our team has started reviewing the verification documents for your event <strong>${data.eventTitle}</strong>.</p>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+          <p style="margin: 0;"><strong>Business:</strong> ${data.businessName}</p>
+        </div>
+
+        <p>This typically takes 1-2 business days. We'll notify you as soon as the review is complete.</p>
+
+        <p style="color: #666; font-size: 14px;">No action is needed from you at this time.</p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          Thank you for your patience.<br>
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function verificationSubmittedEmail(data: {
+  userName: string
+  eventTitle: string
+  businessName: string
+  verificationUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `Verification submitted for "${data.eventTitle}"`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">Verification Submitted</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>We've received your verification request for <strong>${data.eventTitle}</strong>.</p>
+
+        <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Status:</strong> Pending Review</p>
+          <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+          <p style="margin: 0;"><strong>Business:</strong> ${data.businessName}</p>
+        </div>
+
+        <p><strong>What happens next:</strong></p>
+        <ol style="color: #666;">
+          <li>Our team will review your submitted documents</li>
+          <li>You'll receive an email once the review is complete</li>
+          <li>Once approved, you can publish your event</li>
+        </ol>
+
+        <p style="color: #666; font-size: 14px;">Review typically takes 1-2 business days.</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.verificationUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">
+            View Verification Status
+          </a>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          Thank you for choosing nvyt.<br>
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}

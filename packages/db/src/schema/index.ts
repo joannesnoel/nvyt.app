@@ -17,3 +17,6 @@ export * from './contributions'
 
 // Finance (Wallets, Transactions, Payouts)
 export * from './finance'
+
+// Event Verification (for paid events)
+export * from './eventVerification'

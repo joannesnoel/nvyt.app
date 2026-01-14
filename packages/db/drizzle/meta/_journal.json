@@ -57,6 +57,20 @@
       "when": 1768236384338,
       "tag": "0007_noisy_patch",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1768375166479,
+      "tag": "0008_lumpy_vin_gonzales",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1768379654951,
+      "tag": "0009_big_celestials",
+      "breakpoints": true
     }
   ]
 }
