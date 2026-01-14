@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: nvyt
+  labels:
+    app: nvyt-migrate
+spec:
+  # Job will be cleaned up 5 minutes after completion
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 0  # Don't retry on failure - investigate manually
+  template:
+    metadata:
+      labels:
+        app: nvyt-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: 192.168.0.20:30500/nvyt-web:latest
+          imagePullPolicy: Always
+          command: ["pnpm", "db:migrate"]
+          envFrom:
+            - configMapRef:
+                name: nvyt-config
+            - secretRef:
+                name: nvyt-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"

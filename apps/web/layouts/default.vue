@@ -140,6 +140,9 @@ const userMenuItems = computed(() => [
             <NuxtLink to="/terms" class="text-gray-500 dark:text-gray-400 hover:text-primary text-sm">
               Terms
             </NuxtLink>
+            <NuxtLink to="/refunds" class="text-gray-500 dark:text-gray-400 hover:text-primary text-sm">
+              Refunds
+            </NuxtLink>
           </div>
         </div>
       </div>

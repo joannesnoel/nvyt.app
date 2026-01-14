@@ -7,6 +7,13 @@ const route = useRoute()
 const eventId = computed(() => route.params.id as string)
 const toast = useToast()
 
+// Fetch event to get registration mode
+const { data: eventResponse } = await useFetch(
+  () => `/api/v1/events/${eventId.value}`,
+)
+const event = computed(() => eventResponse.value?.data)
+const isTicketMode = computed(() => event.value?.registrationMode === 'tickets')
+
 // Filters
 const statusFilter = ref<string | undefined>(undefined)
 const searchQuery = ref('')
@@ -129,14 +136,25 @@ function getStatusColor(status: string) {
   }
 }
 
-const statusOptions = [
+// Status display label - shows "Paid" instead of "Confirmed" for ticket mode
+function getStatusLabel(status: string) {
+  if (status === 'confirmed' && isTicketMode.value) {
+    return 'Paid'
+  }
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+const statusOptions = computed(() => [
   { label: 'All', value: undefined },
-  { label: 'Confirmed', value: 'confirmed' },
+  { label: isTicketMode.value ? 'Paid' : 'Confirmed', value: 'confirmed' },
   { label: 'Pending', value: 'pending' },
   { label: 'Waitlisted', value: 'waitlisted' },
   { label: 'Declined', value: 'declined' },
   { label: 'Cancelled', value: 'cancelled' },
-]
+])
+
+// Column header labels based on mode
+const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP Date')
 </script>
 
 <template>
@@ -186,7 +204,7 @@ const statusOptions = [
         </UCard>
         <UCard class="text-center">
           <p class="text-2xl font-bold text-green-600">{{ stats.confirmed }}</p>
-          <p class="text-sm text-gray-500">Confirmed</p>
+          <p class="text-sm text-gray-500">{{ isTicketMode ? 'Paid' : 'Confirmed' }}</p>
         </UCard>
         <UCard class="text-center">
           <p class="text-2xl font-bold text-yellow-600">{{ stats.pending }}</p>
@@ -242,7 +260,7 @@ const statusOptions = [
             :loading="updateLoading"
             @click="bulkUpdateStatus('confirmed')"
           >
-            Confirm
+            {{ isTicketMode ? 'Mark Paid' : 'Confirm' }}
           </UButton>
           <UButton
             color="red"
@@ -305,13 +323,13 @@ const statusOptions = [
                 </div>
               </div>
               <UBadge :color="getStatusColor(attendee.status)" variant="soft">
-                {{ attendee.status }}
+                {{ getStatusLabel(attendee.status) }}
               </UBadge>
             </div>
 
             <div class="space-y-2 mb-3 pl-9">
               <div class="flex justify-between">
-                <span class="text-sm text-gray-500">RSVP Date</span>
+                <span class="text-sm text-gray-500">{{ dateColumnLabel }}</span>
                 <span class="text-sm text-gray-900 dark:text-white">
                   {{ attendee.respondedAt ? new Date(attendee.respondedAt).toLocaleDateString() : '-' }}
                 </span>
@@ -334,7 +352,7 @@ const statusOptions = [
                 :loading="updateLoading"
                 @click="updateStatus(attendee.id, 'confirmed')"
               >
-                Confirm
+                {{ isTicketMode ? 'Mark Paid' : 'Confirm' }}
               </UButton>
               <UButton
                 v-if="attendee.status !== 'waitlisted'"
@@ -370,7 +388,7 @@ const statusOptions = [
                 </th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Attendee</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Status</th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">RSVP Date</th>
+                <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">{{ dateColumnLabel }}</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Checked In</th>
                 <th class="py-3 px-4 text-right text-sm font-medium text-gray-500">Actions</th>
               </tr>
@@ -406,7 +424,7 @@ const statusOptions = [
                 </td>
                 <td class="py-3 px-4">
                   <UBadge :color="getStatusColor(attendee.status)" variant="soft">
-                    {{ attendee.status }}
+                    {{ getStatusLabel(attendee.status) }}
                   </UBadge>
                 </td>
                 <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
@@ -422,7 +440,7 @@ const statusOptions = [
                   <UDropdown
                     :items="[[
                       {
-                        label: 'Confirm',
+                        label: isTicketMode ? 'Mark as Paid' : 'Confirm',
                         icon: 'i-heroicons-check',
                         disabled: attendee.status === 'confirmed',
                         click: () => updateStatus(attendee.id, 'confirmed')

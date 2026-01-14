@@ -1,9 +1,17 @@
-import { eq } from 'drizzle-orm'
-import { orders, tickets, events, users, ticketTypes } from '@nvyt/db'
-import { createRefund, getPaymentIntent, toCentavos } from '~/server/utils/paymongo'
-import { sendEmail } from '~/server/utils/email'
+export default defineEventHandler(async (_event) => {
+  // Refund functionality has been disabled.
+  // Refunds should be requested directly from event organizers.
+  throw createError({
+    statusCode: 403,
+    message: 'Refunds are not available through the platform. Please contact the event organizer directly to request a refund.',
+  })
 
-export default defineEventHandler(async (event) => {
+  /* DISABLED - Original refund implementation below
+  import { eq } from 'drizzle-orm'
+  import { orders, tickets, events, users, ticketTypes } from '@nvyt/db'
+  import { createRefund, getPaymentIntent, toCentavos } from '~/server/utils/paymongo'
+  import { sendEmail } from '~/server/utils/email'
+
   const orderNumber = getRouterParam(event, 'orderNumber')
   const body = await readBody(event)
 
@@ -225,4 +233,5 @@ export default defineEventHandler(async (event) => {
       message: err.message || 'Failed to process refund',
     })
   }
+  */
 })

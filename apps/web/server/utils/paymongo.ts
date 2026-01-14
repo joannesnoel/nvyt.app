@@ -1,7 +1,7 @@
 // PayMongo API integration for Philippine payments
 import crypto from 'crypto'
 
-// Supports: GCash, Maya, Cards, Grab Pay, BPI, UnionBank
+// Supports: GCash, Maya, Cards, Grab Pay, QR Ph, BPI, UnionBank
 
 interface PayMongoConfig {
   secretKey: string
@@ -182,7 +182,7 @@ export async function createCheckoutSession(
 ): Promise<CheckoutSession> {
   const {
     lineItems,
-    paymentMethodTypes = ['gcash', 'paymaya', 'card', 'grab_pay', 'dob', 'dob_ubp'],
+    paymentMethodTypes = ['qrph'], // TODO: Add back ['gcash', 'paymaya', 'card', 'grab_pay', 'dob', 'dob_ubp'] after activation
     successUrl,
     cancelUrl,
     referenceNumber,

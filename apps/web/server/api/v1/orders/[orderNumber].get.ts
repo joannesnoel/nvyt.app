@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get order with event info
+  // Get order with event info (including organizer for permission check)
   const [result] = await db
     .select({
       order: orders,
@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
         location: events.location,
         locationDetails: events.locationDetails,
         status: events.status,
+        organizerId: events.organizerId,
       },
     })
     .from(orders)
@@ -64,8 +65,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify ownership
-  if (result.order.userId !== userId) {
+  // Verify access: order owner OR event organizer can view
+  const isOrderOwner = result.order.userId === userId
+  const isEventOrganizer = result.event.organizerId === userId
+
+  if (!isOrderOwner && !isEventOrganizer) {
     throw createError({
       statusCode: 403,
       message: 'You are not authorized to view this order',
@@ -87,9 +91,12 @@ export default defineEventHandler(async (event) => {
     .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
     .where(eq(tickets.orderId, result.order.id))
 
+  // Exclude organizerId from response (only needed for permission check)
+  const { organizerId: _, ...eventData } = result.event
+
   return successResponse({
     ...result.order,
-    event: result.event,
+    event: eventData,
     tickets: orderTickets.map(({ ticket, ticketType }) => ({
       ...ticket,
       ticketType,

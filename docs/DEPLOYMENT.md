@@ -138,38 +138,54 @@ kubectl get pods -n nvyt
 kubectl get ingress -n nvyt
 ```
 
-### Step 6: Database Setup
+### Step 6: Database Migrations
 
-Run migrations from a pod:
+Use the migration Job to safely apply schema changes:
 
 ```bash
-# Get pod name
-kubectl get pods -n nvyt
+# Delete any previous migration job
+kubectl delete job db-migrate -n nvyt --ignore-not-found
 
-# Run migrations
-kubectl exec -it nvyt-web-xxx -n nvyt -- npm run db:migrate
+# Run migration job
+kubectl apply -f k8s/migration-job.yaml
+
+# Wait for completion and check status
+kubectl wait --for=condition=complete job/db-migrate -n nvyt --timeout=120s
+
+# View migration logs
+kubectl logs job/db-migrate -n nvyt
 ```
 
-Or use a Kubernetes Job:
+**Important:** Always run migrations BEFORE deploying new application code that depends on schema changes.
 
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: db-migrate
-  namespace: nvyt
-spec:
-  template:
-    spec:
-      containers:
-        - name: migrate
-          image: ghcr.io/your-org/nvyt-web:latest
-          command: ["npm", "run", "db:migrate"]
-          envFrom:
-            - secretRef:
-                name: nvyt-secrets
-      restartPolicy: Never
+---
+
+## Safe Deployment Workflow (with migrations)
+
+When deploying changes that include database migrations:
+
+```bash
+# 1. Build and push new image
+docker build -t 192.168.0.20:30500/nvyt-web:latest -f docker/Dockerfile .
+docker push 192.168.0.20:30500/nvyt-web:latest
+
+# 2. Run migrations FIRST (using new image)
+kubectl delete job db-migrate -n nvyt --ignore-not-found
+kubectl apply -f k8s/migration-job.yaml
+kubectl wait --for=condition=complete job/db-migrate -n nvyt --timeout=120s
+
+# 3. Check migration succeeded
+kubectl logs job/db-migrate -n nvyt
+
+# 4. Deploy application (only after migrations succeed)
+kubectl rollout restart deployment/nvyt-web -n nvyt
+kubectl rollout status deployment/nvyt-web -n nvyt
 ```
+
+**If migration fails:**
+- Check logs: `kubectl logs job/db-migrate -n nvyt`
+- Do NOT deploy the new application code
+- Fix the migration locally and rebuild the image
 
 ---
 
@@ -426,7 +442,7 @@ kubectl scale deployment nvyt-web --replicas=5 -n nvyt
 
 ## Rollback
 
-### Kubernetes
+### Application Rollback
 
 ```bash
 # View rollout history
@@ -438,6 +454,18 @@ kubectl rollout undo deployment/nvyt-web -n nvyt
 # Rollback to specific revision
 kubectl rollout undo deployment/nvyt-web --to-revision=2 -n nvyt
 ```
+
+### Database Migration Rollback
+
+Drizzle migrations are forward-only. If you need to rollback a migration:
+
+1. **For additive changes** (new tables, new columns with defaults): Just rollback the app, old code ignores new columns
+2. **For breaking changes** (removed columns, renamed tables): Create a new migration to reverse the changes
+
+**Best Practice:** Make migrations backward-compatible when possible:
+- Add new columns as nullable or with defaults
+- Keep old columns until all app versions are updated
+- Use feature flags for schema-dependent features
 
 ---
 

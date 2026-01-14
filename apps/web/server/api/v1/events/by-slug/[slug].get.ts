@@ -93,6 +93,7 @@ export default defineEventHandler(async (event) => {
         .orderBy(ticketTypes.sortOrder)
     } else {
       // Public users only see active tickets within sales period
+      const nowIso = now.toISOString()
       tickets = await db
         .select()
         .from(ticketTypes)
@@ -101,9 +102,9 @@ export default defineEventHandler(async (event) => {
             eq(ticketTypes.eventId, eventData.id),
             eq(ticketTypes.status, 'active'),
             // Sales must have started (or no start date set)
-            sql`(${ticketTypes.salesStart} IS NULL OR ${ticketTypes.salesStart} <= ${now})`,
+            sql`(${ticketTypes.salesStart} IS NULL OR ${ticketTypes.salesStart} <= ${nowIso}::timestamptz)`,
             // Sales must not have ended (or no end date set)
-            sql`(${ticketTypes.salesEnd} IS NULL OR ${ticketTypes.salesEnd} >= ${now})`
+            sql`(${ticketTypes.salesEnd} IS NULL OR ${ticketTypes.salesEnd} >= ${nowIso}::timestamptz)`
           )
         )
         .orderBy(ticketTypes.sortOrder)

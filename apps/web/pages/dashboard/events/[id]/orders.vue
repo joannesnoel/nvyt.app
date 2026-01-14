@@ -42,47 +42,6 @@ watch(searchQuery, () => {
   }, 300)
 })
 
-// Refund modal
-const showRefundModal = ref(false)
-const refundingOrder = ref<any>(null)
-const refundReason = ref('')
-const isRefunding = ref(false)
-
-function openRefundModal(order: any) {
-  refundingOrder.value = order
-  refundReason.value = ''
-  showRefundModal.value = true
-}
-
-async function processRefund() {
-  if (!refundingOrder.value) return
-
-  isRefunding.value = true
-  try {
-    await $fetch(`/api/v1/orders/${refundingOrder.value.orderNumber}/refund`, {
-      method: 'POST',
-      body: {
-        reason: refundReason.value || 'requested_by_customer',
-      },
-    })
-    toast.add({
-      title: 'Refund Processed',
-      description: `Order ${refundingOrder.value.orderNumber} has been refunded.`,
-      color: 'green',
-    })
-    showRefundModal.value = false
-    await refresh()
-  } catch (e: any) {
-    toast.add({
-      title: 'Refund Failed',
-      description: e.data?.message || 'Failed to process refund',
-      color: 'red',
-    })
-  } finally {
-    isRefunding.value = false
-  }
-}
-
 // Status helpers
 function getStatusColor(status: string) {
   switch (status) {
@@ -240,15 +199,6 @@ const statusOptions = [
               >
                 View Details
               </UButton>
-              <UButton
-                v-if="order.paymentStatus === 'paid'"
-                color="red"
-                variant="outline"
-                size="sm"
-                @click="openRefundModal(order)"
-              >
-                Refund
-              </UButton>
             </div>
           </div>
         </div>
@@ -303,27 +253,12 @@ const statusOptions = [
                   {{ formatDate(order.createdAt) }}
                 </td>
                 <td class="py-3 px-4 text-right">
-                  <UDropdown
-                    :items="[[
-                      {
-                        label: 'View Details',
-                        icon: 'i-heroicons-eye',
-                        click: () => navigateTo(`/orders/${order.orderNumber}`)
-                      },
-                      {
-                        label: 'Refund',
-                        icon: 'i-heroicons-arrow-uturn-left',
-                        disabled: order.paymentStatus !== 'paid',
-                        click: () => openRefundModal(order)
-                      },
-                    ]]"
-                  >
-                    <UButton
-                      color="gray"
-                      variant="ghost"
-                      icon="i-heroicons-ellipsis-vertical"
-                    />
-                  </UDropdown>
+                  <UButton
+                    color="gray"
+                    variant="ghost"
+                    icon="i-heroicons-eye"
+                    @click="navigateTo(`/orders/${order.orderNumber}`)"
+                  />
                 </td>
               </tr>
             </tbody>
@@ -341,80 +276,5 @@ const statusOptions = [
       </UCard>
     </div>
 
-    <!-- Refund Modal -->
-    <UModal v-model="showRefundModal">
-      <UCard>
-        <template #header>
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-            Process Refund
-          </h3>
-        </template>
-
-        <div v-if="refundingOrder" class="space-y-4">
-          <UAlert
-            color="yellow"
-            icon="i-heroicons-exclamation-triangle"
-            title="This action cannot be undone"
-            description="The customer will be refunded to their original payment method."
-          />
-
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p class="text-gray-500">Order Number</p>
-                <p class="font-mono font-medium text-gray-900 dark:text-white">
-                  {{ refundingOrder.orderNumber }}
-                </p>
-              </div>
-              <div>
-                <p class="text-gray-500">Amount</p>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ formatCurrency(refundingOrder.totalAmount) }}
-                </p>
-              </div>
-              <div>
-                <p class="text-gray-500">Customer</p>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ refundingOrder.customer?.name }}
-                </p>
-              </div>
-              <div>
-                <p class="text-gray-500">Tickets</p>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ refundingOrder.ticketCount }} ticket{{ refundingOrder.ticketCount !== 1 ? 's' : '' }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <UFormGroup label="Reason (optional)">
-            <UTextarea
-              v-model="refundReason"
-              placeholder="Enter a reason for the refund..."
-              :rows="2"
-            />
-          </UFormGroup>
-        </div>
-
-        <template #footer>
-          <div class="flex justify-end gap-3">
-            <UButton
-              color="gray"
-              variant="outline"
-              @click="showRefundModal = false"
-            >
-              Cancel
-            </UButton>
-            <UButton
-              color="red"
-              :loading="isRefunding"
-              @click="processRefund"
-            >
-              Process Refund
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </UModal>
   </div>
 </template>

@@ -30,14 +30,15 @@ cd nvyt.app
 pnpm install
 ```
 
-### 3. Start Development Databases
+### 3. Start Development Infrastructure
 
 ```bash
 docker compose -f docker/docker-compose.dev.yml up -d
 ```
 
 This starts:
-- PostgreSQL on port 5432
+- **PostgreSQL** on port 5432 - Database
+- **Mailhog** on port 8025 - Email testing UI (SMTP on 1025)
 
 ### 4. Configure Environment
 
@@ -108,8 +109,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 | Command | Description |
 |---------|-------------|
-| `docker compose -f docker/docker-compose.dev.yml up -d` | Start dev databases |
-| `docker compose -f docker/docker-compose.dev.yml down` | Stop dev databases |
+| `docker compose -f docker/docker-compose.dev.yml up -d` | Start dev infrastructure |
+| `docker compose -f docker/docker-compose.dev.yml down` | Stop dev infrastructure |
 | `docker compose -f docker/docker-compose.yml up --build` | Run full stack |
 
 ---
@@ -284,6 +285,37 @@ http POST localhost:3000/api/v1/auth/login \
   email="test@example.com" \
   password="Password123"
 ```
+
+---
+
+## Testing Tools
+
+### Email Testing with Mailhog
+
+All emails sent in development go to Mailhog instead of real recipients.
+
+1. Open [http://localhost:8025](http://localhost:8025)
+2. View all sent emails in the web UI
+3. No configuration needed - uses SMTP on port 1025 by default
+
+### PayMongo Webhook Testing with Cloudflare Tunnel
+
+To test PayMongo webhooks locally, use Cloudflare Tunnel to expose your local server:
+
+1. **Start a quick tunnel:**
+   ```bash
+   cloudflared tunnel --url http://localhost:3000
+   ```
+
+2. **Copy the public URL** from the output (e.g., `https://xxx.trycloudflare.com`)
+
+3. **Register webhook in PayMongo Dashboard:**
+   - Go to Developers → Webhooks
+   - Add URL: `https://<your-tunnel-url>/api/v1/webhooks/paymongo`
+   - Select events: `checkout_session.payment.paid`, `payment.paid`, `payment.failed`
+   - Copy the webhook secret to `PAYMONGO_WEBHOOK_SECRET` in `.env`
+
+For persistent tunnels, configure a named tunnel in your Cloudflare dashboard.
 
 ---
 
