@@ -182,7 +182,7 @@ export async function createCheckoutSession(
 ): Promise<CheckoutSession> {
   const {
     lineItems,
-    paymentMethodTypes = ['qrph'], // TODO: Add back ['gcash', 'paymaya', 'card', 'grab_pay', 'dob', 'dob_ubp'] after activation
+    paymentMethodTypes = ['gcash', 'paymaya', 'card', 'grab_pay', 'qrph'], // dob, dob_ubp require activation
     successUrl,
     cancelUrl,
     referenceNumber,

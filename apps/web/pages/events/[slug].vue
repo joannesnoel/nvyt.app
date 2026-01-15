@@ -86,6 +86,9 @@ const guestForm = ref({
   email: '',
 })
 
+// Requirements state
+const requirementResponses = ref<Record<string, boolean | undefined>>({})
+
 function openTicketModal() {
   // Initialize cart with 0 for each ticket type
   if (event.value?.ticketTypes) {
@@ -98,6 +101,14 @@ function openTicketModal() {
   // Reset guest form
   showGuestForm.value = false
   guestForm.value = { name: '', email: '' }
+  // Initialize requirement responses
+  if (event.value?.requirements) {
+    const responses: Record<string, boolean | undefined> = {}
+    for (const req of event.value.requirements) {
+      responses[req.id] = req.type === 'checkbox' ? false : undefined
+    }
+    requirementResponses.value = responses
+  }
   showTicketModal.value = true
 }
 
@@ -132,6 +143,64 @@ const cartItemCount = computed(() => {
   return Object.values(ticketCart.value).reduce((a, b) => a + b, 0)
 })
 
+// Check if all requirements are satisfied (for disabling button)
+const requirementsSatisfied = computed(() => {
+  if (!event.value?.requirements?.length) return true
+
+  for (const req of event.value.requirements) {
+    const response = requirementResponses.value[req.id]
+
+    if (req.type === 'checkbox' && response !== true) {
+      return false
+    }
+
+    if (req.type === 'yes_no') {
+      if (response === undefined || response !== req.requiredAnswer) {
+        return false
+      }
+    }
+  }
+  return true
+})
+
+function validateRequirements(): boolean {
+  if (!event.value?.requirements?.length) return true
+
+  for (const req of event.value.requirements) {
+    const response = requirementResponses.value[req.id]
+
+    if (req.type === 'checkbox' && response !== true) {
+      toast.add({
+        title: 'Requirements',
+        description: `You must agree to: "${req.text}"`,
+        color: 'yellow',
+      })
+      return false
+    }
+
+    if (req.type === 'yes_no') {
+      if (response === undefined) {
+        toast.add({
+          title: 'Requirements',
+          description: `Please answer: "${req.text}"`,
+          color: 'yellow',
+        })
+        return false
+      }
+      if (response !== req.requiredAnswer) {
+        const expected = req.requiredAnswer ? 'Yes' : 'No'
+        toast.add({
+          title: 'Requirements',
+          description: `You must answer "${expected}" to: "${req.text}"`,
+          color: 'yellow',
+        })
+        return false
+      }
+    }
+  }
+  return true
+}
+
 async function checkout() {
   if (!event.value) return
   if (cartItemCount.value === 0) {
@@ -142,6 +211,9 @@ async function checkout() {
     })
     return
   }
+
+  // Validate requirements
+  if (!validateRequirements()) return
 
   // If not logged in, need guest info
   if (!user.value) {
@@ -175,6 +247,14 @@ async function checkout() {
       .filter(([_, qty]) => qty > 0)
       .map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }))
 
+    // Build requirement responses array
+    const reqResponses = event.value.requirements?.length
+      ? Object.entries(requirementResponses.value).map(([requirementId, response]) => ({
+          requirementId,
+          response: response ?? false,
+        }))
+      : undefined
+
     const response = await $fetch('/api/v1/orders/checkout', {
       method: 'POST',
       body: {
@@ -183,6 +263,7 @@ async function checkout() {
         customerName: user.value?.name || guestForm.value.name,
         customerEmail: user.value?.email || guestForm.value.email,
         isGuest: !user.value,
+        requirementResponses: reqResponses,
       },
     }) as any
 
@@ -777,6 +858,113 @@ function getCategoryColor(category: string) {
                 </p>
               </template>
             </UCard>
+
+            <!-- Announcements Section -->
+            <UCard v-if="event.announcements?.length">
+              <template #header>
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                    <UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div>
+                    <h2 class="font-semibold text-gray-900 dark:text-white">Announcements</h2>
+                    <p class="text-sm text-gray-500">Latest updates from the organizer</p>
+                  </div>
+                </div>
+              </template>
+              <div class="space-y-4">
+                <div
+                  v-for="announcement in event.announcements"
+                  :key="announcement.id"
+                  class="relative"
+                >
+                  <div
+                    class="p-4 rounded-lg border"
+                    :class="announcement.isPinned
+                      ? 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20'
+                      : 'border-gray-200 dark:border-gray-700'"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div v-if="announcement.isPinned" class="flex-shrink-0">
+                        <UIcon name="i-heroicons-pin" class="w-4 h-4 text-orange-500" />
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <h3 class="font-semibold text-gray-900 dark:text-white">
+                            {{ announcement.title }}
+                          </h3>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-2">
+                          {{ new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                        </p>
+                        <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                          {{ announcement.content }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </UCard>
+
+            <!-- FAQs Section -->
+            <UCard v-if="event.faqs?.length">
+              <template #header>
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                    <UIcon name="i-heroicons-question-mark-circle" class="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 class="font-semibold text-gray-900 dark:text-white">Frequently Asked Questions</h2>
+                    <p class="text-sm text-gray-500">{{ event.faqs.length }} question{{ event.faqs.length !== 1 ? 's' : '' }}</p>
+                  </div>
+                </div>
+              </template>
+              <div class="space-y-3">
+                <div
+                  v-for="(faq, index) in event.faqs"
+                  :key="faq.id"
+                  class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                >
+                  <UAccordion
+                    :items="[{ label: faq.question, content: faq.answer, slot: 'faq-' + index }]"
+                    :ui="{
+                      wrapper: '',
+                      item: { base: '', padding: '' },
+                    }"
+                  >
+                    <template #default="{ open }">
+                      <button
+                        class="w-full flex items-start gap-3 p-4 text-left transition-colors"
+                        :class="open ? 'bg-gray-50 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
+                      >
+                        <div
+                          class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                          :class="open ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                        >
+                          {{ index + 1 }}
+                        </div>
+                        <span class="flex-1 font-medium text-gray-900 dark:text-white">
+                          {{ faq.question }}
+                        </span>
+                        <UIcon
+                          name="i-heroicons-chevron-down"
+                          class="w-5 h-5 text-gray-400 transition-transform flex-shrink-0 mt-0.5"
+                          :class="{ 'rotate-180 text-primary': open }"
+                        />
+                      </button>
+                    </template>
+                    <template #[`faq-${index}`]>
+                      <div class="px-4 pb-4 pt-0">
+                        <div class="pl-9 text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                          {{ faq.answer }}
+                        </div>
+                      </div>
+                    </template>
+                  </UAccordion>
+                </div>
+              </div>
+            </UCard>
           </div>
 
           <!-- Sidebar -->
@@ -951,6 +1139,50 @@ function getCategoryColor(category: string) {
           </div>
         </div>
 
+        <!-- Event Requirements Section -->
+        <div v-if="event?.requirements?.length" class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">
+            Terms & Requirements
+          </h4>
+          <div class="space-y-4">
+            <div v-for="req in event.requirements" :key="req.id">
+              <!-- Checkbox type -->
+              <template v-if="req.type === 'checkbox'">
+                <div class="flex items-start gap-3">
+                  <UCheckbox
+                    v-model="requirementResponses[req.id]"
+                    :ui="{ wrapper: 'mt-0.5' }"
+                  />
+                  <div class="flex-1">
+                    <p class="text-sm text-gray-700 dark:text-gray-300">{{ req.text }}</p>
+                    <p v-if="req.description" class="text-xs text-gray-500 mt-1">
+                      {{ req.description }}
+                    </p>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Yes/No type -->
+              <template v-else-if="req.type === 'yes_no'">
+                <div class="space-y-2">
+                  <p class="text-sm text-gray-700 dark:text-gray-300">{{ req.text }}</p>
+                  <p v-if="req.description" class="text-xs text-gray-500">
+                    {{ req.description }}
+                  </p>
+                  <URadioGroup
+                    v-model="requirementResponses[req.id]"
+                    :options="[
+                      { value: true, label: 'Yes' },
+                      { value: false, label: 'No' },
+                    ]"
+                    :ui="{ fieldset: 'flex gap-4' }"
+                  />
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
         <template #footer>
           <div class="space-y-4">
             <!-- Guest Form (shown when not logged in and showGuestForm is true) -->
@@ -981,6 +1213,15 @@ function getCategoryColor(category: string) {
               </p>
             </div>
 
+            <!-- Requirements hint -->
+            <p
+              v-if="event?.requirements?.length && !requirementsSatisfied"
+              class="text-sm text-yellow-600 dark:text-yellow-500 flex items-center gap-2"
+            >
+              <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4" />
+              Please agree to all requirements above to continue
+            </p>
+
             <!-- Footer Actions -->
             <div class="flex items-center justify-between">
               <div>
@@ -993,7 +1234,7 @@ function getCategoryColor(category: string) {
                 color="primary"
                 size="lg"
                 :loading="isCheckingOut"
-                :disabled="cartItemCount === 0"
+                :disabled="cartItemCount === 0 || !requirementsSatisfied"
                 @click="checkout"
               >
                 <template v-if="user">

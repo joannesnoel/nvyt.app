@@ -70,17 +70,30 @@ function openEditModal(ticketType: any) {
 
 function formatDateTimeLocal(dateStr: string) {
   const date = new Date(dateStr)
-  return date.toISOString().slice(0, 16)
+  // Format as YYYY-MM-DDTHH:mm for datetime-local input using LOCAL time
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+// Convert datetime-local string to ISO string preserving local time intent
+function toISOString(datetimeLocal: string): string {
+  if (!datetimeLocal) return ''
+  return new Date(datetimeLocal).toISOString()
 }
 
 async function saveTicketType() {
   isSubmitting.value = true
   try {
+    // Convert dates to ISO strings to preserve timezone
     const payload = {
       ...formData.value,
       quantity: formData.value.quantity || undefined,
-      salesStart: formData.value.salesStart || undefined,
-      salesEnd: formData.value.salesEnd || undefined,
+      salesStart: formData.value.salesStart ? toISOString(formData.value.salesStart) : undefined,
+      salesEnd: formData.value.salesEnd ? toISOString(formData.value.salesEnd) : undefined,
     }
 
     if (editingTicketType.value) {

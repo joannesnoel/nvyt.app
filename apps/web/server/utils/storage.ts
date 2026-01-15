@@ -15,25 +15,47 @@ function getS3Client(): S3Client {
 
   const config = useRuntimeConfig()
 
-  if (!config.s3Endpoint || !config.s3AccessKeyId || !config.s3SecretAccessKey) {
-    throw new Error('S3 storage not configured')
-  }
+  // For AWS S3: only region and bucket are required (uses IAM role)
+  // For S3-compatible services (MinIO, Garage): endpoint and access keys are required
+  const isAwsS3 = !config.s3Endpoint || (config.s3Endpoint as string).includes('amazonaws.com')
 
-  s3Client = new S3Client({
-    endpoint: config.s3Endpoint as string,
-    region: config.s3Region as string || 'garage',
-    credentials: {
-      accessKeyId: config.s3AccessKeyId as string,
-      secretAccessKey: config.s3SecretAccessKey as string,
-    },
-    forcePathStyle: true, // Required for Garage, MinIO, and other S3-compatible services
-  })
+  if (isAwsS3) {
+    // Use AWS S3 with IAM role credentials (default credential provider)
+    if (!config.s3Region) {
+      throw new Error('S3 storage not configured: S3_REGION is required')
+    }
+    s3Client = new S3Client({
+      region: config.s3Region as string,
+      // No explicit credentials - uses IAM role from ECS task
+    })
+  } else {
+    // Use S3-compatible service with explicit credentials
+    if (!config.s3Endpoint || !config.s3AccessKeyId || !config.s3SecretAccessKey) {
+      throw new Error('S3 storage not configured: endpoint and credentials required for S3-compatible services')
+    }
+    s3Client = new S3Client({
+      endpoint: config.s3Endpoint as string,
+      region: config.s3Region as string || 'garage',
+      credentials: {
+        accessKeyId: config.s3AccessKeyId as string,
+        secretAccessKey: config.s3SecretAccessKey as string,
+      },
+      forcePathStyle: true, // Required for Garage, MinIO, and other S3-compatible services
+    })
+  }
 
   return s3Client
 }
 
 export function isStorageConfigured(): boolean {
   const config = useRuntimeConfig()
+  const isAwsS3 = !config.s3Endpoint || (config.s3Endpoint as string).includes('amazonaws.com')
+
+  if (isAwsS3) {
+    // AWS S3 with IAM role - only need region and bucket
+    return !!(config.s3Region && config.s3Bucket)
+  }
+  // S3-compatible services need endpoint and credentials
   return !!(config.s3Endpoint && config.s3AccessKeyId && config.s3SecretAccessKey)
 }
 

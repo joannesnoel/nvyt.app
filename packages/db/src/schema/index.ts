@@ -5,6 +5,9 @@ export * from './users'
 export * from './events'
 export * from './eventCollaborators'
 export * from './eventInvitations'
+export * from './eventRequirements'
+export * from './eventFaqs'
+export * from './eventAnnouncements'
 
 // Tickets & Payments
 export * from './tickets'

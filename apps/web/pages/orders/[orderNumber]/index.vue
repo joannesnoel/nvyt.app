@@ -162,6 +162,47 @@ const canDownload = computed(() => {
   return order.value?.paymentStatus === 'paid' &&
     order.value?.tickets?.some((t: any) => t.status === 'confirmed' || t.status === 'checked_in')
 })
+
+// Check if payment can be retried
+const canRetryPayment = computed(() => {
+  return (order.value?.paymentStatus === 'pending' || order.value?.paymentStatus === 'failed') &&
+    parseFloat(order.value?.totalAmount || '0') > 0
+})
+
+// Retry payment
+const retryingPayment = ref(false)
+
+async function retryPayment() {
+  if (!order.value) return
+
+  retryingPayment.value = true
+  try {
+    const response = await $fetch(`/api/v1/orders/${order.value.orderNumber}/retry-payment`, {
+      method: 'POST',
+    })
+
+    if (response.data?.alreadyPaid) {
+      // Payment was already confirmed - show success and refresh
+      toast.add({
+        title: 'Payment Confirmed',
+        description: response.data.message || 'Your payment has been confirmed!',
+        color: 'green',
+        icon: 'i-heroicons-check-circle',
+      })
+      // Refresh the page to show updated status
+      window.location.reload()
+    } else if (response.data?.checkoutUrl) {
+      window.location.href = response.data.checkoutUrl
+    }
+  } catch (e: any) {
+    toast.add({
+      title: 'Payment retry failed',
+      description: e.data?.message || 'Failed to retry payment. Please try again.',
+      color: 'red',
+    })
+    retryingPayment.value = false
+  }
+}
 </script>
 
 <template>
@@ -318,8 +359,37 @@ const canDownload = computed(() => {
           </div>
         </UCard>
 
+        <!-- Payment Pending/Failed Alert -->
+        <UAlert
+          v-if="canRetryPayment"
+          :color="order.paymentStatus === 'failed' ? 'red' : 'yellow'"
+          :icon="order.paymentStatus === 'failed' ? 'i-heroicons-x-circle' : 'i-heroicons-clock'"
+          class="mb-6"
+        >
+          <template #title>
+            {{ order.paymentStatus === 'failed' ? 'Payment Failed' : 'Payment Pending' }}
+          </template>
+          <template #description>
+            {{ order.paymentStatus === 'failed'
+              ? 'Your payment was not successful. Please retry to complete your order.'
+              : 'Your payment has not been completed. Please complete payment to receive your tickets.'
+            }}
+          </template>
+        </UAlert>
+
         <!-- Actions -->
-        <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex flex-col gap-3">
+          <UButton
+            v-if="canRetryPayment"
+            color="primary"
+            block
+            size="lg"
+            icon="i-heroicons-credit-card"
+            :loading="retryingPayment"
+            @click="retryPayment"
+          >
+            {{ order.paymentStatus === 'failed' ? 'Retry Payment' : 'Complete Payment' }}
+          </UButton>
           <UButton
             v-if="canDownload"
             color="primary"
@@ -333,8 +403,8 @@ const canDownload = computed(() => {
           </UButton>
           <UButton
             to="/tickets"
-            :color="canDownload ? 'gray' : 'primary'"
-            :variant="canDownload ? 'outline' : 'solid'"
+            :color="canDownload || canRetryPayment ? 'gray' : 'primary'"
+            :variant="canDownload || canRetryPayment ? 'outline' : 'solid'"
             block
             size="lg"
             icon="i-heroicons-ticket"

@@ -7,31 +7,50 @@ const toggleColorMode = () => {
 }
 
 // User dropdown menu items
-const userMenuItems = computed(() => [
-  [{
-    label: user.value?.email || '',
-    slot: 'account',
-    disabled: true,
-  }],
-  [{
-    label: 'Dashboard',
-    icon: 'i-heroicons-squares-2x2',
-    to: '/dashboard',
-  }, {
-    label: 'My Events',
-    icon: 'i-heroicons-calendar-days',
-    to: '/dashboard',
-  }, {
-    label: 'Settings',
-    icon: 'i-heroicons-cog-6-tooth',
-    to: '/settings',
-  }],
-  [{
+const userMenuItems = computed(() => {
+  const items: any[][] = [
+    [{
+      label: user.value?.email || '',
+      slot: 'account',
+      disabled: true,
+    }],
+    [{
+      label: 'Dashboard',
+      icon: 'i-heroicons-squares-2x2',
+      to: '/dashboard',
+    }, {
+      label: 'My Events',
+      icon: 'i-heroicons-calendar-days',
+      to: '/dashboard',
+    }, {
+      label: 'Settings',
+      icon: 'i-heroicons-cog-6-tooth',
+      to: '/settings',
+    }],
+  ]
+
+  // Add admin section if user is admin
+  if (user.value?.isAdmin) {
+    items.push([{
+      label: 'Admin',
+      icon: 'i-heroicons-shield-check',
+      to: '/admin/verifications',
+    }, {
+      label: 'Payouts',
+      icon: 'i-heroicons-banknotes',
+      to: '/admin/payouts',
+    }])
+  }
+
+  // Sign out is always last
+  items.push([{
     label: 'Sign out',
     icon: 'i-heroicons-arrow-right-on-rectangle',
     click: logout,
-  }],
-])
+  }])
+
+  return items
+})
 </script>
 
 <template>
@@ -141,5 +160,11 @@ const userMenuItems = computed(() => [
         </div>
       </div>
     </footer>
+
+    <!-- Email Verification Banner (fixed at bottom) -->
+    <EmailVerificationBanner />
+
+    <!-- Bottom padding when banner is shown -->
+    <div v-if="isAuthenticated && user && !user.emailVerified" class="h-14 sm:h-12" />
   </div>
 </template>

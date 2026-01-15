@@ -377,7 +377,7 @@ function getStatusColor(status: string) {
                 <h2 class="font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
               </template>
 
-              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <NuxtLink
                   :to="`/dashboard/events/${eventId}/attendees`"
                   class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
@@ -405,6 +405,16 @@ function getStatusColor(status: string) {
                   <UIcon name="i-heroicons-shopping-cart" class="w-8 h-8 text-primary mx-auto mb-2" />
                   <p class="font-medium text-gray-900 dark:text-white">Orders</p>
                   <p class="text-sm text-gray-500">Sales & refunds</p>
+                </NuxtLink>
+
+                <NuxtLink
+                  v-if="event.registrationMode === 'tickets'"
+                  :to="`/dashboard/events/${eventId}/requirements`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-clipboard-document-check" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Requirements</p>
+                  <p class="text-sm text-gray-500">Terms & agreements</p>
                 </NuxtLink>
 
                 <NuxtLink
@@ -451,6 +461,24 @@ function getStatusColor(status: string) {
                   <UIcon name="i-heroicons-gift" class="w-8 h-8 text-primary mx-auto mb-2" />
                   <p class="font-medium text-gray-900 dark:text-white">Contributions</p>
                   <p class="text-sm text-gray-500">Manage list</p>
+                </NuxtLink>
+
+                <NuxtLink
+                  :to="`/dashboard/events/${eventId}/announcements`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-megaphone" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Announcements</p>
+                  <p class="text-sm text-gray-500">News & updates</p>
+                </NuxtLink>
+
+                <NuxtLink
+                  :to="`/dashboard/events/${eventId}/faqs`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-question-mark-circle" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">FAQs</p>
+                  <p class="text-sm text-gray-500">Q&A section</p>
                 </NuxtLink>
               </div>
             </UCard>

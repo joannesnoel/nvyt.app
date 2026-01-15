@@ -47,6 +47,15 @@ const loading = ref(false)
 const error = ref('')
 const toast = useToast()
 
+// Convert datetime-local string to ISO string preserving local time intent
+function toISOString(datetimeLocal: string): string {
+  if (!datetimeLocal) return ''
+  // datetime-local gives us "YYYY-MM-DDTHH:mm" without timezone
+  // new Date() in browser interprets this as local time
+  // toISOString() converts to UTC ISO format
+  return new Date(datetimeLocal).toISOString()
+}
+
 async function handleSubmit() {
   // Validate
   const result = createEventSchema.safeParse(form)
@@ -59,9 +68,16 @@ async function handleSubmit() {
   error.value = ''
 
   try {
+    // Convert dates to ISO strings to preserve timezone
+    const payload = {
+      ...form,
+      startDate: toISOString(form.startDate || ''),
+      endDate: form.endDate ? toISOString(form.endDate) : undefined,
+    }
+
     const response = await $fetch('/api/v1/events', {
       method: 'POST',
-      body: form,
+      body: payload,
     })
 
     if (response.success) {

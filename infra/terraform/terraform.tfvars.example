@@ -1,0 +1,46 @@
+# Terraform Variables for nvyt.app Production
+# Copy this file to terraform.tfvars and fill in your values
+# IMPORTANT: terraform.tfvars should be gitignored
+
+# AWS Configuration
+aws_region  = "ap-southeast-1"
+aws_profile = "nvyt-prod"
+
+# Project
+project_name = "nvyt"
+environment  = "production"
+
+# Domain
+domain_name = "nvyt.app"
+
+# Application URL
+app_url = "https://nvyt.app"
+
+# Admin emails (comma-separated)
+admin_emails = "jon@creativelogik.net,hello@nvyt.app"
+
+# PayMongo (get from PayMongo dashboard)
+paymongo_public_key     = "pk_live_xxx"
+paymongo_secret_key     = "sk_live_xxx"
+paymongo_webhook_secret = "whsk_xxx"
+
+# Google Maps
+google_maps_api_key = "AIzaSy..."
+
+# Pusher (for real-time features)
+pusher_app_id  = "your-app-id"
+pusher_key     = "your-key"
+pusher_secret  = "your-secret"
+pusher_cluster = "ap1"
+
+# SendGrid (for production emails)
+sendgrid_api_key = "SG.xxx"
+
+# Database (optional - defaults are fine for most cases)
+# db_instance_class    = "db.t3.micro"
+# db_allocated_storage = 20
+
+# ECS (optional - defaults are fine for most cases)
+# ecs_task_cpu     = 512
+# ecs_task_memory  = 1024
+# ecs_desired_count = 2

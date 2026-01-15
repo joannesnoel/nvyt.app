@@ -27,8 +27,8 @@ function getSmtpTransporter(): nodemailer.Transporter<SMTPTransport.SentMessageI
 
   const config = useRuntimeConfig()
 
-  // Check if SMTP is configured
-  if (!config.smtpHost || !config.smtpUser || !config.smtpPass) {
+  // Check if SMTP host is configured (user/pass optional for services like Mailhog)
+  if (!config.smtpHost) {
     return null
   }
 
@@ -36,10 +36,14 @@ function getSmtpTransporter(): nodemailer.Transporter<SMTPTransport.SentMessageI
     host: config.smtpHost as string,
     port: Number(config.smtpPort) || 587,
     secure: config.smtpSecure === 'true',
-    auth: {
+  }
+
+  // Only add auth if credentials are provided
+  if (config.smtpUser && config.smtpPass) {
+    smtpConfig.auth = {
       user: config.smtpUser as string,
       pass: config.smtpPass as string,
-    },
+    }
   }
 
   transporter = nodemailer.createTransport(smtpConfig)
@@ -631,15 +635,15 @@ export function accountSetupEmail(data: {
           <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
         </div>
 
-        <h2 style="color: #111; margin-bottom: 10px;">Your Tickets are Ready!</h2>
+        <h2 style="color: #111; margin-bottom: 10px;">Set Up Your Account</h2>
 
         <p>Hi ${data.userName},</p>
 
-        <p>Thank you for your purchase! Your tickets for <strong>${data.eventTitle}</strong> are confirmed.</p>
+        <p>Thank you for your order for <strong>${data.eventTitle}</strong>!</p>
 
         <p>Order Number: <strong>${data.orderNumber}</strong></p>
 
-        <p>To access your tickets anytime and manage your account, please set up a password:</p>
+        <p>We've created an account for you. Set up a password to access your tickets and manage future orders:</p>
 
         <p style="text-align: center; margin: 30px 0;">
           <a href="${data.setupUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Set Up Your Account</a>
@@ -1112,6 +1116,91 @@ export function verificationSubmittedEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           Thank you for choosing nvyt.<br>
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function welcomeEmail(data: {
+  userName: string
+  verificationUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: 'Welcome to nvyt - Please verify your email',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">Welcome to nvyt!</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>Thanks for signing up! We're excited to have you on board.</p>
+
+        <p>To get started, please verify your email address by clicking the button below:</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.verificationUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Verify Email Address</a>
+        </p>
+
+        <p style="color: #666; font-size: 14px;">This link will expire in 24 hours. If you didn't create an account, you can safely ignore this email.</p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          Welcome aboard!<br>
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function emailVerificationEmail(data: {
+  userName: string
+  verificationUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: 'Verify your email address - nvyt',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">Verify Your Email</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>Please verify your email address by clicking the button below:</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.verificationUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Verify Email Address</a>
+        </p>
+
+        <p style="color: #666; font-size: 14px;">This link will expire in 24 hours. If you didn't request this email, you can safely ignore it.</p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
           The nvyt Team
         </p>
       </body>

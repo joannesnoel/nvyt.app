@@ -74,7 +74,19 @@
       "Bash(pnpm install)",
       "Bash(npx tsx:*)",
       "Bash(pnpm run reset:dev:*)",
-      "Bash(npx drizzle-kit:*)"
+      "Bash(npx drizzle-kit:*)",
+      "Bash(aws ecs describe-services:*)",
+      "Bash(aws secretsmanager get-secret-value:*)",
+      "Bash(aws ecs describe-task-definition:*)",
+      "Bash(AWS_PROFILE=nvyt-prod terraform apply:*)",
+      "Bash(aws ecs update-service:*)",
+      "Bash(aws ecs execute-command:*)",
+      "Bash(aws ec2 describe-security-groups:*)",
+      "Bash(aws ecr describe-repositories:*)",
+      "Bash(aws ecr get-login-password:*)",
+      "Bash(npx nuxi typecheck:*)",
+      "Bash(pnpm db:generate:*)",
+      "Bash(pnpm db:migrate:*)"
     ]
   }
 }

@@ -45,6 +45,11 @@ export const purchaseTicketsSchema = z.object({
   customerEmail: z.string().email(),
   customerPhone: z.string().optional(),
   isGuest: z.boolean().optional().default(false),
+  // Event requirement responses
+  requirementResponses: z.array(z.object({
+    requirementId: z.string().uuid(),
+    response: z.boolean(),
+  })).optional(),
 })
 
 export const checkInSchema = z.object({

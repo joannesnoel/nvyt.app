@@ -1,6 +1,6 @@
-import { orders, tickets, ticketTypes, events, users, type User } from '@nvyt/db'
+import { orders, tickets, ticketTypes, events, users, eventRequirements, type User } from '@nvyt/db'
 import { purchaseTicketsSchema } from '@nvyt/shared'
-import { eq, and, inArray } from 'drizzle-orm'
+import { eq, and, inArray, asc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail, ticketPurchaseConfirmationEmail } from '~/server/utils/email'
@@ -133,6 +133,51 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       message: 'This event has been cancelled',
     })
+  }
+
+  // Validate event requirements
+  const activeRequirements = await db
+    .select()
+    .from(eventRequirements)
+    .where(
+      and(
+        eq(eventRequirements.eventId, data.eventId),
+        eq(eventRequirements.isActive, true)
+      )
+    )
+    .orderBy(asc(eventRequirements.sortOrder))
+
+  if (activeRequirements.length > 0) {
+    const responses = data.requirementResponses || []
+    const responseMap = new Map(responses.map(r => [r.requirementId, r.response]))
+
+    for (const req of activeRequirements) {
+      const response = responseMap.get(req.id)
+
+      if (response === undefined) {
+        throw createError({
+          statusCode: 400,
+          message: `You must respond to all requirements: "${req.text}"`,
+        })
+      }
+
+      // For checkbox type: must be true (agreed)
+      if (req.type === 'checkbox' && response !== true) {
+        throw createError({
+          statusCode: 400,
+          message: `You must agree to: "${req.text}"`,
+        })
+      }
+
+      // For yes_no type: must match required answer
+      if (req.type === 'yes_no' && response !== req.requiredAnswer) {
+        const expectedAnswer = req.requiredAnswer ? 'Yes' : 'No'
+        throw createError({
+          statusCode: 400,
+          message: `You must answer "${expectedAnswer}" to: "${req.text}"`,
+        })
+      }
+    }
   }
 
   // Get all requested ticket types
@@ -316,6 +361,7 @@ export default defineEventHandler(async (event) => {
       customerName: data.customerName,
       customerEmail: data.customerEmail,
       customerPhone: data.customerPhone,
+      requirementResponses: data.requirementResponses || null,
     })
     .returning()
 

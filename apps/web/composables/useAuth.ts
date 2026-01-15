@@ -3,6 +3,8 @@ export interface User {
   name: string
   email: string
   avatarUrl?: string | null
+  emailVerified?: boolean
+  isAdmin?: boolean
 }
 
 export const useAuth = () => {

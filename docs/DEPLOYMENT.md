@@ -8,9 +8,147 @@
 
 | Option | Best For | Complexity |
 |--------|----------|------------|
+| **AWS ECS** | Production, managed | Medium |
 | **Kubernetes** | Production, scaling | High |
 | **Docker Compose** | Small deployments | Medium |
 | **Platform (Vercel/Railway)** | Quick deploys | Low |
+
+---
+
+## AWS ECS Deployment (Recommended)
+
+nvyt.app production runs on AWS ECS Fargate with the following infrastructure:
+
+### Architecture
+
+| Component | AWS Service | Details |
+|-----------|-------------|---------|
+| Compute | ECS Fargate | 2 tasks, auto-scaling |
+| Database | RDS PostgreSQL | db.t3.micro, private subnet |
+| Load Balancer | ALB | HTTPS termination |
+| SSL/TLS | ACM | Auto-renewed certificates |
+| Storage | S3 | User uploads |
+| Container Registry | ECR | Docker images |
+| Secrets | Secrets Manager | Database credentials, API keys |
+| DNS | Cloudflare | Proxy & DDoS protection |
+
+### Prerequisites
+
+- AWS CLI configured with profile `nvyt-prod`
+- Terraform 1.5+
+- Docker
+
+### Infrastructure Setup (One-time)
+
+```bash
+cd infra/terraform
+
+# Initialize Terraform
+terraform init
+
+# Review planned changes
+terraform plan
+
+# Apply infrastructure
+terraform apply
+```
+
+This creates all AWS resources including VPC, RDS, ECS cluster, ALB, etc.
+
+### Deploy Application
+
+```bash
+# From project root
+./infra/scripts/deploy.sh latest
+```
+
+This script:
+1. Builds Docker image
+2. Pushes to ECR
+3. Updates ECS service (rolling deployment)
+
+### Run Database Migrations
+
+```bash
+# Run migrations using existing image
+./infra/scripts/migrate.sh
+
+# Or build new migration image first
+./infra/scripts/migrate.sh --build
+```
+
+Migrations run as a one-off ECS Fargate task that connects to RDS.
+
+### Full Deployment Workflow
+
+When deploying changes with database migrations:
+
+```bash
+# 1. Run migrations FIRST
+./infra/scripts/migrate.sh --build
+
+# 2. Deploy application
+./infra/scripts/deploy.sh latest
+
+# 3. Verify
+curl https://nvyt.app/api/health
+```
+
+### Configuration
+
+**Terraform Variables** (`infra/terraform/terraform.tfvars`):
+
+```hcl
+aws_region     = "ap-southeast-1"
+environment    = "production"
+app_url        = "https://nvyt.app"
+admin_emails   = "admin@nvyt.app"
+```
+
+**Secrets** (AWS Secrets Manager):
+
+Secrets are stored in `nvyt-production/app-secrets`:
+- `DATABASE_URL` - PostgreSQL connection string with SSL
+- `JWT_SECRET` - JWT signing secret
+- `PAYMONGO_*` - Payment gateway keys
+- `PUSHER_*` - Real-time messaging keys
+- `SENDGRID_API_KEY` - Email service
+
+### Monitoring
+
+```bash
+# Check ECS service status
+aws --profile nvyt-prod ecs describe-services \
+  --cluster nvyt-production-cluster \
+  --services nvyt-production-web
+
+# View application logs
+aws --profile nvyt-prod logs tail /ecs/nvyt-production --follow
+
+# List running tasks
+aws --profile nvyt-prod ecs list-tasks \
+  --cluster nvyt-production-cluster \
+  --service-name nvyt-production-web
+```
+
+### Scaling
+
+```bash
+# Manual scaling
+aws --profile nvyt-prod ecs update-service \
+  --cluster nvyt-production-cluster \
+  --service nvyt-production-web \
+  --desired-count 4
+```
+
+### Costs
+
+Estimated monthly costs (ap-southeast-1):
+- ECS Fargate (2 tasks): ~$30
+- RDS db.t3.micro: ~$15
+- ALB: ~$20
+- S3 + ECR: ~$5
+- **Total: ~$70/month**
 
 ---
 
@@ -525,4 +663,4 @@ kubectl exec nvyt-web-xxx -n nvyt -- env
 
 ---
 
-*Last updated: January 10, 2026*
+*Last updated: January 14, 2026*

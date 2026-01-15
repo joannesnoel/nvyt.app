@@ -160,6 +160,48 @@ const canDownload = computed(() => {
   return order.value?.paymentStatus === 'paid' &&
     order.value?.tickets?.some((t: any) => t.status === 'confirmed' || t.status === 'checked_in')
 })
+
+// Check if payment can be retried
+const canRetryPayment = computed(() => {
+  return (order.value?.paymentStatus === 'pending' || order.value?.paymentStatus === 'failed') &&
+    parseFloat(order.value?.totalAmount || '0') > 0
+})
+
+// Retry payment
+const retryingPayment = ref(false)
+
+async function retryPayment() {
+  if (!order.value) return
+
+  retryingPayment.value = true
+  try {
+    const response = await $fetch(`/api/v1/orders/${order.value.orderNumber}/retry-payment`, {
+      method: 'POST',
+      query: token.value ? { token: token.value } : undefined,
+    })
+
+    if (response.data?.alreadyPaid) {
+      // Payment was already confirmed - show success and refresh
+      toast.add({
+        title: 'Payment Confirmed',
+        description: response.data.message || 'Your payment has been confirmed!',
+        color: 'green',
+        icon: 'i-heroicons-check-circle',
+      })
+      // Refresh the page to show updated status
+      window.location.reload()
+    } else if (response.data?.checkoutUrl) {
+      window.location.href = response.data.checkoutUrl
+    }
+  } catch (e: any) {
+    toast.add({
+      title: 'Payment retry failed',
+      description: e.data?.message || 'Failed to retry payment. Please try again.',
+      color: 'red',
+    })
+    retryingPayment.value = false
+  }
+}
 </script>
 
 <template>
@@ -191,14 +233,31 @@ const canDownload = computed(() => {
       <div v-else>
         <!-- Success Header -->
         <div class="text-center mb-8">
-          <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <UIcon name="i-heroicons-check-circle" class="w-12 h-12 text-green-500" />
+          <div
+            class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+            :class="canRetryPayment
+              ? 'bg-yellow-100 dark:bg-yellow-900/30'
+              : 'bg-green-100 dark:bg-green-900/30'"
+          >
+            <UIcon
+              :name="canRetryPayment ? 'i-heroicons-clock' : 'i-heroicons-check-circle'"
+              class="w-12 h-12"
+              :class="canRetryPayment ? 'text-yellow-500' : 'text-green-500'"
+            />
           </div>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {{ order.paymentStatus === 'paid' ? 'Payment Successful!' : 'Order Confirmed!' }}
+            {{ order.paymentStatus === 'paid' ? 'Payment Successful!' : order.paymentStatus === 'failed' ? 'Payment Failed' : 'Payment Pending' }}
           </h1>
           <p class="text-gray-600 dark:text-gray-400">
-            Your tickets are ready. Check your email for confirmation.
+            <template v-if="order.paymentStatus === 'paid'">
+              Your tickets are ready. Check your email for confirmation.
+            </template>
+            <template v-else-if="order.paymentStatus === 'failed'">
+              Your payment was not successful. Please retry to complete your order.
+            </template>
+            <template v-else>
+              Your payment has not been completed yet. Please complete payment to receive your tickets.
+            </template>
           </p>
         </div>
 
@@ -266,7 +325,9 @@ const canDownload = computed(() => {
           <!-- Total -->
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between">
-              <span class="font-medium text-gray-900 dark:text-white">Total Paid</span>
+              <span class="font-medium text-gray-900 dark:text-white">
+                {{ order.paymentStatus === 'paid' ? 'Total Paid' : 'Total Due' }}
+              </span>
               <span class="text-xl font-bold text-primary">
                 {{ parseFloat(order.totalAmount) === 0 ? 'Free' : formatCurrency(order.totalAmount) }}
               </span>
@@ -274,9 +335,20 @@ const canDownload = computed(() => {
           </div>
         </UCard>
 
-        <!-- QR Code Note -->
+        <!-- Payment Pending Alert -->
         <UAlert
-          v-if="isGuest"
+          v-if="canRetryPayment"
+          :color="order.paymentStatus === 'failed' ? 'red' : 'yellow'"
+          :icon="order.paymentStatus === 'failed' ? 'i-heroicons-x-circle' : 'i-heroicons-exclamation-triangle'"
+          :title="order.paymentStatus === 'failed' ? 'Payment was not completed' : 'Payment not yet received'"
+          :description="order.paymentStatus === 'failed'
+            ? 'Your payment could not be processed. Please try again to complete your order.'
+            : 'We have not received your payment yet. If you closed the payment page, click the button below to retry.'"
+          class="mb-6"
+        />
+        <!-- QR Code Note (only show for paid orders) -->
+        <UAlert
+          v-else-if="isGuest"
           color="blue"
           icon="i-heroicons-user-plus"
           title="Set up your account"
@@ -295,6 +367,17 @@ const canDownload = computed(() => {
         <!-- Actions -->
         <div class="flex flex-col gap-3">
           <UButton
+            v-if="canRetryPayment"
+            color="primary"
+            block
+            size="lg"
+            icon="i-heroicons-credit-card"
+            :loading="retryingPayment"
+            @click="retryPayment"
+          >
+            {{ order.paymentStatus === 'failed' ? 'Retry Payment' : 'Complete Payment' }}
+          </UButton>
+          <UButton
             v-if="canDownload && !isGuest"
             color="primary"
             block
@@ -306,6 +389,7 @@ const canDownload = computed(() => {
             Download Tickets (PDF)
           </UButton>
           <UButton
+            v-if="!canRetryPayment"
             :to="ticketsUrl"
             :color="canDownload && !isGuest ? 'gray' : 'primary'"
             :variant="canDownload && !isGuest ? 'outline' : 'solid'"
@@ -316,7 +400,6 @@ const canDownload = computed(() => {
             {{ isGuest ? 'Set Up Account to View Tickets' : 'View My Tickets' }}
           </UButton>
           <UButton
-            v-if="!isGuest"
             :to="`/events/${order.event?.slug}`"
             color="gray"
             variant="outline"

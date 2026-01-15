@@ -71,6 +71,34 @@
       "when": 1768379654951,
       "tag": "0009_big_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1768466475683,
+      "tag": "0010_blushing_slyde",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1768471516278,
+      "tag": "0011_black_rocket_raccoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1768473576538,
+      "tag": "0012_nebulous_stingray",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1768475515497,
+      "tag": "0013_jittery_mimic",
+      "breakpoints": true
     }
   ]
 }

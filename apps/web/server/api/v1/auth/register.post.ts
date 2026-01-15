@@ -1,6 +1,8 @@
 import { eq, and, isNull, isNotNull } from 'drizzle-orm'
-import { users, eventCollaborators } from '@nvyt/db'
+import { users, eventCollaborators, emailVerificationTokens } from '@nvyt/db'
 import { registerSchema } from '@nvyt/shared'
+import { nanoid } from 'nanoid'
+import { sendEmail, welcomeEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -112,6 +114,32 @@ export default defineEventHandler(async (event) => {
         isNull(eventCollaborators.userId)
       )
     )
+
+  // Create email verification token and send welcome email
+  const config = useRuntimeConfig()
+  const verificationToken = nanoid(32)
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+  await db.insert(emailVerificationTokens).values({
+    userId: user.id,
+    token: verificationToken,
+    expiresAt,
+  })
+
+  // Send welcome email with verification link
+  const verificationUrl = `${config.public.appUrl}/verify-email?token=${verificationToken}`
+  try {
+    await sendEmail({
+      to: user.email,
+      ...welcomeEmail({
+        userName: user.name,
+        verificationUrl,
+      }),
+    })
+  } catch (emailError) {
+    console.error('[Register] Failed to send welcome email:', emailError)
+    // Don't fail registration if email fails
+  }
 
   // Create session
   const sessionToken = await createSession(event, user)

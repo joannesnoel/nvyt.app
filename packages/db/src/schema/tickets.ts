@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, integer, decimal, boolean, pgEnum } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid, integer, decimal, boolean, pgEnum, jsonb } from 'drizzle-orm/pg-core'
 import { events } from './events'
 import { users } from './users'
 
@@ -92,6 +92,9 @@ export const orders = pgTable('orders', {
   customerName: text('customer_name').notNull(),
   customerEmail: text('customer_email').notNull(),
   customerPhone: text('customer_phone'),
+
+  // Event requirements responses (stored as JSON array)
+  requirementResponses: jsonb('requirement_responses').$type<Array<{ requirementId: string; response: boolean }>>(),
 
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

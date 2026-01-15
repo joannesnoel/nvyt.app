@@ -50,12 +50,6 @@ function getStatusColor(status: string) {
     default: return 'gray'
   }
 }
-
-// Apple Wallet / Google Wallet (placeholder)
-function addToWallet() {
-  // TODO: Implement wallet pass generation
-  alert('Wallet integration coming soon!')
-}
 </script>
 
 <template>
@@ -172,20 +166,21 @@ function addToWallet() {
           <!-- Actions -->
           <div class="px-6 pb-6 space-y-3">
             <UButton
-              v-if="ticket.status === 'confirmed'"
+              v-if="ticket.order?.orderNumber"
+              :to="`/orders/${ticket.order.orderNumber}`"
               color="gray"
               variant="outline"
               block
-              icon="i-heroicons-wallet"
-              @click="addToWallet"
+              icon="i-heroicons-document-text"
             >
-              Add to Wallet
+              View Order
             </UButton>
             <UButton
               :to="`/events/${ticket.event?.slug}`"
               color="gray"
               variant="ghost"
               block
+              icon="i-heroicons-calendar"
             >
               View Event Details
             </UButton>

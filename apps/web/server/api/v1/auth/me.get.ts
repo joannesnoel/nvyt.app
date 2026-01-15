@@ -13,5 +13,6 @@ export default defineEventHandler(async (event) => {
     avatarUrl: user.avatarUrl,
     emailVerified: user.emailVerified,
     createdAt: user.createdAt,
+    isAdmin: isAdmin(user.email),
   })
 })
