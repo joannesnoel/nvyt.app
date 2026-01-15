@@ -22,6 +22,7 @@ const form = reactive<Partial<UpdateEventInput>>({
   title: '',
   description: '',
   coverImage: '',
+  promoVideoUrl: '',
   organizationName: '',
   startDate: '',
   endDate: '',
@@ -33,6 +34,9 @@ const form = reactive<Partial<UpdateEventInput>>({
   requiresApproval: false,
   contributionsEnabled: false,
 })
+
+// Media type toggle: 'image' or 'video'
+const mediaType = ref<'image' | 'video'>('image')
 
 const registrationModeOptions = [
   {
@@ -62,6 +66,7 @@ watch(event, (newEvent) => {
     form.title = newEvent.title || ''
     form.description = newEvent.description || ''
     form.coverImage = newEvent.coverImage || ''
+    form.promoVideoUrl = newEvent.promoVideoUrl || ''
     form.organizationName = newEvent.organizationName || ''
     form.startDate = formatDateTimeLocal(newEvent.startDate)
     form.endDate = newEvent.endDate ? formatDateTimeLocal(newEvent.endDate) : ''
@@ -72,6 +77,8 @@ watch(event, (newEvent) => {
     form.maxAttendees = newEvent.maxAttendees || undefined
     form.requiresApproval = newEvent.requiresApproval || false
     form.contributionsEnabled = newEvent.contributionsEnabled || false
+    // Set media type from database field
+    mediaType.value = newEvent.mediaType || 'image'
   }
 }, { immediate: true })
 
@@ -113,6 +120,7 @@ async function handleSubmit() {
     // Convert dates to ISO strings to preserve timezone
     const payload = {
       ...form,
+      mediaType: mediaType.value,
       startDate: form.startDate ? toISOString(form.startDate) : undefined,
       endDate: form.endDate ? toISOString(form.endDate) : undefined,
     }
@@ -201,12 +209,50 @@ async function handleSubmit() {
                 />
               </UFormGroup>
 
-              <UFormGroup label="Cover Image" name="coverImage">
-                <ImageUpload
-                  v-model="form.coverImage"
-                  folder="events"
-                  placeholder="Click or drag to upload a cover image"
-                />
+              <UFormGroup label="Event Media" name="media">
+                <div class="space-y-4">
+                  <!-- Media Type Toggle -->
+                  <div class="flex gap-2">
+                    <UButton
+                      :color="mediaType === 'image' ? 'primary' : 'gray'"
+                      :variant="mediaType === 'image' ? 'solid' : 'ghost'"
+                      size="sm"
+                      icon="i-heroicons-photo"
+                      @click="mediaType = 'image'"
+                    >
+                      Cover Image
+                    </UButton>
+                    <UButton
+                      :color="mediaType === 'video' ? 'primary' : 'gray'"
+                      :variant="mediaType === 'video' ? 'solid' : 'ghost'"
+                      size="sm"
+                      icon="i-heroicons-play-circle"
+                      @click="mediaType = 'video'"
+                    >
+                      Promo Video
+                    </UButton>
+                  </div>
+
+                  <!-- Cover Image Upload -->
+                  <ImageUpload
+                    v-if="mediaType === 'image'"
+                    v-model="form.coverImage"
+                    folder="events"
+                    placeholder="Click or drag to upload a cover image"
+                  />
+
+                  <!-- YouTube Video URL -->
+                  <div v-else class="space-y-2">
+                    <UInput
+                      v-model="form.promoVideoUrl"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      icon="i-heroicons-play-circle"
+                    />
+                    <p class="text-sm text-gray-500">
+                      Paste a YouTube video URL to embed as your event promo video
+                    </p>
+                  </div>
+                </div>
               </UFormGroup>
 
               <UFormGroup label="Organization Name" name="organizationName" hint="Optional - overrides your name as organizer">

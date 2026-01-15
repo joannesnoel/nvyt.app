@@ -40,6 +40,48 @@ const apiError = computed(() => {
 const isOrganizer = computed(() => event.value?.isOrganizer)
 const userAttendee = computed(() => event.value?.userAttendee)
 
+// YouTube embed URL helper
+const youtubeEmbedUrl = computed(() => {
+  const url = event.value?.promoVideoUrl
+  if (!url) return null
+
+  let videoId: string | null = null
+
+  // Standard watch URL: youtube.com/watch?v=VIDEO_ID
+  const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/)
+  if (watchMatch) videoId = watchMatch[1]
+
+  // Short URL: youtu.be/VIDEO_ID
+  if (!videoId) {
+    const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/)
+    if (shortMatch) videoId = shortMatch[1]
+  }
+
+  // Embed URL: youtube.com/embed/VIDEO_ID
+  if (!videoId) {
+    const embedMatch = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/)
+    if (embedMatch) videoId = embedMatch[1]
+  }
+
+  if (videoId) {
+    const params = new URLSearchParams({
+      autoplay: '1',
+      mute: '1',
+      loop: '1',
+      playlist: videoId,
+      controls: '0',
+      showinfo: '0',
+      rel: '0',
+      modestbranding: '1',
+      playsinline: '1',
+      enablejsapi: '1',
+    })
+    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`
+  }
+
+  return null
+})
+
 // RSVP state
 const rsvpLoading = ref(false)
 const showRsvpModal = ref(false)
@@ -600,10 +642,41 @@ function getCategoryColor(category: string) {
 </script>
 
 <template>
-  <div class="py-12">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Loading -->
-      <div v-if="pending" class="space-y-4">
+  <div>
+    <!-- Full-width YouTube Video (scrolls with page, behind navbar and content) -->
+    <!-- Capped at 1920px width so video height stays reasonable on 4K screens -->
+    <div v-if="event && event.mediaType === 'video' && youtubeEmbedUrl" class="relative w-full -mt-16 z-10 bg-black">
+      <div class="max-w-[1920px] mx-auto relative" style="padding-bottom: clamp(400px, 56.25%, 1080px);">
+        <iframe
+          :src="youtubeEmbedUrl"
+          :title="event.title"
+          class="absolute top-0 left-0 w-full h-full"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        ></iframe>
+        <!-- Overlay to prevent hover interactions -->
+        <div class="absolute inset-0"></div>
+      </div>
+    </div>
+
+    <!-- Full-width Cover Image (same layout as video) -->
+    <div v-else-if="event && event.mediaType !== 'video' && event.coverImage" class="relative w-full -mt-16 z-10 bg-gray-900">
+      <div class="max-w-[1920px] mx-auto relative" style="padding-bottom: clamp(400px, 56.25%, 1080px);">
+        <img
+          :src="event.coverImage"
+          :alt="event.title"
+          class="absolute top-0 left-0 w-full h-full object-cover"
+        >
+      </div>
+    </div>
+
+    <!-- #1 - Full-width background (overlays lower part of media) -->
+    <div class="relative z-20 bg-gray-50 dark:bg-gray-950 py-12" :class="{ '-mt-24': event && ((event.mediaType === 'video' && youtubeEmbedUrl) || (event.mediaType !== 'video' && event.coverImage)) }">
+      <!-- #2 - Narrower content box (overlays more of the media) -->
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 sm:p-8" :class="{ '-mt-28 lg:-mt-40': event && ((event.mediaType === 'video' && youtubeEmbedUrl) || (event.mediaType !== 'video' && event.coverImage)) }">
+        <!-- Loading -->
+        <div v-if="pending" class="space-y-4">
         <USkeleton class="h-64 w-full rounded-xl" />
         <USkeleton class="h-8 w-2/3" />
         <USkeleton class="h-4 w-1/3" />
@@ -622,19 +695,6 @@ function getCategoryColor(category: string) {
 
       <!-- Event Content -->
       <div v-else>
-        <!-- Cover Image -->
-        <div class="aspect-video bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden mb-8">
-          <img
-            v-if="event.coverImage"
-            :src="event.coverImage"
-            :alt="event.title"
-            class="w-full h-full object-cover"
-          >
-          <div v-else class="w-full h-full flex items-center justify-center">
-            <UIcon name="i-heroicons-photo" class="w-16 h-16 text-gray-400" />
-          </div>
-        </div>
-
         <!-- Event Header -->
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
           <div>
@@ -1133,7 +1193,9 @@ function getCategoryColor(category: string) {
             </UCard>
           </div>
         </div>
+        </div>
       </div>
+    </div>
     </div>
 
     <!-- Ticket Purchase Modal -->

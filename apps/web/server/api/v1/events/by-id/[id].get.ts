@@ -22,6 +22,8 @@ export default defineEventHandler(async (event) => {
       slug: events.slug,
       description: events.description,
       coverImage: events.coverImage,
+      promoVideoUrl: events.promoVideoUrl,
+      mediaType: events.mediaType,
       organizationName: events.organizationName,
       startDate: events.startDate,
       endDate: events.endDate,

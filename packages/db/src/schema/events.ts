@@ -9,6 +9,7 @@ export const eventStatusEnum = pgEnum('event_status', ['draft', 'published', 'ca
 // - 'tickets': Registration required via tickets, free or paid (conferences, workshops, large events)
 // - 'open': No registration needed, just show up (casual public events)
 export const registrationModeEnum = pgEnum('registration_mode', ['rsvp', 'tickets', 'open'])
+export const eventMediaTypeEnum = pgEnum('event_media_type', ['image', 'video'])
 
 export const events = pgTable('events', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -21,6 +22,8 @@ export const events = pgTable('events', {
   slug: text('slug').notNull().unique(),
   description: text('description'),
   coverImage: text('cover_image'),
+  promoVideoUrl: text('promo_video_url'), // YouTube video URL for promo video embed
+  mediaType: eventMediaTypeEnum('media_type').default('image').notNull(), // Which media to display: 'image' or 'video'
   organizationName: text('organization_name'), // Optional: override "Organized by" display
 
   // Date & Location

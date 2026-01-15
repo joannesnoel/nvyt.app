@@ -86,7 +86,13 @@
       "Bash(aws ecr get-login-password:*)",
       "Bash(npx nuxi typecheck:*)",
       "Bash(pnpm db:generate:*)",
-      "Bash(pnpm db:migrate:*)"
+      "Bash(pnpm db:migrate:*)",
+      "Bash(psql:*)",
+      "Bash(tail:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(pnpm db:regenerate:*)",
+      "Bash(pnpm --filter @nvyt/shared build:*)",
+      "Bash(pnpm typecheck:*)"
     ]
   }
 }

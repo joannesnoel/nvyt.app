@@ -7,6 +7,7 @@ export const eventStatus = z.enum(['draft', 'published', 'cancelled', 'completed
 // - 'tickets': Registration required via tickets, free or paid (conferences, workshops, large events)
 // - 'open': No registration needed, just show up (casual public events)
 export const registrationMode = z.enum(['rsvp', 'tickets', 'open'])
+export const eventMediaType = z.enum(['image', 'video'])
 
 // Custom datetime parser that accepts both ISO 8601 and datetime-local format
 const dateTimeString = z.string().refine((val) => {
@@ -28,10 +29,22 @@ export const locationDetailsSchema = z.object({
   meetingPassword: z.string().optional(),
 })
 
+// YouTube URL validation - accepts various YouTube URL formats (or empty string)
+const youtubeUrlSchema = z.union([
+  z.literal(''),
+  z.string().refine((url) => {
+    // Match youtube.com/watch?v=, youtu.be/, youtube.com/embed/
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/)|youtu\.be\/)[\w-]+/
+    return youtubeRegex.test(url)
+  }, { message: 'Please enter a valid YouTube URL' }),
+]).transform(val => val || undefined)
+
 export const createEventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
   description: z.string().max(5000).optional(),
   coverImage: z.string().url().optional(),
+  promoVideoUrl: youtubeUrlSchema.optional(),
+  mediaType: eventMediaType.default('image'),
   organizationName: z.string().max(100).optional(), // Override "Organized by" display
 
   startDate: dateTimeString,
@@ -66,6 +79,7 @@ export const eventFiltersSchema = z.object({
 export type EventVisibility = z.infer<typeof eventVisibility>
 export type EventStatus = z.infer<typeof eventStatus>
 export type RegistrationMode = z.infer<typeof registrationMode>
+export type EventMediaType = z.infer<typeof eventMediaType>
 export type LocationDetails = z.infer<typeof locationDetailsSchema>
 export type CreateEventInput = z.infer<typeof createEventSchema>
 export type UpdateEventInput = z.infer<typeof updateEventSchema>
