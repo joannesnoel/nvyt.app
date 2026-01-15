@@ -25,8 +25,8 @@ PGPASSWORD=$(printf '%b' "${PGPASSWORD//%/\\x}")
 
 export PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE
 
-# Enable SSL for RDS connections
-export PGSSLMODE=require
+# Use SSL mode from environment or default to 'prefer' (works with both SSL and non-SSL)
+export PGSSLMODE=${PGSSLMODE:-prefer}
 
 echo "Host: $PGHOST:$PGPORT"
 echo "SSL Mode: $PGSSLMODE"

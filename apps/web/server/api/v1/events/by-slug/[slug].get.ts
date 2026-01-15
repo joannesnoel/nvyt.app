@@ -1,5 +1,5 @@
 import { eq, and, sql, asc, desc } from 'drizzle-orm'
-import { events, users, ticketTypes, attendees, contributionItems, eventRequirements, eventFaqs, eventAnnouncements } from '@nvyt/db'
+import { events, users, ticketTypes, tickets, attendees, contributionItems, eventRequirements, eventFaqs, eventAnnouncements } from '@nvyt/db'
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug')
@@ -35,6 +35,7 @@ export default defineEventHandler(async (event) => {
       slug: events.slug,
       description: events.description,
       coverImage: events.coverImage,
+      organizationName: events.organizationName,
       startDate: events.startDate,
       endDate: events.endDate,
       timezone: events.timezone,
@@ -80,13 +81,13 @@ export default defineEventHandler(async (event) => {
   }
 
   // Get ticket types if registration mode is 'tickets'
-  let tickets: typeof ticketTypes.$inferSelect[] = []
+  let ticketTypesData: typeof ticketTypes.$inferSelect[] = []
   if (eventData.registrationMode === 'tickets') {
     const now = new Date()
 
     if (isOrganizer) {
       // Organizers see all tickets for management
-      tickets = await db
+      ticketTypesData = await db
         .select()
         .from(ticketTypes)
         .where(eq(ticketTypes.eventId, eventData.id))
@@ -94,7 +95,7 @@ export default defineEventHandler(async (event) => {
     } else {
       // Public users only see active tickets within sales period
       const nowIso = now.toISOString()
-      tickets = await db
+      ticketTypesData = await db
         .select()
         .from(ticketTypes)
         .where(
@@ -160,7 +161,7 @@ export default defineEventHandler(async (event) => {
     )
     .orderBy(desc(eventAnnouncements.isPinned), desc(eventAnnouncements.createdAt))
 
-  // Get attendee count
+  // Get attendee count (for RSVP events)
   const countResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(attendees)
@@ -171,6 +172,21 @@ export default defineEventHandler(async (event) => {
       )
     )
   const attendeeCount = Number(countResult[0]?.count ?? 0)
+
+  // Get confirmed ticket count (for ticket-based events)
+  let ticketCount = 0
+  if (eventData.registrationMode === 'tickets') {
+    const [ticketCountResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(tickets)
+      .where(
+        and(
+          eq(tickets.eventId, eventData.id),
+          eq(tickets.status, 'confirmed')
+        )
+      )
+    ticketCount = Number(ticketCountResult?.count ?? 0)
+  }
 
   // Check if current user is attending
   let userAttendee = null
@@ -191,15 +207,17 @@ export default defineEventHandler(async (event) => {
   // Remove sensitive data
   const { inviteToken: _, ...safeEventData } = eventData
 
+  // Ensure all data is plain objects (no Drizzle internal references)
   return successResponse({
     ...safeEventData,
-    ticketTypes: tickets,
-    contributionItems: contributions,
-    requirements,
-    faqs,
-    announcements,
+    ticketTypes: ticketTypesData.map(t => ({ ...t })),
+    contributionItems: contributions.map(c => ({ ...c })),
+    requirements: requirements.map(r => ({ ...r })),
+    faqs: faqs.map(f => ({ ...f })),
+    announcements: announcements.map(a => ({ ...a })),
     attendeeCount: Number(attendeeCount),
-    userAttendee,
+    ticketCount,
+    userAttendee: userAttendee ? { ...userAttendee } : null,
     isOrganizer,
   })
 })

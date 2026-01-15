@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
       slug: events.slug,
       description: events.description,
       coverImage: events.coverImage,
+      organizationName: events.organizationName,
       startDate: events.startDate,
       endDate: events.endDate,
       timezone: events.timezone,

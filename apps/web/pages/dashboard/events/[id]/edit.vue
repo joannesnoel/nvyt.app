@@ -309,8 +309,8 @@ async function handleSubmit() {
                 </div>
               </UFormGroup>
 
-              <!-- RSVP-specific options -->
-              <template v-if="form.registrationMode === 'rsvp'">
+              <!-- Capacity (for RSVP and Tickets modes) -->
+              <template v-if="form.registrationMode === 'rsvp' || form.registrationMode === 'tickets'">
                 <UFormGroup label="Capacity" name="maxAttendees" hint="Leave empty for unlimited">
                   <UInput
                     v-model.number="form.maxAttendees"
@@ -319,7 +319,10 @@ async function handleSubmit() {
                     min="1"
                   />
                 </UFormGroup>
+              </template>
 
+              <!-- RSVP-specific options -->
+              <template v-if="form.registrationMode === 'rsvp'">
                 <UCheckbox
                   v-model="form.requiresApproval"
                   label="Require approval"

@@ -1,6 +1,6 @@
 import { orders, tickets, ticketTypes, events, users, eventRequirements, type User } from '@nvyt/db'
 import { purchaseTicketsSchema } from '@nvyt/shared'
-import { eq, and, inArray, asc } from 'drizzle-orm'
+import { eq, and, inArray, asc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail, ticketPurchaseConfirmationEmail } from '~/server/utils/email'
@@ -133,6 +133,39 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       message: 'This event has been cancelled',
     })
+  }
+
+  // Calculate total tickets being purchased
+  const totalTicketsRequested = data.items.reduce((sum, item) => sum + item.quantity, 0)
+
+  // Check event-level capacity (maxAttendees)
+  if (eventRecord.maxAttendees !== null) {
+    // Count confirmed tickets for this event
+    const [ticketCountResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(tickets)
+      .where(
+        and(
+          eq(tickets.eventId, data.eventId),
+          eq(tickets.status, 'confirmed')
+        )
+      )
+
+    const confirmedTickets = Number(ticketCountResult?.count ?? 0)
+    const availableCapacity = eventRecord.maxAttendees - confirmedTickets
+
+    if (totalTicketsRequested > availableCapacity) {
+      if (availableCapacity <= 0) {
+        throw createError({
+          statusCode: 400,
+          message: 'This event is sold out',
+        })
+      }
+      throw createError({
+        statusCode: 400,
+        message: `Only ${availableCapacity} spots remaining for this event`,
+      })
+    }
   }
 
   // Validate event requirements

@@ -86,6 +86,9 @@ const guestForm = ref({
   email: '',
 })
 
+// Checkout error state
+const checkoutError = ref<string | null>(null)
+
 // Requirements state
 const requirementResponses = ref<Record<string, boolean | undefined>>({})
 
@@ -101,6 +104,8 @@ function openTicketModal() {
   // Reset guest form
   showGuestForm.value = false
   guestForm.value = { name: '', email: '' }
+  // Clear any previous error
+  checkoutError.value = null
   // Initialize requirement responses
   if (event.value?.requirements) {
     const responses: Record<string, boolean | undefined> = {}
@@ -161,6 +166,31 @@ const requirementsSatisfied = computed(() => {
     }
   }
   return true
+})
+
+// Check if event is sold out (capacity reached)
+const isEventSoldOut = computed(() => {
+  if (!event.value) return false
+  if (event.value.maxAttendees === null) return false
+
+  // For ticket-based events, use ticketCount
+  if (event.value.registrationMode === 'tickets') {
+    return (event.value.ticketCount ?? 0) >= event.value.maxAttendees
+  }
+
+  // For RSVP events, use attendeeCount
+  return (event.value.attendeeCount ?? 0) >= event.value.maxAttendees
+})
+
+// Calculate remaining capacity
+const remainingCapacity = computed(() => {
+  if (!event.value || event.value.maxAttendees === null) return null
+
+  if (event.value.registrationMode === 'tickets') {
+    return event.value.maxAttendees - (event.value.ticketCount ?? 0)
+  }
+
+  return event.value.maxAttendees - (event.value.attendeeCount ?? 0)
 })
 
 function validateRequirements(): boolean {
@@ -305,11 +335,21 @@ async function checkout() {
       return
     }
 
+    // Extract error message from various possible locations
+    const errorMessage = e.data?.message || e.statusMessage || e.message || 'Failed to process checkout. Please try again.'
+
+    // Set inline error for visibility in the modal
+    checkoutError.value = errorMessage
+
     toast.add({
       title: 'Checkout Failed',
-      description: e.data?.message || e.message || 'Failed to process checkout. Please try again.',
+      description: errorMessage,
       color: 'red',
+      timeout: 6000,
     })
+
+    // Refresh event data to get updated availability
+    await refresh()
   } finally {
     isCheckingOut.value = false
   }
@@ -687,15 +727,29 @@ function getCategoryColor(category: string) {
 
               <!-- Registration Mode: Tickets -->
               <template v-else-if="event.registrationMode === 'tickets'">
-                <UButton
-                  v-if="event.ticketTypes?.length"
-                  color="primary"
-                  size="lg"
-                  @click="openTicketModal"
-                >
-                  <UIcon name="i-heroicons-ticket" class="w-5 h-5 mr-2" />
-                  Get Tickets
-                </UButton>
+                <template v-if="isEventSoldOut">
+                  <UButton
+                    color="gray"
+                    size="lg"
+                    disabled
+                  >
+                    <UIcon name="i-heroicons-x-circle" class="w-5 h-5 mr-2" />
+                    Sold Out
+                  </UButton>
+                </template>
+                <template v-else-if="event.ticketTypes?.length">
+                  <UButton
+                    color="primary"
+                    size="lg"
+                    @click="openTicketModal"
+                  >
+                    <UIcon name="i-heroicons-ticket" class="w-5 h-5 mr-2" />
+                    Get Tickets
+                  </UButton>
+                  <p v-if="remainingCapacity !== null && remainingCapacity <= 10" class="text-sm text-orange-600 text-center mt-2">
+                    Only {{ remainingCapacity }} spots left!
+                  </p>
+                </template>
                 <p v-else class="text-sm text-gray-500 text-center">
                   No tickets available
                 </p>
@@ -863,8 +917,8 @@ function getCategoryColor(category: string) {
             <UCard v-if="event.announcements?.length">
               <template #header>
                 <div class="flex items-center gap-3">
-                  <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                    <UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                    <UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     <h2 class="font-semibold text-gray-900 dark:text-white">Announcements</h2>
@@ -878,29 +932,24 @@ function getCategoryColor(category: string) {
                   :key="announcement.id"
                   class="relative"
                 >
-                  <div
-                    class="p-4 rounded-lg border"
-                    :class="announcement.isPinned
-                      ? 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20'
-                      : 'border-gray-200 dark:border-gray-700'"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div v-if="announcement.isPinned" class="flex-shrink-0">
-                        <UIcon name="i-heroicons-pin" class="w-4 h-4 text-orange-500" />
+                  <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-1">
+                        <UIcon
+                          v-if="announcement.isPinned"
+                          name="i-heroicons-bookmark-solid"
+                          class="w-4 h-4 text-primary flex-shrink-0"
+                        />
+                        <h3 class="font-semibold text-gray-900 dark:text-white">
+                          {{ announcement.title }}
+                        </h3>
                       </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                          <h3 class="font-semibold text-gray-900 dark:text-white">
-                            {{ announcement.title }}
-                          </h3>
-                        </div>
-                        <p class="text-xs text-gray-500 mb-2">
-                          {{ new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-                        </p>
-                        <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                          {{ announcement.content }}
-                        </p>
-                      </div>
+                      <p class="text-xs text-gray-500 mb-2">
+                        {{ new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                      </p>
+                      <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                        {{ announcement.content }}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1065,6 +1114,15 @@ function getCategoryColor(category: string) {
               </div>
               <template #footer>
                 <UButton
+                  v-if="isEventSoldOut"
+                  color="gray"
+                  block
+                  disabled
+                >
+                  Sold Out
+                </UButton>
+                <UButton
+                  v-else
                   color="primary"
                   block
                   @click="openTicketModal"
@@ -1185,6 +1243,17 @@ function getCategoryColor(category: string) {
 
         <template #footer>
           <div class="space-y-4">
+            <!-- Checkout Error Alert -->
+            <UAlert
+              v-if="checkoutError"
+              color="red"
+              variant="soft"
+              icon="i-heroicons-exclamation-circle"
+              :title="checkoutError"
+              :close-button="{ icon: 'i-heroicons-x-mark', color: 'red', variant: 'link' }"
+              @close="checkoutError = null"
+            />
+
             <!-- Guest Form (shown when not logged in and showGuestForm is true) -->
             <div v-if="!user && showGuestForm" class="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
               <p class="text-sm text-gray-600 dark:text-gray-400">

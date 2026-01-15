@@ -64,17 +64,6 @@ const userMenuItems = computed(() => {
             <span class="text-2xl font-bold text-primary">nvyt</span>
           </NuxtLink>
 
-          <!-- Navigation -->
-          <nav class="hidden md:flex items-center gap-6">
-            <NuxtLink
-              v-if="isAuthenticated"
-              to="/dashboard"
-              class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors"
-            >
-              Dashboard
-            </NuxtLink>
-          </nav>
-
           <!-- Actions -->
           <div class="flex items-center gap-3">
             <!-- Dark mode toggle -->

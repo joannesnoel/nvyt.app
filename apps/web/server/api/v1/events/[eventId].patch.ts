@@ -112,6 +112,7 @@ export default defineEventHandler(async (event) => {
     if ('title' in body) updateData.title = data.title
     if ('description' in body) updateData.description = data.description
     if ('coverImage' in body) updateData.coverImage = data.coverImage
+    if ('organizationName' in body) updateData.organizationName = data.organizationName ?? null
     if ('startDate' in body && data.startDate) updateData.startDate = new Date(data.startDate)
     if ('endDate' in body) updateData.endDate = data.endDate ? new Date(data.endDate) : null
     if ('timezone' in body) updateData.timezone = data.timezone

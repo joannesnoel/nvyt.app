@@ -8,5 +8,7 @@ metadata:
 data:
   APP_URL: "https://staging.nvyt.app"
   NODE_ENV: "staging"
+  # Disable SSL for internal PostgreSQL (no SSL support)
+  DB_SSL: "false"
   # Comma-separated list of admin emails
   ADMIN_EMAILS: "jon@creativelogik.net,hello@nvyt.app"
