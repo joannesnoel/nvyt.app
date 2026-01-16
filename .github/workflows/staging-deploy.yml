@@ -34,7 +34,8 @@ jobs:
           kubectl config set-credentials github-runner --token=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
           kubectl config set-context default --cluster=k3s --user=github-runner
           kubectl config use-context default
-          kubectl get ns
+          # Verify access to nvyt-staging namespace
+          kubectl get pods -n nvyt-staging --no-headers | head -1
 
       - name: Generate image tag
         id: tag
