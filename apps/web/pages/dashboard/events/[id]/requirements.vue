@@ -178,7 +178,7 @@ async function deleteRequirement() {
 
   isDeleting.value = true
   try {
-    await $fetch(`/api/v1/events/${eventId.value}/requirements/${deletingRequirement.value.id}`, {
+    await ($fetch as any)(`/api/v1/events/${eventId.value}/requirements/${deletingRequirement.value.id}`, {
       method: 'DELETE',
     })
     toast.add({

@@ -40,6 +40,14 @@ export default defineEventHandler(async (event) => {
 
   // Get wallet
   const wallet = await getOrCreateWallet(userId)
+
+  if (!wallet) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to get or create wallet',
+    })
+  }
+
   const availableBalance = parseFloat(wallet.availableBalance)
 
   // Check if user has sufficient balance
@@ -102,6 +110,13 @@ export default defineEventHandler(async (event) => {
       accountNumber: settings.accountNumber,
     })
     .returning()
+
+  if (!payout) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to create payout request',
+    })
+  }
 
   // Deduct from available balance
   await deductForPayout(wallet.id, amount)

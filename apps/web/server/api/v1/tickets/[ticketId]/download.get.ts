@@ -30,14 +30,15 @@ export default defineEventHandler(async (event) => {
     .where(eq(tickets.id, ticketId))
     .limit(1)
 
-  if (result.length === 0) {
+  const ticketData = result[0]
+  if (!ticketData) {
     throw createError({
       statusCode: 404,
       message: 'Ticket not found',
     })
   }
 
-  const { ticket, ticketType, event: eventData, order } = result[0]
+  const { ticket, ticketType, event: eventData, order } = ticketData
 
   // Check authorization - user must own the ticket or be the event organizer
   const isOwner = ticket.userId === user.id

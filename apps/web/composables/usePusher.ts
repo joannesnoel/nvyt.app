@@ -48,7 +48,7 @@ export function usePusher() {
 
     // Return existing subscription if already subscribed
     if (subscribedChannels.value.has(channelName)) {
-      return subscribedChannels.value.get(channelName)!
+      return subscribedChannels.value.get(channelName) as Channel
     }
 
     const channel = pusher.subscribe(channelName)

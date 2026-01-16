@@ -33,6 +33,13 @@ export default defineEventHandler(async (event) => {
   // Get wallet
   const wallet = await getOrCreateWallet(userId)
 
+  if (!wallet) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to get or create wallet',
+    })
+  }
+
   // Build conditions - only include payment_received and refund transactions
   const conditions = [
     eq(transactions.walletId, wallet.id),

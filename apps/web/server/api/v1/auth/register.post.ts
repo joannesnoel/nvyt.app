@@ -151,6 +151,7 @@ export default defineEventHandler(async (event) => {
       name: user.name,
       email: user.email,
       avatarUrl: user.avatarUrl,
+      emailVerified: user.emailVerified,
     },
     accessToken, // For mobile apps
     sessionToken, // For reference (cookie is also set)

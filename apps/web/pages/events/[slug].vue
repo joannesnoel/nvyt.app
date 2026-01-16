@@ -492,7 +492,7 @@ async function cancelRsvp() {
   rsvpLoading.value = true
   try {
     await $fetch(`/api/v1/events/${event.value.id}/rsvp`, {
-      method: 'DELETE',
+      method: 'DELETE' as const,
     })
 
     toast.add({
@@ -552,8 +552,8 @@ const canClaimContributions = computed(() => {
 })
 
 // Fetch contributions for this event
-const { data: contributionsResponse, refresh: refreshContributions } = await useFetch(
-  () => event.value?.id ? `/api/v1/events/${event.value.id}/contributions` : null,
+const { data: contributionsResponse, refresh: refreshContributions } = await useFetch<{ data?: any[] }>(
+  () => event.value?.id ? `/api/v1/events/${event.value.id}/contributions` as const : null!,
   {
     watch: [event],
     immediate: false,
@@ -610,7 +610,7 @@ async function unclaimContribution(item: any) {
   isClaimLoading.value = true
   try {
     await $fetch(`/api/v1/events/${event.value.id}/contributions/${item.id}/claim`, {
-      method: 'DELETE',
+      method: 'DELETE' as const,
     })
     toast.add({
       title: 'Removed',
@@ -888,7 +888,7 @@ function getCategoryColor(category: string) {
                     <div class="flex-1">
                       <div class="flex items-center gap-2 mb-1">
                         <p class="font-medium text-gray-900 dark:text-white">{{ item.name }}</p>
-                        <UBadge :color="getCategoryColor(item.category)" variant="soft" size="xs">
+                        <UBadge :color="getCategoryColor(item.category) as any" variant="soft" size="xs">
                           {{ item.category }}
                         </UBadge>
                         <UBadge v-if="item.isFullyClaimed" color="green" variant="soft" size="xs">

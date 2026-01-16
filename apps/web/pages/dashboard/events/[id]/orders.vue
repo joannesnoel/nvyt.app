@@ -266,11 +266,11 @@ const statusOptions = [
         </div>
 
         <!-- Pagination -->
-        <div v-if="meta && meta.totalPages > 1" class="flex justify-center mt-6">
+        <div v-if="meta && (meta.totalPages ?? 0) > 1" class="flex justify-center mt-6">
           <UPagination
             v-model="page"
-            :page-count="meta.limit"
-            :total="meta.total"
+            :page-count="meta.limit ?? 20"
+            :total="meta.total ?? 0"
           />
         </div>
       </UCard>

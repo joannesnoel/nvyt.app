@@ -63,6 +63,13 @@ export default defineEventHandler(async (event) => {
     settings = created
   }
 
+  if (!settings) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to save payout settings',
+    })
+  }
+
   // Mask account number for response
   const maskedAccountNumber = '****' + accountNumber.slice(-4)
 

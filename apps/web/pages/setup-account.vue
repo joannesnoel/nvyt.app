@@ -29,8 +29,8 @@ const { data: tokenData, pending: verifying } = await useFetch(
 
 const tokenValid = computed(() => tokenData.value?.data?.valid)
 const tokenExpired = computed(() => tokenData.value?.data?.expired)
-const userEmail = computed(() => tokenData.value?.data?.user?.email)
-const userName = computed(() => tokenData.value?.data?.user?.name)
+const userEmail = computed(() => (tokenData.value?.data as { user?: { email?: string } | null })?.user?.email)
+const userName = computed(() => (tokenData.value?.data as { user?: { name?: string } | null })?.user?.name)
 
 const form = reactive({
   password: '',

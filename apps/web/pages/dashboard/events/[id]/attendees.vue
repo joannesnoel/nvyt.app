@@ -8,7 +8,7 @@ const eventId = computed(() => route.params.id as string)
 const toast = useToast()
 
 // Fetch event to get registration mode
-const { data: eventResponse } = await useFetch(
+const { data: eventResponse } = await useFetch<{ data?: { registrationMode?: string } }>(
   () => `/api/v1/events/${eventId.value}`,
 )
 const event = computed(() => eventResponse.value?.data)
@@ -311,8 +311,8 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
                     : selectedIds.push(attendee.id)"
                 />
                 <UAvatar
-                  :src="attendee.user?.avatarUrl"
-                  :alt="attendee.user?.name"
+                  :src="attendee.user?.avatarUrl ?? undefined"
+                  :alt="attendee.user?.name ?? undefined"
                   size="sm"
                 />
                 <div>
@@ -410,8 +410,8 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
                 <td class="py-3 px-4">
                   <div class="flex items-center gap-3">
                     <UAvatar
-                      :src="attendee.user?.avatarUrl"
-                      :alt="attendee.user?.name"
+                      :src="attendee.user?.avatarUrl ?? undefined"
+                      :alt="attendee.user?.name ?? undefined"
                       size="sm"
                     />
                     <div>
@@ -473,11 +473,11 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
         </div>
 
         <!-- Pagination -->
-        <div v-if="meta && meta.totalPages > 1" class="flex justify-center mt-6">
+        <div v-if="meta && (meta.totalPages ?? 0) > 1" class="flex justify-center mt-6">
           <UPagination
             v-model="page"
-            :page-count="meta.limit"
-            :total="meta.total"
+            :page-count="meta.limit ?? 20"
+            :total="meta.total ?? 0"
           />
         </div>
       </UCard>

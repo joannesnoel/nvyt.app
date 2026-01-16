@@ -85,7 +85,7 @@ async function handleSubmit() {
       body: payload,
     })
 
-    if (response.success) {
+    if (response.success && response.data) {
       // Redirect ticket-based events to ticket creation page
       if (form.registrationMode === 'tickets') {
         toast.add({

@@ -67,7 +67,7 @@ function formatPeriod(period: string | undefined) {
     })
   } else if (period.match(/^\d{4}-\d{2}$/)) {
     const [year, month] = period.split('-')
-    return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', {
+    return new Date(parseInt(year ?? '0'), parseInt(month ?? '1') - 1).toLocaleDateString('en-US', {
       month: 'long',
       year: 'numeric',
     })
@@ -88,27 +88,27 @@ const exportUrl = computed(() => {
 // Set quick date ranges
 function setDateRange(range: 'week' | 'month' | 'quarter' | 'year' | 'all') {
   const now = new Date()
-  const end = now.toISOString().split('T')[0]
+  const end = now.toISOString().split('T')[0] ?? ''
 
   switch (range) {
     case 'week':
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      dateRange.startDate = weekAgo.toISOString().split('T')[0]
+      dateRange.startDate = weekAgo.toISOString().split('T')[0] ?? ''
       dateRange.endDate = end
       break
     case 'month':
       const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
-      dateRange.startDate = monthAgo.toISOString().split('T')[0]
+      dateRange.startDate = monthAgo.toISOString().split('T')[0] ?? ''
       dateRange.endDate = end
       break
     case 'quarter':
       const quarterAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
-      dateRange.startDate = quarterAgo.toISOString().split('T')[0]
+      dateRange.startDate = quarterAgo.toISOString().split('T')[0] ?? ''
       dateRange.endDate = end
       break
     case 'year':
       const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
-      dateRange.startDate = yearAgo.toISOString().split('T')[0]
+      dateRange.startDate = yearAgo.toISOString().split('T')[0] ?? ''
       dateRange.endDate = end
       break
     case 'all':

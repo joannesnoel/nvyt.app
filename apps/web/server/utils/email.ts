@@ -618,11 +618,12 @@ export function ticketPurchaseConfirmationEmail(data: {
 export function accountSetupEmail(data: {
   userName: string
   setupUrl: string
-  orderNumber: string
+  orderNumber?: string
   eventTitle: string
 }): { subject: string; html: string } {
+  const subjectSuffix = data.orderNumber ? ` - Order ${data.orderNumber}` : ` - ${data.eventTitle}`
   return {
-    subject: `Set up your nvyt account - Order ${data.orderNumber}`,
+    subject: `Set up your nvyt account${subjectSuffix}`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -639,11 +640,11 @@ export function accountSetupEmail(data: {
 
         <p>Hi ${data.userName},</p>
 
-        <p>Thank you for your order for <strong>${data.eventTitle}</strong>!</p>
+        <p>Thank you for ${data.orderNumber ? 'your order' : 'your RSVP'} for <strong>${data.eventTitle}</strong>!</p>
 
-        <p>Order Number: <strong>${data.orderNumber}</strong></p>
+        ${data.orderNumber ? `<p>Order Number: <strong>${data.orderNumber}</strong></p>` : ''}
 
-        <p>We've created an account for you. Set up a password to access your tickets and manage future orders:</p>
+        <p>We've created an account for you. Set up a password to access your ${data.orderNumber ? 'tickets and manage future orders' : 'event details'}:</p>
 
         <p style="text-align: center; margin: 30px 0;">
           <a href="${data.setupUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Set Up Your Account</a>

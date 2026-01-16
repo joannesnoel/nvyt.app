@@ -21,7 +21,7 @@ const payoutsList = computed(() => payoutsData.value?.data?.payouts || [])
 
 // Payout request form
 const showRequestModal = ref(false)
-const requestAmount = ref<number | null>(null)
+const requestAmount = ref<number | undefined>(undefined)
 const requesting = ref(false)
 
 // Settings form
@@ -146,7 +146,7 @@ async function requestPayout() {
       color: 'green',
     })
     showRequestModal.value = false
-    requestAmount.value = null
+    requestAmount.value = undefined
     await Promise.all([refreshWallet(), refreshPayouts()])
   } catch (err: any) {
     toast.add({

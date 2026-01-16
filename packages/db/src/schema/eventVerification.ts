@@ -160,5 +160,9 @@ export type DocumentRequirement = {
 
 // Get document requirements for a country
 export function getDocumentRequirements(countryCode: string): DocumentRequirement {
-  return COUNTRY_DOCUMENT_REQUIREMENTS[countryCode] || COUNTRY_DOCUMENT_REQUIREMENTS.OTHER
+  const requirements = COUNTRY_DOCUMENT_REQUIREMENTS[countryCode as keyof typeof COUNTRY_DOCUMENT_REQUIREMENTS]
+  if (requirements) {
+    return requirements
+  }
+  return COUNTRY_DOCUMENT_REQUIREMENTS.OTHER as DocumentRequirement
 }

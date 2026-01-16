@@ -32,12 +32,23 @@ const { data, pending, refresh } = await useFetch('/api/v1/admin/verifications',
 
 const verifications = computed(() => data.value?.data?.verifications || [])
 const stats = computed(() => data.value?.data?.stats || { pending: 0, underReview: 0, approved: 0, rejected: 0 })
-const pagination = computed(() => data.value?.pagination || { page: 1, limit: 20, total: 0, totalPages: 1 })
+const pagination = computed(() => ({
+  page: data.value?.meta?.page ?? 1,
+  limit: data.value?.meta?.limit ?? 20,
+  total: data.value?.meta?.total ?? 0,
+  totalPages: data.value?.meta?.totalPages ?? 1,
+}))
 
 // Selected verification for detail view
 const selectedId = ref<string | null>(null)
-const { data: detailData, pending: detailPending, refresh: refreshDetail } = await useFetch(
-  () => selectedId.value ? `/api/v1/admin/verifications/${selectedId.value}` : null,
+const { data: detailData, pending: detailPending, refresh: refreshDetail } = await useFetch<{
+  data?: {
+    verification: any
+    documents: any[]
+    tickets: any[]
+  }
+}>(
+  () => selectedId.value ? `/api/v1/admin/verifications/${selectedId.value}` as const : null!,
   { watch: [selectedId], immediate: false }
 )
 const selectedVerification = computed(() => detailData.value?.data)

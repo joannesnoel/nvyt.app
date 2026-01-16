@@ -14,7 +14,19 @@ const token = computed(() => route.query.token as string | undefined)
 const queryToken = computed(() => user.value ? undefined : token.value)
 
 // Fetch order details (include token only for guest access)
-const { data: orderResponse, pending, error } = await useFetch(
+const { data: orderResponse, pending, error } = await useFetch<{
+  data?: {
+    id: string
+    orderNumber: string
+    event: any
+    tickets: any[]
+    totalAmount: string
+    paymentStatus: string
+    customerName: string
+    customerEmail: string
+    createdAt: string
+  }
+}>(
   () => `/api/v1/orders/${orderNumber.value}`,
   {
     query: { token: queryToken.value },
@@ -67,6 +79,7 @@ watch(ticketUpdates, (updates) => {
   if (updates.length === 0 || !orderResponse.value?.data?.tickets) return
 
   const latestUpdate = updates[updates.length - 1]
+  if (!latestUpdate) return
 
   // Find and update the ticket in the order data
   const ticketIndex = orderResponse.value.data.tickets.findIndex(
@@ -130,7 +143,7 @@ async function downloadAllTickets() {
     })
 
     // Create download link
-    const url = window.URL.createObjectURL(response as Blob)
+    const url = window.URL.createObjectURL(response as unknown as Blob)
     const link = document.createElement('a')
     link.href = url
     link.download = `tickets-${order.value.orderNumber}.pdf`
@@ -178,7 +191,7 @@ async function retryPayment() {
     const response = await $fetch(`/api/v1/orders/${order.value.orderNumber}/retry-payment`, {
       method: 'POST',
       query: token.value ? { token: token.value } : undefined,
-    })
+    }) as any
 
     if (response.data?.alreadyPaid) {
       // Payment was already confirmed - show success and refresh

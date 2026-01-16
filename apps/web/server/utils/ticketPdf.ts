@@ -197,7 +197,7 @@ export async function generateTicketPdf(ticket: TicketData): Promise<Buffer> {
       const qrX = (288 - qrSize) / 2
 
       // Convert data URL to buffer for PDFKit
-      const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64')
+      const qrBuffer = Buffer.from(qrDataUrl.split(',')[1] ?? '', 'base64')
       doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize })
 
       // Ticket Number below QR
@@ -270,6 +270,7 @@ export async function generateAllTicketsPdf(tickets: TicketData[]): Promise<Buff
 
       for (let i = 0; i < tickets.length; i++) {
         const ticket = tickets[i]
+        if (!ticket) continue
 
         if (i > 0) {
           doc.addPage()
@@ -407,7 +408,7 @@ export async function generateAllTicketsPdf(tickets: TicketData[]): Promise<Buff
 
         // Right column - QR Code
         const qrSize = 150
-        const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64')
+        const qrBuffer = Buffer.from(qrDataUrl.split(',')[1] ?? '', 'base64')
         doc.image(qrBuffer, rightColX + 45, contentY, { width: qrSize, height: qrSize })
 
         // Ticket Number below QR

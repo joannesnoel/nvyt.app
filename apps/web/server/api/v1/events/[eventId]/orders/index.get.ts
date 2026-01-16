@@ -119,10 +119,11 @@ export default defineEventHandler(async (event) => {
   }
 
   // Count total for pagination
-  const [{ count: total }] = await db
+  const countResult = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(orders)
     .where(and(...conditions))
+  const total = countResult[0]?.count ?? 0
 
   // Calculate stats
   const [stats] = await db

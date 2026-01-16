@@ -51,13 +51,13 @@ async function processCheckIn(qrCode: string) {
       body: { qrCode: qrCode.trim() },
     })
 
-    const data = response.data
+    const data = response.data as any
     const isTicket = data?.type === 'ticket'
 
     lastResult.value = {
       success: true,
       message: 'Check-in successful!',
-      type: data?.type,
+      type: data?.type as 'ticket' | 'rsvp' | undefined,
       attendeeName: data?.attendeeName,
       attendeeEmail: data?.attendeeEmail,
       ticketType: isTicket ? data?.ticketType?.name : undefined,

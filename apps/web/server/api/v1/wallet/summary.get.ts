@@ -11,6 +11,13 @@ export default defineEventHandler(async (event) => {
   // Get wallet
   const wallet = await getOrCreateWallet(userId)
 
+  if (!wallet) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to get or create wallet',
+    })
+  }
+
   // Get earnings breakdown by event
   // Now we only have payment_received and refund transactions
   // Platform fees are stored in the 'fee' field of payment_received transactions

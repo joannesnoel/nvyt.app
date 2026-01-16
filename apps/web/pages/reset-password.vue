@@ -41,7 +41,7 @@ async function verifyToken() {
     const response = await $fetch('/api/v1/auth/verify-reset-token', {
       query: { token: token.value },
     })
-    if (response.success) {
+    if (response.success && response.data) {
       email.value = response.data.email || ''
     }
   } catch (e: any) {

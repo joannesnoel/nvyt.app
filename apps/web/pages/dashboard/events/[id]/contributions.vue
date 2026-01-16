@@ -24,7 +24,8 @@ const { data: contributionsResponse, pending: contributionsPending, refresh: ref
 const contributions = computed(() => contributionsResponse.value?.data ?? [])
 
 // Categories with colors
-const categories: { value: ContributionCategory; label: string; color: string }[] = [
+type BadgeColor = 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'emerald' | 'teal' | 'cyan' | 'sky' | 'blue' | 'indigo' | 'violet' | 'purple' | 'fuchsia' | 'pink' | 'rose' | 'gray'
+const categories: { value: ContributionCategory; label: string; color: BadgeColor }[] = [
   { value: 'food', label: 'Food', color: 'orange' },
   { value: 'drinks', label: 'Drinks', color: 'blue' },
   { value: 'supplies', label: 'Supplies', color: 'green' },
@@ -32,8 +33,8 @@ const categories: { value: ContributionCategory; label: string; color: string }[
   { value: 'other', label: 'Other', color: 'gray' },
 ]
 
-function getCategoryColor(category: string) {
-  return categories.find(c => c.value === category)?.color || 'gray'
+function getCategoryColor(category: string): BadgeColor {
+  return categories.find(c => c.value === category)?.color ?? 'gray'
 }
 
 function getCategoryLabel(category: string) {
@@ -151,7 +152,7 @@ async function deleteItem() {
 
   isDeleting.value = true
   try {
-    await $fetch(`/api/v1/events/${eventId.value}/contributions/${deletingItem.value.id}`, {
+    await ($fetch as any)(`/api/v1/events/${eventId.value}/contributions/${deletingItem.value.id}`, {
       method: 'DELETE',
     })
     toast.add({
@@ -188,7 +189,7 @@ const contributionsByCategory = computed(() => {
     if (!grouped[item.category]) {
       grouped[item.category] = []
     }
-    grouped[item.category].push(item)
+    grouped[item.category]!.push(item)
   }
   return grouped
 })
@@ -196,7 +197,7 @@ const contributionsByCategory = computed(() => {
 // Category order for display
 const categoryOrder = ['food', 'drinks', 'supplies', 'equipment', 'other']
 const sortedCategories = computed(() => {
-  return categoryOrder.filter(cat => contributionsByCategory.value[cat]?.length > 0)
+  return categoryOrder.filter(cat => (contributionsByCategory.value[cat]?.length ?? 0) > 0)
 })
 </script>
 
@@ -298,11 +299,11 @@ const sortedCategories = computed(() => {
         <div v-if="contributions.length > 0" class="space-y-6">
           <div v-for="category in sortedCategories" :key="category">
             <div class="flex items-center gap-2 mb-3">
-              <UBadge :color="getCategoryColor(category)" variant="soft">
+              <UBadge :color="getCategoryColor(category) as any" variant="soft">
                 {{ getCategoryLabel(category) }}
               </UBadge>
               <span class="text-sm text-gray-500">
-                ({{ contributionsByCategory[category].length }} items)
+                ({{ contributionsByCategory[category]?.length ?? 0 }} items)
               </span>
             </div>
 

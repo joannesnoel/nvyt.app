@@ -210,6 +210,10 @@ export async function processPaymentReceived(params: {
   // Get or create wallet for the organizer
   const wallet = await getOrCreateWallet(userId)
 
+  if (!wallet) {
+    throw new Error('Failed to get or create wallet')
+  }
+
   // Calculate fees
   const { platformFee, netAmount } = calculateFees(grossAmount)
 

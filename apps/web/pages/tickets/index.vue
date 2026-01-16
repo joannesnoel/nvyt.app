@@ -190,11 +190,11 @@ const statusOptions = [
         </UCard>
 
         <!-- Pagination -->
-        <div v-if="meta && meta.totalPages > 1" class="flex justify-center mt-8">
+        <div v-if="meta && (meta.totalPages ?? 0) > 1" class="flex justify-center mt-8">
           <UPagination
             v-model="page"
-            :page-count="meta.limit"
-            :total="meta.total"
+            :page-count="meta.limit ?? 20"
+            :total="meta.total ?? 0"
             @update:model-value="navigateTo({ query: { ...route.query, page: $event } })"
           />
         </div>

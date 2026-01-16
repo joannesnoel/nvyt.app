@@ -31,7 +31,12 @@ const { data, pending, refresh } = await useFetch('/api/v1/admin/payouts', {
 
 const payouts = computed(() => data.value?.data?.payouts || [])
 const stats = computed(() => data.value?.data?.stats || { pending: { count: 0, amount: 0 }, processing: { count: 0, amount: 0 }, completed: { count: 0, amount: 0 } })
-const pagination = computed(() => data.value?.pagination || { page: 1, limit: 20, total: 0, totalPages: 1 })
+const pagination = computed(() => ({
+  page: data.value?.meta?.page ?? 1,
+  limit: data.value?.meta?.limit ?? 20,
+  total: data.value?.meta?.total ?? 0,
+  totalPages: data.value?.meta?.totalPages ?? 1,
+}))
 
 // Modal state
 const showModal = ref(false)

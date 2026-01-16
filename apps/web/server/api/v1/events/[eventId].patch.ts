@@ -185,10 +185,12 @@ export default defineEventHandler(async (event) => {
     // Combine and deduplicate by email
     const allAttendees = new Map<string, string>()
     for (const a of rsvpAttendees) {
-      allAttendees.set(a.email, a.name || 'there')
+      if (a.email) {
+        allAttendees.set(a.email, a.name || 'there')
+      }
     }
     for (const t of ticketHolders) {
-      if (!allAttendees.has(t.email)) {
+      if (t.email && !allAttendees.has(t.email)) {
         allAttendees.set(t.email, t.name || 'there')
       }
     }

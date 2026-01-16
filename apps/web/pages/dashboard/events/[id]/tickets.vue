@@ -31,7 +31,7 @@ const formData = ref({
   name: '',
   description: '',
   price: 0,
-  quantity: null as number | null,
+  quantity: undefined as number | undefined,
   salesStart: '',
   salesEnd: '',
   maxPerOrder: 10,
@@ -44,7 +44,7 @@ function openCreateModal() {
     name: '',
     description: '',
     price: 0,
-    quantity: null,
+    quantity: undefined,
     salesStart: '',
     salesEnd: '',
     maxPerOrder: 10,
@@ -161,7 +161,7 @@ async function deleteTicketType(ticketType: any) {
   }
 
   try {
-    await $fetch(`/api/v1/events/${eventId.value}/ticket-types/${ticketType.id}`, {
+    await ($fetch as any)(`/api/v1/events/${eventId.value}/ticket-types/${ticketType.id}`, {
       method: 'DELETE',
     })
     toast.add({

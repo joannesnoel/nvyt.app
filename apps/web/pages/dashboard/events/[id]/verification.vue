@@ -151,7 +151,7 @@ watchEffect(() => {
   if (verification.value?.verification) {
     form.value.country = verification.value.verification.country || 'PH'
     form.value.businessName = verification.value.verification.businessName || ''
-    form.value.businessType = verification.value.verification.businessType || 'sole_proprietor'
+    form.value.businessType = (verification.value.verification.businessType || 'sole_proprietor') as typeof form.value.businessType
     form.value.registrationNumber = verification.value.verification.registrationNumber || ''
   }
 })
@@ -419,7 +419,7 @@ function isDocTypeUploaded(type: string) {
             <div>
               <p class="text-sm text-gray-500">Country</p>
               <p class="font-medium text-gray-900 dark:text-white">
-                {{ countries.find(c => c.value === verification.verification?.country)?.label || verification.verification?.country }}
+                {{ countries.find(c => c.value === verification?.verification?.country)?.label || verification?.verification?.country }}
               </p>
             </div>
             <div v-if="verification.verification?.registrationNumber">
@@ -537,14 +537,14 @@ function isDocTypeUploaded(type: string) {
 
           <div class="space-y-4">
             <p class="text-sm text-gray-600 dark:text-gray-400">
-              {{ currentDocumentRequirements.description }}
+              {{ currentDocumentRequirements?.description }}
             </p>
 
             <!-- Uploaded Documents -->
-            <div v-if="verification?.documents?.length > 0" class="space-y-2">
+            <div v-if="verification?.documents && verification.documents.length > 0" class="space-y-2">
               <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Uploaded Documents</h3>
               <div
-                v-for="doc in verification.documents"
+                v-for="doc in verification?.documents"
                 :key="doc.id"
                 class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
               >

@@ -30,7 +30,7 @@ export function errorResponse(code: string, message: string, details?: unknown):
     error: {
       code,
       message,
-      ...(details && { details }),
+      ...(details !== undefined ? { details } : {}),
     },
   }
 }

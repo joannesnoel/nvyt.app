@@ -156,7 +156,7 @@ async function removeCollaborator() {
   isRemoving.value = true
   try {
     await $fetch(`/api/v1/events/${eventId.value}/collaborators/${removingCollaborator.value.id}`, {
-      method: 'DELETE',
+      method: 'DELETE' as const,
     })
     toast.add({
       title: 'Collaborator Removed',
@@ -243,8 +243,8 @@ function getPermissionBadges(collaborator: any) {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
               <UAvatar
-                :src="event.organizer?.avatarUrl"
-                :alt="event.organizer?.name"
+                :src="event.organizer?.avatarUrl ?? undefined"
+                :alt="event.organizer?.name ?? undefined"
                 size="lg"
               />
               <div>
@@ -254,7 +254,7 @@ function getPermissionBadges(collaborator: any) {
                   </p>
                   <UBadge color="primary" variant="soft" size="xs">Owner</UBadge>
                 </div>
-                <p class="text-sm text-gray-500">{{ event.organizer?.email }}</p>
+                <p class="text-sm text-gray-500">{{ (event.organizer as any)?.email }}</p>
               </div>
             </div>
             <p class="text-sm text-gray-500">Full access</p>
@@ -269,8 +269,8 @@ function getPermissionBadges(collaborator: any) {
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div class="flex items-center gap-4">
                 <UAvatar
-                  :src="collaborator.user?.avatarUrl"
-                  :alt="collaborator.user?.name"
+                  :src="(collaborator.user as any)?.avatarUrl ?? undefined"
+                  :alt="collaborator.user?.name ?? undefined"
                   size="lg"
                 />
                 <div>

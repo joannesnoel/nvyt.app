@@ -83,13 +83,14 @@ const verificationStatusLabel = computed(() => {
 })
 
 // Format currency
-function formatCurrency(amount: number) {
+function formatCurrency(amount: number | string) {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount)
+  }).format(num)
 }
 
 // Publish/Unpublish
@@ -516,8 +517,8 @@ function getStatusColor(status: string) {
                   >
                     <div class="flex items-center gap-3">
                       <UAvatar
-                        :src="attendee.user?.avatarUrl"
-                        :alt="attendee.user?.name"
+                        :src="attendee.user?.avatarUrl ?? undefined"
+                        :alt="attendee.user?.name ?? undefined"
                         size="sm"
                       />
                       <div>
@@ -563,12 +564,12 @@ function getStatusColor(status: string) {
                         {{ formatCurrency(order.totalAmount) }}
                       </p>
                       <UBadge
-                        :color="order.status === 'completed' ? 'green' :
-                                order.status === 'pending' ? 'yellow' : 'gray'"
+                        :color="order.paymentStatus === 'paid' ? 'green' :
+                                order.paymentStatus === 'pending' ? 'yellow' : 'gray'"
                         variant="soft"
                         size="xs"
                       >
-                        {{ order.status }}
+                        {{ order.paymentStatus }}
                       </UBadge>
                     </div>
                   </div>

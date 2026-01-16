@@ -34,7 +34,12 @@ const { data, pending, refresh } = await useFetch('/api/v1/transactions', {
 })
 
 const transactions = computed(() => data.value?.data?.transactions || [])
-const pagination = computed(() => data.value?.pagination || { page: 1, limit: 20, total: 0, totalPages: 1 })
+const pagination = computed(() => ({
+  page: data.value?.meta?.page ?? 1,
+  limit: data.value?.meta?.limit ?? 20,
+  total: data.value?.meta?.total ?? 0,
+  totalPages: data.value?.meta?.totalPages ?? 1,
+}))
 
 function formatCurrency(amount: number | string | null | undefined) {
   const num = typeof amount === 'string' ? parseFloat(amount) : (amount ?? 0)
@@ -245,17 +250,17 @@ function goToPage(page: number) {
                     {{ formatCurrency(tx.amount) }}
                   </td>
                   <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-orange-600">
-                    {{ parseFloat(tx.fee) > 0 ? '-' : '' }}{{ formatCurrency(tx.fee) }}
+                    {{ parseFloat(tx.fee ?? '0') > 0 ? '-' : '' }}{{ formatCurrency(tx.fee) }}
                   </td>
                   <td
                     class="px-4 py-3 whitespace-nowrap text-sm text-right font-medium"
                     :class="{
-                      'text-green-600': parseFloat(tx.netAmount) > 0,
-                      'text-red-600': parseFloat(tx.netAmount) < 0,
-                      'text-gray-600': parseFloat(tx.netAmount) === 0,
+                      'text-green-600': parseFloat(tx.netAmount ?? '0') > 0,
+                      'text-red-600': parseFloat(tx.netAmount ?? '0') < 0,
+                      'text-gray-600': parseFloat(tx.netAmount ?? '0') === 0,
                     }"
                   >
-                    {{ parseFloat(tx.netAmount) >= 0 ? '+' : '' }}{{ formatCurrency(tx.netAmount) }}
+                    {{ parseFloat(tx.netAmount ?? '0') >= 0 ? '+' : '' }}{{ formatCurrency(tx.netAmount) }}
                   </td>
                 </tr>
               </tbody>

@@ -23,8 +23,8 @@ async function fetchInviteData() {
     const response = await $fetch('/api/v1/auth/verify-invite', {
       query: { token: inviteToken.value },
     })
-    if (response.success) {
-      inviteData.value = response.data
+    if (response.success && response.data) {
+      inviteData.value = { ...response.data, email: response.data.email || '' }
       form.email = response.data.email || ''
     }
   } catch {

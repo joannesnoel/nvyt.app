@@ -9,7 +9,20 @@ const toast = useToast()
 const orderNumber = computed(() => route.params.orderNumber as string)
 
 // Fetch order details
-const { data: orderResponse, pending, error } = await useFetch(
+const { data: orderResponse, pending, error } = await useFetch<{
+  data?: {
+    id: string
+    orderNumber: string
+    event: any
+    tickets: any[]
+    totalAmount: string
+    paymentStatus: string
+    customerName: string
+    customerEmail: string
+    createdAt: string
+    paidAt?: string | null
+  }
+}>(
   () => `/api/v1/orders/${orderNumber.value}`,
   { watch: [orderNumber] }
 )
@@ -24,6 +37,7 @@ watch(ticketUpdates, (updates) => {
   if (updates.length === 0 || !orderResponse.value?.data?.tickets) return
 
   const latestUpdate = updates[updates.length - 1]
+  if (!latestUpdate) return
 
   // Find and update the ticket in the order data
   const ticketIndex = orderResponse.value.data.tickets.findIndex(
@@ -99,7 +113,7 @@ async function downloadAllTickets() {
     })
 
     // Create download link
-    const url = window.URL.createObjectURL(response as Blob)
+    const url = window.URL.createObjectURL(response as unknown as Blob)
     const link = document.createElement('a')
     link.href = url
     link.download = `tickets-${order.value.orderNumber}.pdf`
@@ -132,7 +146,7 @@ async function downloadSingleTicket(ticketId: string, ticketNumber: string) {
     })
 
     // Create download link
-    const url = window.URL.createObjectURL(response as Blob)
+    const url = window.URL.createObjectURL(response as unknown as Blob)
     const link = document.createElement('a')
     link.href = url
     link.download = `ticket-${ticketNumber}.pdf`
@@ -179,7 +193,7 @@ async function retryPayment() {
   try {
     const response = await $fetch(`/api/v1/orders/${order.value.orderNumber}/retry-payment`, {
       method: 'POST',
-    })
+    }) as any
 
     if (response.data?.alreadyPaid) {
       // Payment was already confirmed - show success and refresh

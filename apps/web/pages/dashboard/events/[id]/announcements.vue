@@ -177,7 +177,7 @@ async function deleteAnnouncement() {
   isDeleting.value = true
   try {
     await $fetch(`/api/v1/events/${eventId.value}/announcements/${deletingAnnouncement.value.id}`, {
-      method: 'DELETE',
+      method: 'DELETE' as const,
     })
     toast.add({
       title: 'Announcement Deleted',

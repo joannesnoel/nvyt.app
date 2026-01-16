@@ -164,11 +164,11 @@ export default defineEventHandler(async (event) => {
     failed: failedEmails.length,
     failedEmails: failedEmails.length > 0 ? failedEmails : undefined,
     alreadyInvited: alreadyInvitedEmails.size,
-    invitations: invitations.map(i => ({
-      id: i.id,
-      email: i.email,
-      status: i.status,
-      invitedAt: i.invitedAt,
+    invitations: invitations.filter(Boolean).map(i => ({
+      id: i!.id,
+      email: i!.email,
+      status: i!.status,
+      invitedAt: i!.invitedAt,
     })),
   })
 })

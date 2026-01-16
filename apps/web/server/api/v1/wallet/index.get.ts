@@ -10,6 +10,13 @@ export default defineEventHandler(async (event) => {
   // Get or create wallet for the user
   const wallet = await getOrCreateWallet(userId)
 
+  if (!wallet) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to get or create wallet',
+    })
+  }
+
   return successResponse({
     wallet: {
       id: wallet.id,

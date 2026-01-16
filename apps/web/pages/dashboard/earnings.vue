@@ -226,7 +226,7 @@ function getTransactionTypeLabel(type: string) {
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    <tr v-for="eventRow in earningsByEvent" :key="eventRow.eventId">
+                    <tr v-for="eventRow in earningsByEvent" :key="eventRow.eventId ?? ''">
                       <td class="px-4 py-3">
                         <p class="font-medium text-gray-900 dark:text-white truncate max-w-xs">
                           {{ eventRow.eventTitle }}

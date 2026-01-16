@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
   // Build response with claims
   const itemsWithClaims = items.map(item => {
     const claims = claimsByItem[item.id] || []
-    const userClaim = user ? claims.find(c => c.userId === user.id) : null
+    const userClaim = user ? claims.find((c: { userId: string }) => c.userId === user.id) : null
 
     return {
       ...item,

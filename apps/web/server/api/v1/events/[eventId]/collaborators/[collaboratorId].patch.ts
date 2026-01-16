@@ -71,19 +71,26 @@ export default defineEventHandler(async (event) => {
     .where(eq(eventCollaborators.id, collaboratorId))
     .returning()
 
+  if (!updated) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to update collaborator',
+    })
+  }
+
   // Get user details for response
-  const [user] = await db
+  const [userDetails] = await db
     .select({
       id: users.id,
       email: users.email,
       name: users.name,
     })
     .from(users)
-    .where(eq(users.id, updated.userId))
+    .where(eq(users.id, updated.userId!))
     .limit(1)
 
   return successResponse({
     ...updated,
-    user,
+    user: userDetails,
   })
 })

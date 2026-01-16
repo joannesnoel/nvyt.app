@@ -148,7 +148,7 @@ async function deleteFaq() {
 
   isDeleting.value = true
   try {
-    await $fetch(`/api/v1/events/${eventId.value}/faqs/${deletingFaq.value.id}`, {
+    await ($fetch as any)(`/api/v1/events/${eventId.value}/faqs/${deletingFaq.value.id}`, {
       method: 'DELETE',
     })
     toast.add({
