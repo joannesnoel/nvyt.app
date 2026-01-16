@@ -16,7 +16,7 @@ jobs:
       WEB_IMAGE: nvyt-web
       MIGRATE_IMAGE: nvyt-migrate
       ECS_CLUSTER: nvyt-production-cluster
-      ECS_SERVICE: nvyt-web-service
+      ECS_SERVICE: nvyt-production-web
       MIGRATION_TASK_FAMILY: nvyt-migrate
 
     steps:
