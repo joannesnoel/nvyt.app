@@ -15,7 +15,7 @@ jobs:
       AWS_REGION: ap-southeast-1
       WEB_IMAGE: nvyt-web
       MIGRATE_IMAGE: nvyt-migrate
-      ECS_CLUSTER: nvyt-production
+      ECS_CLUSTER: nvyt-production-cluster
       ECS_SERVICE: nvyt-web-service
       MIGRATION_TASK_FAMILY: nvyt-migrate
 
