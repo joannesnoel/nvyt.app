@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
         title: events.title,
         slug: events.slug,
         coverImage: events.coverImage,
+        promoVideoUrl: events.promoVideoUrl,
         startDate: events.startDate,
         endDate: events.endDate,
         timezone: events.timezone,

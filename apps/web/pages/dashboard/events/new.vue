@@ -49,7 +49,15 @@ function updateLocationDetails(details: LocationDetails | undefined) {
 
 const loading = ref(false)
 const error = ref('')
+const errorAlert = ref<HTMLElement | null>(null)
 const toast = useToast()
+
+// Scroll to error alert when error occurs
+function scrollToError() {
+  nextTick(() => {
+    errorAlert.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
 
 // Convert datetime-local string to ISO string preserving local time intent
 function toISOString(datetimeLocal: string): string {
@@ -65,6 +73,7 @@ async function handleSubmit() {
   const result = createEventSchema.safeParse(form)
   if (!result.success) {
     error.value = result.error.errors[0]?.message || 'Validation failed'
+    scrollToError()
     return
   }
 
@@ -105,6 +114,7 @@ async function handleSubmit() {
     }
   } catch (e: any) {
     error.value = e.data?.message || 'Failed to create event'
+    scrollToError()
   } finally {
     loading.value = false
   }
@@ -126,7 +136,9 @@ async function handleSubmit() {
 
       <UCard>
         <form @submit.prevent="handleSubmit" class="space-y-6">
-          <UAlert v-if="error" color="red" :title="error" />
+          <div v-if="error" ref="errorAlert">
+            <UAlert color="red" :title="error" />
+          </div>
 
           <!-- Basic Info -->
           <div class="space-y-4">
@@ -150,7 +162,17 @@ async function handleSubmit() {
               />
             </UFormGroup>
 
-            <UFormGroup label="Event Media" name="media">
+            <UFormGroup label="Visibility" name="visibility">
+              <URadioGroup
+                v-model="form.visibility"
+                :options="[
+                  { value: 'public', label: 'Public - Anyone can find and join' },
+                  { value: 'private', label: 'Private - Invite only' },
+                ]"
+              />
+            </UFormGroup>
+
+            <UFormGroup label="Event Media" name="media" :required="form.visibility === 'public'">
               <div class="space-y-4">
                 <!-- Media Type Toggle -->
                 <div class="flex gap-2">
@@ -255,16 +277,6 @@ async function handleSubmit() {
             <h3 class="text-lg font-medium text-gray-900 dark:text-white">
               Settings
             </h3>
-
-            <UFormGroup label="Visibility" name="visibility">
-              <URadioGroup
-                v-model="form.visibility"
-                :options="[
-                  { value: 'public', label: 'Public - Anyone can find and join' },
-                  { value: 'private', label: 'Private - Invite only' },
-                ]"
-              />
-            </UFormGroup>
 
             <UFormGroup label="Registration Mode" name="registrationMode">
               <div class="space-y-3">

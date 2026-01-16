@@ -1,0 +1,126 @@
+---
+# Secret for GitHub PAT (apply manually with your token)
+# kubectl create secret generic github-runner-secret \
+#   --namespace github-actions \
+#   --from-literal=GITHUB_PAT=<your-pat-token>
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-runner-secret
+  namespace: github-actions
+type: Opaque
+stringData:
+  GITHUB_PAT: "REPLACE_WITH_YOUR_PAT"
+
+---
+# ServiceAccount for the runner
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-runner
+  namespace: github-actions
+
+---
+# Role for accessing nvyt-staging namespace resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-runner-role
+  namespace: nvyt-staging
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch"]
+
+---
+# RoleBinding to bind the role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-runner-binding
+  namespace: nvyt-staging
+subjects:
+  - kind: ServiceAccount
+    name: github-runner
+    namespace: github-actions
+roleRef:
+  kind: Role
+  name: github-runner-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Deployment for the self-hosted runner
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-runner
+  namespace: github-actions
+  labels:
+    app: github-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-runner
+  template:
+    metadata:
+      labels:
+        app: github-runner
+    spec:
+      serviceAccountName: github-runner
+      containers:
+        - name: runner
+          image: myoung34/github-runner:latest
+          imagePullPolicy: Always
+          env:
+            - name: REPO_URL
+              value: "https://github.com/joannesnoel/nvyt.app"
+            - name: RUNNER_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: RUNNER_WORKDIR
+              value: "/tmp/runner"
+            - name: LABELS
+              value: "self-hosted,k3s,nvyt-staging"
+            - name: ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-runner-secret
+                  key: GITHUB_PAT
+            - name: RUNNER_SCOPE
+              value: "repo"
+            - name: DISABLE_AUTO_UPDATE
+              value: "true"
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+            - name: runner-workdir
+              mountPath: /tmp/runner
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          securityContext:
+            privileged: true
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        - name: runner-workdir
+          emptyDir: {}
+      # Prefer scheduling on nodes with Docker
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"

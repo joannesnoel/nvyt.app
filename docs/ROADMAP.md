@@ -37,6 +37,10 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 - [x] Cancel events (with status management)
 - [x] Location autocomplete (Google Maps API)
 - [x] Event cover image upload (Garage S3 storage)
+- [x] YouTube promo video support (alternative to cover image)
+- [x] YouTube thumbnail fallback (auto-extract from video URL)
+- [x] Media type toggle (image or video)
+- [x] Public events require media (cover image or promo video)
 - [ ] Rich text description (Markdown/WYSIWYG)
 
 ### User Dashboard
@@ -125,29 +129,31 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 
 ---
 
-## Phase 4: Contribution Lists 📋
+## Phase 4: Contribution Lists ✅
 
-**Status: SCHEMA ONLY (20% complete)**
+**Status: COMPLETE**
 
 ### Contribution Items
 - [x] Database schema for contribution lists
-- [x] Quantity needed per item (schema)
+- [x] Quantity needed per item
 - [x] Categories defined (food, drinks, supplies, equipment, other)
-- [ ] CRUD API for contribution items
-- [ ] UI for managing contribution items
+- [x] CRUD API for contribution items
+- [x] UI for managing contribution items (organizer dashboard)
+- [x] Reorder items
 - [ ] Custom items (attendee suggestions)
 
 ### Claiming System
 - [x] Database schema for claims
-- [ ] Claim items API
-- [ ] Partial claims (bring 2 of 5)
-- [ ] Claim notes
-- [ ] Unclaim items
+- [x] Claim items API
+- [x] Partial claims (bring X of Y)
+- [x] Claim notes
+- [x] Unclaim items
 
 ### Visibility
-- [ ] Public contribution list display
-- [ ] Who's bringing what view
-- [ ] Progress tracking (X/Y items claimed)
+- [x] Public contribution list display (on event page)
+- [x] Who's bringing what view
+- [x] Progress tracking (X/Y items claimed)
+- [x] Only confirmed attendees can claim items
 
 ---
 
@@ -175,7 +181,20 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 
 ## Phase 6: Advanced Features ⚡
 
-**Status: PARTIALLY COMPLETE (Team Management done)**
+**Status: SIGNIFICANTLY COMPLETE (70%)**
+
+### Event Content Management
+- [x] Event FAQs (full CRUD + public display with accordion)
+- [x] Event Announcements (news & updates with publish dates)
+- [x] Event Requirements (terms & agreements for ticket purchases)
+- [x] Requirements satisfaction tracking (checkbox acceptance)
+
+### Business Verification (for Paid Events)
+- [x] Verification submission flow
+- [x] Document uploads (business registration, license)
+- [x] Verification status tracking (pending, approved, rejected)
+- [x] Block publishing until verified (for paid ticket events)
+- [x] Admin review interface (backend ready)
 
 ### Event Discovery
 - [ ] Location-based search
@@ -192,11 +211,12 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 
 ### Analytics & Insights
 - [x] Basic attendee stats in API (total, checked-in, by status)
+- [x] Revenue stats in orders page
 - [ ] Analytics dashboard UI
 - [ ] Attendance trends
 - [ ] Revenue reports
 - [ ] Conversion funnels
-- [ ] Export to CSV/Excel (attendee export exists)
+- [x] Export to CSV/Excel (attendee export)
 
 ### Organizer Tools
 - [ ] Custom branding
@@ -250,16 +270,18 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 1. **Email Verification Flow** - Security & trust
 2. **Resend Tickets Functionality** - User convenience
 3. **Profile Settings Page** - User management
+4. **RSVP/Event Confirmation Emails** - Trigger existing templates
 
 ### Medium Priority (User Experience)
-4. **Contribution List APIs** - Complete Phase 4
 5. **OAuth Integration** - Reduce signup friction (Google/Facebook)
-6. **RSVP/Event Confirmation Emails** - Trigger existing templates
+6. **Admin Dashboard** - Review business verifications, manage users
+7. **Event Reminders** - Automated emails before event date
 
 ### Lower Priority (Feature Enhancement)
-7. **Analytics Dashboard UI** - Visualize organizer insights
-8. **Bulk CSV Invitations** - Large event management
-9. **Rich Text Event Descriptions** - Better formatting
+8. **Analytics Dashboard UI** - Visualize organizer insights
+9. **Bulk CSV Invitations** - Large event management
+10. **Rich Text Event Descriptions** - Better formatting
+11. **Custom Contribution Items** - Let attendees suggest items
 
 ---
 
@@ -278,14 +300,14 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 
 | Phase | Target | Status | Completion |
 |-------|--------|--------|------------|
-| Phase 1 | Q1 2026 | ✅ Complete | 95% |
+| Phase 1 | Q1 2026 | ✅ Complete | 98% |
 | Phase 2 | Q1 2026 | ✅ Complete | 98% |
 | Phase 3 | Q2 2026 | ✅ Complete | 98% |
-| Phase 4 | Q2 2026 | 📋 Schema Only | 20% |
+| Phase 4 | Q2 2026 | ✅ Complete | 95% |
 | Phase 5 | Q3 2026 | ⏳ Planned | 0% |
-| Phase 6 | Q4 2026 | 🔄 Partial | 45% |
+| Phase 6 | Q4 2026 | 🔄 Significant | 70% |
 | Phase 7 | 2027 | 🔄 Started | 15% |
 
 ---
 
-*Last updated: January 12, 2026*
+*Last updated: January 16, 2026*

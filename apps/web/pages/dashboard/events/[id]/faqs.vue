@@ -238,9 +238,7 @@ async function deleteFaq() {
                   {{ faq.question }}
                 </p>
 
-                <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                  {{ faq.answer }}
-                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ faq.answer }}</p>
               </div>
 
               <div class="flex flex-wrap items-center gap-2">

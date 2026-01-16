@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 export default {
+  content: [], // Nuxt UI handles content paths
   theme: {
     extend: {
       // Add wider container options for large screens

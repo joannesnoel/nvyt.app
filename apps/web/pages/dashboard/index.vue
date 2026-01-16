@@ -4,6 +4,7 @@ definePageMeta({
 })
 
 const { user } = useAuth()
+const { getEventImage } = useYoutubeThumbnail()
 
 // Fetch my events
 const { data: eventsData, pending: eventsPending } = await useFetch('/api/v1/events/my-events')
@@ -157,10 +158,17 @@ function isUpcoming(date: string) {
                 <!-- Event Image -->
                 <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex-shrink-0 overflow-hidden">
                   <img
-                    v-if="ticket.event?.coverImage"
-                    :src="ticket.event.coverImage"
+                    v-if="ticket.event && getEventImage(ticket.event)"
+                    :src="getEventImage(ticket.event)!.src"
                     :alt="ticket.event.title"
                     class="w-full h-full object-cover"
+                    @error="(e: Event) => {
+                      const img = e.target as HTMLImageElement
+                      const eventImg = ticket.event ? getEventImage(ticket.event) : null
+                      if (eventImg?.fallback && img.src !== eventImg.fallback) {
+                        img.src = eventImg.fallback
+                      }
+                    }"
                   >
                   <div v-else class="w-full h-full flex items-center justify-center">
                     <UIcon name="i-heroicons-calendar" class="w-6 h-6 text-gray-400" />
@@ -238,14 +246,21 @@ function isUpcoming(date: string) {
             <UCard class="h-full hover:ring-2 hover:ring-primary transition-all">
               <!-- Cover Image -->
               <template #header>
-                <div class="aspect-video bg-gray-100 dark:bg-gray-800 -m-4 mb-0 rounded-t-lg overflow-hidden">
+                <div class="relative bg-gray-100 dark:bg-gray-800 -m-4 mb-0 rounded-t-lg overflow-hidden" style="padding-bottom: 56.25%;">
                   <img
-                    v-if="event.coverImage"
-                    :src="event.coverImage"
+                    v-if="getEventImage(event)"
+                    :src="getEventImage(event)!.src"
                     :alt="event.title"
-                    class="w-full h-full object-cover"
+                    class="absolute inset-0 w-full h-full object-cover"
+                    @error="(e: Event) => {
+                      const img = e.target as HTMLImageElement
+                      const eventImg = getEventImage(event)
+                      if (eventImg?.fallback && img.src !== eventImg.fallback) {
+                        img.src = eventImg.fallback
+                      }
+                    }"
                   >
-                  <div v-else class="w-full h-full flex items-center justify-center">
+                  <div v-else class="absolute inset-0 flex items-center justify-center">
                     <UIcon name="i-heroicons-photo" class="w-10 h-10 text-gray-400" />
                   </div>
                 </div>

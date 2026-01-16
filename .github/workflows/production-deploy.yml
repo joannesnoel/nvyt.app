@@ -1,0 +1,226 @@
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build and Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      AWS_REGION: ca-central-1
+      ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ca-central-1.amazonaws.com
+      WEB_IMAGE: nvyt-web
+      MIGRATE_IMAGE: nvyt-migrate
+      ECS_CLUSTER: nvyt-production
+      ECS_SERVICE: nvyt-web-service
+      MIGRATION_TASK_FAMILY: nvyt-migrate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate image tag
+        id: tag
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          SHORT_SHA=${GITHUB_SHA::7}
+          TAG="${TIMESTAMP}-${SHORT_SHA}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Generated image tag: ${TAG}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.WEB_IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.ECR_REGISTRY }}/${{ env.WEB_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push migrate image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.migrate
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.MIGRATE_IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.ECR_REGISTRY }}/${{ env.MIGRATE_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Get migration task network configuration
+        id: network
+        run: |
+          # Get the VPC and subnets from the ECS service
+          SERVICE_CONFIG=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration' \
+            --output json)
+
+          SUBNETS=$(echo $SERVICE_CONFIG | jq -r '.subnets | join(",")')
+          SECURITY_GROUPS=$(echo $SERVICE_CONFIG | jq -r '.securityGroups | join(",")')
+
+          echo "subnets=${SUBNETS}" >> $GITHUB_OUTPUT
+          echo "security_groups=${SECURITY_GROUPS}" >> $GITHUB_OUTPUT
+
+      - name: Update migration task definition with new image
+        id: migrate-task-def
+        run: |
+          # Get current task definition
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition ${{ env.MIGRATION_TASK_FAMILY }} \
+            --query 'taskDefinition' \
+            --output json)
+
+          # Update image in container definition
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq \
+            --arg IMAGE "${{ env.ECR_REGISTRY }}/${{ env.MIGRATE_IMAGE }}:${{ steps.tag.outputs.tag }}" \
+            '.containerDefinitions[0].image = $IMAGE |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          # Register new task definition
+          NEW_TASK_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "task_arn=${NEW_TASK_ARN}" >> $GITHUB_OUTPUT
+
+      - name: Run database migrations
+        id: migrate
+        run: |
+          echo "Starting migration task..."
+
+          # Run the migration task
+          TASK_ARN=$(aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task-definition ${{ steps.migrate-task-def.outputs.task_arn }} \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ steps.network.outputs.subnets }}],securityGroups=[${{ steps.network.outputs.security_groups }}],assignPublicIp=ENABLED}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "Migration task started: ${TASK_ARN}"
+          echo "task_arn=${TASK_ARN}" >> $GITHUB_OUTPUT
+
+          # Wait for task to complete
+          echo "Waiting for migration to complete..."
+          aws ecs wait tasks-stopped \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks "${TASK_ARN}"
+
+          # Check exit code
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks "${TASK_ARN}" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed with exit code: ${EXIT_CODE}"
+
+            # Get logs for debugging
+            TASK_ID=$(echo "${TASK_ARN}" | awk -F'/' '{print $NF}')
+            echo "Fetching logs..."
+            aws logs get-log-events \
+              --log-group-name "/ecs/nvyt-migrate" \
+              --log-stream-name "ecs/migrate/${TASK_ID}" \
+              --limit 100 \
+              --query 'events[*].message' \
+              --output text || echo "Could not fetch logs"
+
+            exit 1
+          fi
+
+          echo "Migration completed successfully!"
+
+      - name: Update ECS service task definition
+        id: web-task-def
+        run: |
+          # Get current task definition for web service
+          CURRENT_TASK=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query 'services[0].taskDefinition' \
+            --output text)
+
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition "${CURRENT_TASK}" \
+            --query 'taskDefinition' \
+            --output json)
+
+          # Update image in container definition
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq \
+            --arg IMAGE "${{ env.ECR_REGISTRY }}/${{ env.WEB_IMAGE }}:${{ steps.tag.outputs.tag }}" \
+            '.containerDefinitions[0].image = $IMAGE |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          # Register new task definition
+          NEW_TASK_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "task_arn=${NEW_TASK_ARN}" >> $GITHUB_OUTPUT
+
+      - name: Deploy to ECS
+        run: |
+          echo "Updating ECS service with new task definition..."
+
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --task-definition ${{ steps.web-task-def.outputs.task_arn }} \
+            --force-new-deployment \
+            --query 'service.serviceName' \
+            --output text
+
+          echo "Waiting for service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }}
+
+          echo "Deployment complete!"
+
+      - name: Verify health check
+        run: |
+          echo "Verifying production health check..."
+
+          for i in {1..30}; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://nvyt.app/api/health)
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "Health check passed! Status: ${HTTP_STATUS}"
+              exit 0
+            fi
+
+            echo "Attempt $i/30: Health check returned ${HTTP_STATUS}, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "Health check failed after 30 attempts"
+          exit 1

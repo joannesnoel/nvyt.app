@@ -92,7 +92,10 @@
       "Bash(npx vue-tsc:*)",
       "Bash(pnpm db:regenerate:*)",
       "Bash(pnpm --filter @nvyt/shared build:*)",
-      "Bash(pnpm typecheck:*)"
+      "Bash(pnpm typecheck:*)",
+      "Bash(npx tsc:*)",
+      "Bash(sudo du:*)",
+      "Bash(xargs:*)"
     ]
   }
 }

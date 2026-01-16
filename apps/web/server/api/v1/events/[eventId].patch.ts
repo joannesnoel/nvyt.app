@@ -91,13 +91,30 @@ export default defineEventHandler(async (event) => {
 
   // Validate other fields
   const result = updateEventSchema.safeParse(body)
-  
+
   if (!result.success && !statusUpdate.status) {
     throw createError({
       statusCode: 400,
       message: 'Validation failed',
       data: result.error.flatten(),
     })
+  }
+
+  // Validate media requirement for public events
+  if (result.success) {
+    const data = result.data
+    // Determine the final visibility (new value or existing)
+    const finalVisibility = data.visibility ?? existingEvent.visibility
+    // Determine the final media values (new values or existing)
+    const finalCoverImage = 'coverImage' in body ? data.coverImage : existingEvent.coverImage
+    const finalPromoVideoUrl = 'promoVideoUrl' in body ? data.promoVideoUrl : existingEvent.promoVideoUrl
+
+    if (finalVisibility === 'public' && !finalCoverImage && !finalPromoVideoUrl) {
+      throw createError({
+        statusCode: 400,
+        message: 'Public events require a cover image or promo video',
+      })
+    }
   }
 
   const updateData: Record<string, unknown> = {

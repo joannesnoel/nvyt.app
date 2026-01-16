@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+const { getEventImage } = useYoutubeThumbnail()
+
 // TODO: Replace with actual API call
 const { data: events, pending } = await useFetch('/api/v1/events')
 </script>
@@ -49,14 +51,21 @@ const { data: events, pending } = await useFetch('/api/v1/events')
           :to="`/events/${event.slug}`"
           class="group rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-primary dark:hover:border-primary transition-colors"
         >
-          <div class="aspect-video bg-gray-100 dark:bg-gray-800 relative">
+          <div class="relative bg-gray-100 dark:bg-gray-800 overflow-hidden" style="padding-bottom: 56.25%;">
             <img
-              v-if="event.coverImage"
-              :src="event.coverImage"
+              v-if="getEventImage(event)"
+              :src="getEventImage(event)!.src"
               :alt="event.title"
-              class="w-full h-full object-cover"
+              class="absolute inset-0 w-full h-full object-cover"
+              @error="(e: Event) => {
+                const img = e.target as HTMLImageElement
+                const eventImg = getEventImage(event)
+                if (eventImg?.fallback && img.src !== eventImg.fallback) {
+                  img.src = eventImg.fallback
+                }
+              }"
             >
-            <div v-else class="w-full h-full flex items-center justify-center">
+            <div v-else class="absolute inset-0 flex items-center justify-center">
               <UIcon name="i-heroicons-photo" class="w-12 h-12 text-gray-400" />
             </div>
           </div>

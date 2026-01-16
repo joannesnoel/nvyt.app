@@ -39,10 +39,11 @@ const youtubeUrlSchema = z.union([
   }, { message: 'Please enter a valid YouTube URL' }),
 ]).transform(val => val || undefined)
 
-export const createEventSchema = z.object({
+// Base event fields (shared between create and update)
+const baseEventFields = {
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
   description: z.string().max(5000).optional(),
-  coverImage: z.string().url().optional(),
+  coverImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || undefined),
   promoVideoUrl: youtubeUrlSchema.optional(),
   mediaType: eventMediaType.default('image'),
   organizationName: z.string().max(100).optional(), // Override "Organized by" display
@@ -61,9 +62,22 @@ export const createEventSchema = z.object({
 
   ticketingEnabled: z.boolean().default(false), // Deprecated: use registrationMode='tickets'
   contributionsEnabled: z.boolean().default(false),
+}
+
+export const createEventSchema = z.object(baseEventFields).refine((data) => {
+  // Public events require either a cover image or promo video
+  if (data.visibility === 'public') {
+    return !!(data.coverImage || data.promoVideoUrl)
+  }
+  return true
+}, {
+  message: 'Public events require a cover image or promo video',
+  path: ['coverImage'], // Show error on the media field
 })
 
-export const updateEventSchema = createEventSchema.partial()
+// Update schema without the media refinement - validation is handled at API level
+// where we can check the current event state
+export const updateEventSchema = z.object(baseEventFields).partial()
 
 export const eventFiltersSchema = z.object({
   visibility: eventVisibility.optional(),

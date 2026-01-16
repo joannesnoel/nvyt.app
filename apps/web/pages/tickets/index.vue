@@ -4,6 +4,7 @@ definePageMeta({
   middleware: 'auth',
 })
 
+const { getEventImage } = useYoutubeThumbnail()
 const route = useRoute()
 const page = computed(() => Number(route.query.page) || 1)
 const status = computed(() => (route.query.status as string) || '')
@@ -109,10 +110,17 @@ const statusOptions = [
             <!-- Event Image -->
             <div class="w-full md:w-32 h-24 bg-gray-100 dark:bg-gray-800 rounded-lg flex-shrink-0 overflow-hidden">
               <img
-                v-if="ticket.event?.coverImage"
-                :src="ticket.event.coverImage"
+                v-if="ticket.event && getEventImage(ticket.event)"
+                :src="getEventImage(ticket.event)!.src"
                 :alt="ticket.event.title"
                 class="w-full h-full object-cover"
+                @error="(e: Event) => {
+                  const img = e.target as HTMLImageElement
+                  const eventImg = ticket.event ? getEventImage(ticket.event) : null
+                  if (eventImg?.fallback && img.src !== eventImg.fallback) {
+                    img.src = eventImg.fallback
+                  }
+                }"
               >
               <div v-else class="w-full h-full flex items-center justify-center">
                 <UIcon name="i-heroicons-calendar" class="w-8 h-8 text-gray-400" />

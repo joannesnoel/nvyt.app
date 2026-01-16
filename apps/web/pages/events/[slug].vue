@@ -38,6 +38,41 @@ const apiError = computed(() => {
   return null
 })
 const isOrganizer = computed(() => event.value?.isOrganizer)
+
+// SEO meta tags for social sharing
+const config = useRuntimeConfig()
+const { getThumbnailUrl } = useYoutubeThumbnail()
+const ogTitle = computed(() => event.value?.title || 'Event')
+const ogDescription = computed(() => {
+  const desc = event.value?.description || 'Join this event on nvyt'
+  // Truncate to 160 characters for optimal social preview
+  return desc.length > 160 ? desc.substring(0, 157) + '...' : desc
+})
+const ogImage = computed(() => {
+  // If media type is video and we have a promo video URL, use the YouTube thumbnail
+  if (event.value?.mediaType === 'video' && event.value?.promoVideoUrl) {
+    const thumbnail = getThumbnailUrl(event.value.promoVideoUrl)
+    if (thumbnail) return thumbnail
+  }
+  // Fallback to cover image
+  return event.value?.coverImage || ''
+})
+const ogUrl = computed(() => `${config.public.appUrl}/events/${route.params.slug}`)
+
+useSeoMeta({
+  title: ogTitle,
+  description: ogDescription,
+  ogTitle,
+  ogDescription,
+  ogImage,
+  ogUrl,
+  ogType: 'website',
+  ogSiteName: 'nvyt',
+  twitterCard: 'summary_large_image',
+  twitterTitle: ogTitle,
+  twitterDescription: ogDescription,
+  twitterImage: ogImage,
+})
 const userAttendee = computed(() => event.value?.userAttendee)
 
 // YouTube embed URL helper
@@ -673,7 +708,7 @@ function getCategoryColor(category: string) {
     <!-- #1 - Full-width background (overlays lower part of media) -->
     <div class="relative z-20 bg-gray-50 dark:bg-gray-950 py-12" :class="{ '-mt-24': event && ((event.mediaType === 'video' && youtubeEmbedUrl) || (event.mediaType !== 'video' && event.coverImage)) }">
       <!-- #2 - Narrower content box (overlays more of the media) -->
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 sm:p-8" :class="{ '-mt-28 lg:-mt-40': event && ((event.mediaType === 'video' && youtubeEmbedUrl) || (event.mediaType !== 'video' && event.coverImage)) }">
         <!-- Loading -->
         <div v-if="pending" class="space-y-4">
@@ -1064,10 +1099,8 @@ function getCategoryColor(category: string) {
                       </button>
                     </template>
                     <template #[`faq-${index}`]>
-                      <div class="px-4 pb-4 pt-0">
-                        <div class="pl-9 text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                          {{ faq.answer }}
-                        </div>
+                      <div class="px-4 pb-4 pt-2">
+                        <div class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ faq.answer }}</div>
                       </div>
                     </template>
                   </UAccordion>
