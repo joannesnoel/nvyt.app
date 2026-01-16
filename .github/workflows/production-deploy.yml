@@ -17,7 +17,7 @@ jobs:
       MIGRATE_IMAGE: nvyt-migrate
       ECS_CLUSTER: nvyt-production-cluster
       ECS_SERVICE: nvyt-production-web
-      MIGRATION_TASK_FAMILY: nvyt-migrate
+      MIGRATION_TASK_FAMILY: nvyt-production-migrate
 
     steps:
       - name: Checkout code
