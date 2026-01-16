@@ -1,17 +1,8 @@
 ---
-# Secret for GitHub PAT (apply manually with your token)
+# Secret for GitHub PAT - create manually:
 # kubectl create secret generic github-runner-secret \
 #   --namespace github-actions \
 #   --from-literal=GITHUB_PAT=<your-pat-token>
-apiVersion: v1
-kind: Secret
-metadata:
-  name: github-runner-secret
-  namespace: github-actions
-type: Opaque
-stringData:
-  GITHUB_PAT: "REPLACE_WITH_YOUR_PAT"
-
 ---
 # ServiceAccount for the runner
 apiVersion: v1
@@ -55,7 +46,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 
 ---
-# Deployment for the self-hosted runner
+# Deployment for the self-hosted runner with Docker-in-Docker
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -75,10 +66,36 @@ spec:
     spec:
       serviceAccountName: github-runner
       containers:
+        # Docker-in-Docker sidecar
+        - name: dind
+          image: docker:24-dind
+          securityContext:
+            privileged: true
+          args:
+            - --insecure-registry=192.168.0.20:30500
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          volumeMounts:
+            - name: docker-storage
+              mountPath: /var/lib/docker
+            - name: runner-workdir
+              mountPath: /tmp/runner
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+
+        # GitHub Actions Runner
         - name: runner
           image: myoung34/github-runner:latest
           imagePullPolicy: Always
           env:
+            - name: DOCKER_HOST
+              value: "tcp://localhost:2375"
             - name: REPO_URL
               value: "https://github.com/joannesnoel/nvyt.app"
             - name: RUNNER_NAME
@@ -99,8 +116,6 @@ spec:
             - name: DISABLE_AUTO_UPDATE
               value: "true"
           volumeMounts:
-            - name: docker-sock
-              mountPath: /var/run/docker.sock
             - name: runner-workdir
               mountPath: /tmp/runner
           resources:
@@ -110,16 +125,12 @@ spec:
             limits:
               memory: "2Gi"
               cpu: "2000m"
-          securityContext:
-            privileged: true
+
       volumes:
-        - name: docker-sock
-          hostPath:
-            path: /var/run/docker.sock
-            type: Socket
+        - name: docker-storage
+          emptyDir: {}
         - name: runner-workdir
           emptyDir: {}
-      # Prefer scheduling on nodes with Docker
       tolerations:
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"

@@ -12,8 +12,8 @@ jobs:
     environment: production
 
     env:
-      AWS_REGION: ca-central-1
-      ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ca-central-1.amazonaws.com
+      AWS_REGION: ap-southeast-1
+      ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com
       WEB_IMAGE: nvyt-web
       MIGRATE_IMAGE: nvyt-migrate
       ECS_CLUSTER: nvyt-production
