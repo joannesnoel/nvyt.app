@@ -131,7 +131,7 @@ jobs:
       - name: Verify health check
         run: |
           # Get the service endpoint
-          SERVICE_IP=$(kubectl get svc nvyt-web -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
+          SERVICE_IP=$(kubectl get svc nvyt-web-service -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.clusterIP}')
 
           # Wait for health check to pass
           echo "Waiting for health check at http://${SERVICE_IP}:80/api/health"
