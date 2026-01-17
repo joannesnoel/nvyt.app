@@ -500,16 +500,30 @@ function getCategoryColor(category: string) {
 
 <template>
   <div class="min-h-screen">
+    <!-- Backdrop for dismissing panel (mobile only) -->
+    <div
+      v-if="panelExpanded && isMobile"
+      class="fixed inset-0 z-40"
+      @click="panelExpanded = false"
+    />
+
     <!-- Floating Control Panel -->
-    <div class="fixed bottom-4 right-4 sm:top-20 sm:bottom-auto z-50">
+    <div class="fixed bottom-4 right-4 sm:top-20 sm:bottom-auto z-50 flex flex-col items-end gap-3">
       <!-- Collapsed state (mobile) -->
-      <div v-if="!panelExpanded" class="sm:hidden">
+      <div v-if="!panelExpanded" class="sm:hidden flex flex-col items-end gap-3">
         <UButton
           color="primary"
-          size="lg"
+          size="xl"
           icon="i-heroicons-paint-brush"
-          class="shadow-xl rounded-full"
+          class="shadow-xl rounded-full !p-4"
           @click="panelExpanded = true"
+        />
+        <UButton
+          :to="`/dashboard/events/${eventId}`"
+          color="green"
+          size="xl"
+          icon="i-heroicons-check"
+          class="shadow-xl rounded-full !p-4"
         />
       </div>
 
@@ -517,24 +531,15 @@ function getCategoryColor(category: string) {
       <UCard v-show="panelExpanded || !isMobile" class="w-56 sm:w-64 shadow-xl">
         <template #header>
           <div class="flex items-center justify-between">
-            <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Preview</h3>
-            <div class="flex gap-1">
-              <UButton
-                class="sm:hidden"
-                color="gray"
-                variant="ghost"
-                size="xs"
-                icon="i-heroicons-minus"
-                @click="panelExpanded = false"
-              />
-              <UButton
-                :to="`/dashboard/events/${eventId}`"
-                color="gray"
-                variant="ghost"
-                size="xs"
-                icon="i-heroicons-x-mark"
-              />
-            </div>
+            <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Customize</h3>
+            <UButton
+              class="sm:hidden"
+              color="gray"
+              variant="ghost"
+              size="xs"
+              icon="i-heroicons-minus"
+              @click="panelExpanded = false"
+            />
           </div>
         </template>
 
@@ -664,33 +669,18 @@ function getCategoryColor(category: string) {
               </USelectMenu>
             </div>
           </div>
-
-          <!-- Links -->
-          <div class="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-            <UButton
-              :to="`/dashboard/events/${eventId}/edit`"
-              color="gray"
-              variant="ghost"
-              size="xs"
-              class="flex-1"
-            >
-              <UIcon name="i-heroicons-pencil-square" class="w-3 h-3 sm:mr-1" />
-              <span class="hidden sm:inline">Edit</span>
-            </UButton>
-            <UButton
-              :to="`/events/${event?.slug}`"
-              target="_blank"
-              color="gray"
-              variant="ghost"
-              size="xs"
-              class="flex-1"
-            >
-              <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 sm:mr-1" />
-              <span class="hidden sm:inline">Open</span>
-            </UButton>
-          </div>
         </div>
       </UCard>
+
+      <!-- Done button (below panel when expanded or on desktop) -->
+      <UButton
+        v-show="panelExpanded || !isMobile"
+        :to="`/dashboard/events/${eventId}`"
+        color="green"
+        size="xl"
+        icon="i-heroicons-check"
+        class="shadow-xl rounded-full !p-4"
+      />
     </div>
 
     <!-- Loading -->
