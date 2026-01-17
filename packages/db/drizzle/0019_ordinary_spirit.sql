@@ -1,0 +1,2 @@
+CREATE TYPE "public"."event_font_family" AS ENUM('system', 'inter', 'roboto', 'opensans', 'lato', 'montserrat', 'poppins', 'playfair', 'merriweather', 'sourceserif');--> statement-breakpoint
+ALTER TABLE "events" ADD COLUMN "font_family" "event_font_family" DEFAULT 'system' NOT NULL;

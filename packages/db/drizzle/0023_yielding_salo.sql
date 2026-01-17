@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "title_font_family" "event_font_family" DEFAULT 'system' NOT NULL;

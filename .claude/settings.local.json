@@ -99,7 +99,10 @@
       "Bash(git merge:*)",
       "Bash(wc:*)",
       "Bash(pnpm --filter web exec vue-tsc:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(node scripts/drop-font-family.mjs:*)",
+      "Bash(pnpm drizzle-kit:*)",
+      "Bash(node -e:*)"
     ]
   }
 }

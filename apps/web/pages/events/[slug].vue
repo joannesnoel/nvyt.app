@@ -30,6 +30,80 @@ const colorTemplateMap: Record<string, { 50: string; 100: string; 200: string; 3
   amber: { 50: '255 251 235', 100: '254 243 199', 200: '253 230 138', 300: '252 211 77', 400: '251 191 36', 500: '245 158 11', 600: '217 119 6', 700: '180 83 9', 800: '146 64 14', 900: '120 53 15', 950: '69 26 3' },
 }
 
+// Font family mapping
+type FontFamily = 'system' | 'inter' | 'roboto' | 'opensans' | 'lato' | 'montserrat' | 'poppins' | 'nunito' | 'raleway' | 'worksans' | 'dmsans' | 'quicksand' | 'playfair' | 'merriweather' | 'sourceserif' | 'librebaskerville' | 'crimsontext' | 'ebgaramond' | 'cormorant' | 'oswald' | 'bebasnueve' | 'anton' | 'archivoblack' | 'dancingscript' | 'greatvibes' | 'pacifico' | 'sacramento' | 'satisfy' | 'lobster'
+const fontFamilyMap: Record<FontFamily, string> = {
+  system: 'Inter, system-ui, sans-serif',
+  // Display
+  oswald: '"Oswald", sans-serif',
+  bebasnueve: '"Bebas Neue", sans-serif',
+  anton: '"Anton", sans-serif',
+  archivoblack: '"Archivo Black", sans-serif',
+  // Script
+  dancingscript: '"Dancing Script", cursive',
+  greatvibes: '"Great Vibes", cursive',
+  pacifico: '"Pacifico", cursive',
+  sacramento: '"Sacramento", cursive',
+  satisfy: '"Satisfy", cursive',
+  lobster: '"Lobster", cursive',
+  // Sans-serif
+  inter: '"Inter", sans-serif',
+  roboto: '"Roboto", sans-serif',
+  opensans: '"Open Sans", sans-serif',
+  lato: '"Lato", sans-serif',
+  montserrat: '"Montserrat", sans-serif',
+  poppins: '"Poppins", sans-serif',
+  nunito: '"Nunito", sans-serif',
+  raleway: '"Raleway", sans-serif',
+  worksans: '"Work Sans", sans-serif',
+  dmsans: '"DM Sans", sans-serif',
+  quicksand: '"Quicksand", sans-serif',
+  // Serif
+  playfair: '"Playfair Display", serif',
+  merriweather: '"Merriweather", serif',
+  sourceserif: '"Source Serif Pro", serif',
+  librebaskerville: '"Libre Baskerville", serif',
+  crimsontext: '"Crimson Text", serif',
+  ebgaramond: '"EB Garamond", serif',
+  cormorant: '"Cormorant Garamond", serif',
+}
+
+const fontUrlMap: Record<FontFamily, string> = {
+  system: '',
+  // Display
+  oswald: 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap',
+  bebasnueve: 'https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap',
+  anton: 'https://fonts.googleapis.com/css2?family=Anton&display=swap',
+  archivoblack: 'https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap',
+  // Script
+  dancingscript: 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap',
+  greatvibes: 'https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap',
+  pacifico: 'https://fonts.googleapis.com/css2?family=Pacifico&display=swap',
+  sacramento: 'https://fonts.googleapis.com/css2?family=Sacramento&display=swap',
+  satisfy: 'https://fonts.googleapis.com/css2?family=Satisfy&display=swap',
+  lobster: 'https://fonts.googleapis.com/css2?family=Lobster&display=swap',
+  // Sans-serif
+  inter: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+  roboto: 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+  opensans: 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap',
+  lato: 'https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap',
+  montserrat: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap',
+  poppins: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap',
+  nunito: 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap',
+  raleway: 'https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap',
+  worksans: 'https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap',
+  dmsans: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap',
+  quicksand: 'https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap',
+  // Serif
+  playfair: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap',
+  merriweather: 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap',
+  sourceserif: 'https://fonts.googleapis.com/css2?family=Source+Serif+Pro:wght@400;600;700&display=swap',
+  librebaskerville: 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap',
+  crimsontext: 'https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap',
+  ebgaramond: 'https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap',
+  cormorant: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap',
+}
+
 // Fetch event data - use $fetch for proper SSR support
 const { data: eventResponse, status, refresh, error: fetchError } = await useAsyncData(
   `event-${route.params.slug}`,
@@ -82,14 +156,96 @@ const colorTemplateStyle = computed(() => {
   `
 })
 
-// Inject color template styles
+// Computed CSS for font families (title, heading, and body)
+const fontFamilyStyle = computed(() => {
+  const titleFont = (event.value?.titleFontFamily as FontFamily) || 'system'
+  const headingFont = (event.value?.fontFamily as FontFamily) || 'system'
+  const bodyFont = (event.value?.bodyFontFamily as FontFamily) || 'system'
+
+  const styles: string[] = []
+
+  // Apply title font to h1 (main event title)
+  if (titleFont !== 'system') {
+    const titleFamily = fontFamilyMap[titleFont] || fontFamilyMap.system
+    styles.push(`
+      h1 {
+        font-family: ${titleFamily} !important;
+      }
+    `)
+  }
+
+  // Apply heading font to h2-h6 and buttons (with larger font size for display fonts)
+  if (headingFont !== 'system') {
+    const headingFamily = fontFamilyMap[headingFont] || fontFamilyMap.system
+    styles.push(`
+      h2, h3, h4, h5, h6 {
+        font-family: ${headingFamily} !important;
+      }
+      h2 { font-size: 1.375rem !important; }
+      h3 { font-size: 1.15rem !important; }
+      h4 { font-size: 1.05rem !important; }
+      button, [role="button"], .btn, [class*="UButton"] {
+        font-family: ${headingFamily} !important;
+        font-size: 1.1rem !important;
+      }
+    `)
+  }
+
+  // Apply body font to body text (excluding buttons)
+  if (bodyFont !== 'system') {
+    const bodyFamily = fontFamilyMap[bodyFont] || fontFamilyMap.system
+    styles.push(`
+      body, p, span, div, li, td, th, label, input, textarea {
+        font-family: ${bodyFamily};
+      }
+    `)
+  }
+
+  return styles.join('\n')
+})
+
+// Google Font links for title, heading and body fonts
+const fontLinks = computed(() => {
+  const titleFont = (event.value?.titleFontFamily as FontFamily) || 'system'
+  const headingFont = (event.value?.fontFamily as FontFamily) || 'system'
+  const bodyFont = (event.value?.bodyFontFamily as FontFamily) || 'system'
+
+  const links: { rel: string; href: string }[] = []
+  const usedUrls = new Set<string>()
+
+  const titleUrl = fontUrlMap[titleFont]
+  const headingUrl = fontUrlMap[headingFont]
+  const bodyUrl = fontUrlMap[bodyFont]
+
+  if (titleUrl && !usedUrls.has(titleUrl)) {
+    links.push({ rel: 'stylesheet', href: titleUrl })
+    usedUrls.add(titleUrl)
+  }
+  if (headingUrl && !usedUrls.has(headingUrl)) {
+    links.push({ rel: 'stylesheet', href: headingUrl })
+    usedUrls.add(headingUrl)
+  }
+  if (bodyUrl && !usedUrls.has(bodyUrl)) {
+    links.push({ rel: 'stylesheet', href: bodyUrl })
+    usedUrls.add(bodyUrl)
+  }
+
+  return links
+})
+
+// Inject styles
 useHead({
   style: [
     {
       key: 'event-color-template',
       innerHTML: colorTemplateStyle,
     },
+    {
+      key: 'event-font-family',
+      innerHTML: fontFamilyStyle,
+    },
   ],
+  link: fontLinks,
 })
 
 // SEO meta tags for social sharing
@@ -761,8 +917,11 @@ onBeforeUnmount(() => {
           frameborder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         ></iframe>
-        <!-- Overlay to prevent hover interactions -->
-        <div class="absolute inset-0"></div>
+        <!-- Color tint overlay (also prevents hover interactions) -->
+        <div
+          class="absolute inset-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen"
+          :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.30)` }"
+        />
       </div>
     </div>
 
@@ -774,6 +933,11 @@ onBeforeUnmount(() => {
           :alt="event.title"
           class="absolute top-0 left-0 w-full h-full object-cover"
         >
+        <!-- Color tint overlay -->
+        <div
+          class="absolute inset-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen"
+          :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.30)` }"
+        />
       </div>
     </div>
 

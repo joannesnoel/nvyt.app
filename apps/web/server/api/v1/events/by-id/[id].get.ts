@@ -1,5 +1,5 @@
-import { eq, and, sql } from 'drizzle-orm'
-import { events, users, ticketTypes, attendees, contributionItems } from '@nvyt/db'
+import { eq, and, sql, asc, desc } from 'drizzle-orm'
+import { events, users, ticketTypes, attendees, contributionItems, eventRequirements, eventFaqs, eventAnnouncements } from '@nvyt/db'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'id')
@@ -39,6 +39,8 @@ export default defineEventHandler(async (event) => {
       contributionsEnabled: events.contributionsEnabled,
       theme: events.theme,
       colorTemplate: events.colorTemplate,
+      fontFamily: events.fontFamily,
+      bodyFontFamily: events.bodyFontFamily,
       inviteToken: events.inviteToken,
       organizerId: events.organizerId,
       createdAt: events.createdAt,
@@ -90,6 +92,45 @@ export default defineEventHandler(async (event) => {
       .orderBy(contributionItems.sortOrder)
   }
 
+  // Get active requirements (for tickets mode)
+  let requirements: typeof eventRequirements.$inferSelect[] = []
+  if (eventData.registrationMode === 'tickets') {
+    requirements = await db
+      .select()
+      .from(eventRequirements)
+      .where(
+        and(
+          eq(eventRequirements.eventId, eventData.id),
+          eq(eventRequirements.isActive, true)
+        )
+      )
+      .orderBy(asc(eventRequirements.sortOrder), asc(eventRequirements.createdAt))
+  }
+
+  // Get active FAQs
+  const faqs = await db
+    .select()
+    .from(eventFaqs)
+    .where(
+      and(
+        eq(eventFaqs.eventId, eventData.id),
+        eq(eventFaqs.isActive, true)
+      )
+    )
+    .orderBy(asc(eventFaqs.sortOrder), asc(eventFaqs.createdAt))
+
+  // Get published announcements (pinned first, then newest)
+  const announcements = await db
+    .select()
+    .from(eventAnnouncements)
+    .where(
+      and(
+        eq(eventAnnouncements.eventId, eventData.id),
+        eq(eventAnnouncements.isPublished, true)
+      )
+    )
+    .orderBy(desc(eventAnnouncements.isPinned), desc(eventAnnouncements.createdAt))
+
   // Get attendee count
   const countResult = await db
     .select({ count: sql<number>`count(*)` })
@@ -125,6 +166,9 @@ export default defineEventHandler(async (event) => {
     inviteToken: isOrganizer ? eventData.inviteToken : undefined,
     ticketTypes: tickets,
     contributionItems: contributions,
+    requirements,
+    faqs,
+    announcements,
     attendeeCount,
     userAttendee,
     isOrganizer,

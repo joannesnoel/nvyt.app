@@ -56,6 +56,105 @@ const colorPalette: { name: ColorTemplate; label: string; light: string; dark: s
   { name: 'amber', label: 'Amber', light: 'bg-amber-700', dark: 'bg-amber-300' },
 ]
 
+// Font family management
+type FontFamily = 'system' | 'inter' | 'roboto' | 'opensans' | 'lato' | 'montserrat' | 'poppins' | 'nunito' | 'raleway' | 'worksans' | 'dmsans' | 'quicksand' | 'playfair' | 'merriweather' | 'sourceserif' | 'librebaskerville' | 'crimsontext' | 'ebgaramond' | 'cormorant' | 'oswald' | 'bebasnueve' | 'anton' | 'archivoblack' | 'dancingscript' | 'greatvibes' | 'pacifico' | 'sacramento' | 'satisfy' | 'lobster'
+const selectedTitleFont = ref<FontFamily>('system')
+const savedTitleFont = ref<FontFamily>('system')
+const selectedHeadingFont = ref<FontFamily>('system')
+const savedHeadingFont = ref<FontFamily>('system')
+const selectedBodyFont = ref<FontFamily>('system')
+const savedBodyFont = ref<FontFamily>('system')
+
+// Font palette configuration
+const fontPalette: { name: FontFamily; label: string; family: string; category: 'sans' | 'serif' | 'display' | 'script' }[] = [
+  // System
+  { name: 'system', label: 'System Default', family: 'Inter, system-ui, sans-serif', category: 'sans' },
+  // Display (most impactful for headings)
+  { name: 'oswald', label: 'Oswald', family: '"Oswald", sans-serif', category: 'display' },
+  { name: 'bebasnueve', label: 'Bebas Neue', family: '"Bebas Neue", sans-serif', category: 'display' },
+  { name: 'anton', label: 'Anton', family: '"Anton", sans-serif', category: 'display' },
+  { name: 'archivoblack', label: 'Archivo Black', family: '"Archivo Black", sans-serif', category: 'display' },
+  // Script (elegant, handwritten)
+  { name: 'dancingscript', label: 'Dancing Script', family: '"Dancing Script", cursive', category: 'script' },
+  { name: 'greatvibes', label: 'Great Vibes', family: '"Great Vibes", cursive', category: 'script' },
+  { name: 'pacifico', label: 'Pacifico', family: '"Pacifico", cursive', category: 'script' },
+  { name: 'sacramento', label: 'Sacramento', family: '"Sacramento", cursive', category: 'script' },
+  { name: 'satisfy', label: 'Satisfy', family: '"Satisfy", cursive', category: 'script' },
+  { name: 'lobster', label: 'Lobster', family: '"Lobster", cursive', category: 'script' },
+  // Sans-serif
+  { name: 'inter', label: 'Inter', family: '"Inter", sans-serif', category: 'sans' },
+  { name: 'roboto', label: 'Roboto', family: '"Roboto", sans-serif', category: 'sans' },
+  { name: 'opensans', label: 'Open Sans', family: '"Open Sans", sans-serif', category: 'sans' },
+  { name: 'lato', label: 'Lato', family: '"Lato", sans-serif', category: 'sans' },
+  { name: 'montserrat', label: 'Montserrat', family: '"Montserrat", sans-serif', category: 'sans' },
+  { name: 'poppins', label: 'Poppins', family: '"Poppins", sans-serif', category: 'sans' },
+  { name: 'nunito', label: 'Nunito', family: '"Nunito", sans-serif', category: 'sans' },
+  { name: 'raleway', label: 'Raleway', family: '"Raleway", sans-serif', category: 'sans' },
+  { name: 'worksans', label: 'Work Sans', family: '"Work Sans", sans-serif', category: 'sans' },
+  { name: 'dmsans', label: 'DM Sans', family: '"DM Sans", sans-serif', category: 'sans' },
+  { name: 'quicksand', label: 'Quicksand', family: '"Quicksand", sans-serif', category: 'sans' },
+  // Serif
+  { name: 'playfair', label: 'Playfair Display', family: '"Playfair Display", serif', category: 'serif' },
+  { name: 'merriweather', label: 'Merriweather', family: '"Merriweather", serif', category: 'serif' },
+  { name: 'sourceserif', label: 'Source Serif', family: '"Source Serif Pro", serif', category: 'serif' },
+  { name: 'librebaskerville', label: 'Libre Baskerville', family: '"Libre Baskerville", serif', category: 'serif' },
+  { name: 'crimsontext', label: 'Crimson Text', family: '"Crimson Text", serif', category: 'serif' },
+  { name: 'ebgaramond', label: 'EB Garamond', family: '"EB Garamond", serif', category: 'serif' },
+  { name: 'cormorant', label: 'Cormorant Garamond', family: '"Cormorant Garamond", serif', category: 'serif' },
+]
+
+// Filtered font palettes for each dropdown
+const titleFontPalette = computed(() => [
+  fontPalette.find(f => f.name === 'system')!,
+  ...fontPalette.filter(f => f.category === 'script'),
+])
+const headingFontPalette = computed(() => [
+  fontPalette.find(f => f.name === 'system')!,
+  ...fontPalette.filter(f => f.category === 'display'),
+])
+const bodyFontPalette = computed(() => [
+  fontPalette.find(f => f.name === 'system')!,
+  ...fontPalette.filter(f => f.category === 'sans' && f.name !== 'system'),
+  ...fontPalette.filter(f => f.category === 'serif'),
+])
+
+// Google Fonts URL mapping
+const fontUrlMap: Record<FontFamily, string> = {
+  system: '',
+  // Display
+  oswald: 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap',
+  bebasnueve: 'https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap',
+  anton: 'https://fonts.googleapis.com/css2?family=Anton&display=swap',
+  archivoblack: 'https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap',
+  // Script
+  dancingscript: 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap',
+  greatvibes: 'https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap',
+  pacifico: 'https://fonts.googleapis.com/css2?family=Pacifico&display=swap',
+  sacramento: 'https://fonts.googleapis.com/css2?family=Sacramento&display=swap',
+  satisfy: 'https://fonts.googleapis.com/css2?family=Satisfy&display=swap',
+  lobster: 'https://fonts.googleapis.com/css2?family=Lobster&display=swap',
+  // Sans-serif
+  inter: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+  roboto: 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+  opensans: 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap',
+  lato: 'https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap',
+  montserrat: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap',
+  poppins: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap',
+  nunito: 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap',
+  raleway: 'https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap',
+  worksans: 'https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap',
+  dmsans: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap',
+  quicksand: 'https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap',
+  // Serif
+  playfair: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap',
+  merriweather: 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap',
+  sourceserif: 'https://fonts.googleapis.com/css2?family=Source+Serif+Pro:wght@400;600;700&display=swap',
+  librebaskerville: 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap',
+  crimsontext: 'https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap',
+  ebgaramond: 'https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap',
+  cormorant: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap',
+}
+
 // Color template mapping to Tailwind RGB values
 const colorTemplateMap: Record<string, { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; 950: string }> = {
   green: { 50: '240 253 244', 100: '220 252 231', 200: '187 247 208', 300: '134 239 172', 400: '74 222 128', 500: '34 197 94', 600: '22 163 74', 700: '21 128 61', 800: '22 101 52', 900: '20 83 45', 950: '5 46 22' },
@@ -92,17 +191,92 @@ const colorTemplateStyle = computed(() => {
   `
 })
 
-// Inject color template styles for preview
+// Computed CSS for font family preview
+const fontFamilyStyle = computed(() => {
+  const titleConfig = fontPalette.find(f => f.name === selectedTitleFont.value) || fontPalette[0]
+  const headingConfig = fontPalette.find(f => f.name === selectedHeadingFont.value) || fontPalette[0]
+  const bodyConfig = fontPalette.find(f => f.name === selectedBodyFont.value) || fontPalette[0]
+
+  const styles: string[] = []
+
+  // Apply title font to h1 (main event title)
+  if (selectedTitleFont.value !== 'system') {
+    styles.push(`
+      h1 {
+        font-family: ${titleConfig.family} !important;
+      }
+    `)
+  }
+
+  // Apply heading font to h2-h6 and buttons (with larger font size for display fonts)
+  if (selectedHeadingFont.value !== 'system') {
+    styles.push(`
+      h2, h3, h4, h5, h6 {
+        font-family: ${headingConfig.family} !important;
+      }
+      h2 { font-size: 1.375rem !important; }
+      h3 { font-size: 1.15rem !important; }
+      h4 { font-size: 1.05rem !important; }
+      button, [role="button"], .btn, [class*="UButton"] {
+        font-family: ${headingConfig.family} !important;
+        font-size: 1.1rem !important;
+      }
+    `)
+  }
+
+  // Apply body font to body text (excluding buttons)
+  if (selectedBodyFont.value !== 'system') {
+    styles.push(`
+      body, p, span, div, li, td, th, label, input, textarea {
+        font-family: ${bodyConfig.family};
+      }
+    `)
+  }
+
+  return styles.join('\n')
+})
+
+// Google Font links for selected fonts
+const fontLinks = computed(() => {
+  const links: { rel: string; href: string }[] = []
+  const usedUrls = new Set<string>()
+
+  const titleUrl = fontUrlMap[selectedTitleFont.value]
+  const headingUrl = fontUrlMap[selectedHeadingFont.value]
+  const bodyUrl = fontUrlMap[selectedBodyFont.value]
+
+  if (titleUrl && !usedUrls.has(titleUrl)) {
+    links.push({ rel: 'stylesheet', href: titleUrl })
+    usedUrls.add(titleUrl)
+  }
+  if (headingUrl && !usedUrls.has(headingUrl)) {
+    links.push({ rel: 'stylesheet', href: headingUrl })
+    usedUrls.add(headingUrl)
+  }
+  if (bodyUrl && !usedUrls.has(bodyUrl)) {
+    links.push({ rel: 'stylesheet', href: bodyUrl })
+    usedUrls.add(bodyUrl)
+  }
+
+  return links
+})
+
+// Inject styles for preview
 useHead({
   style: [
     {
       key: 'preview-color-template',
       innerHTML: colorTemplateStyle,
     },
+    {
+      key: 'preview-font-family',
+      innerHTML: fontFamilyStyle,
+    },
   ],
+  link: fontLinks,
 })
 
-// Initialize selected theme and color from event data (only once)
+// Initialize selected theme, color, and fonts from event data (only once)
 watch(event, (newEvent) => {
   if (newEvent && !isInitialized.value) {
     const theme = newEvent.theme ?? null
@@ -111,6 +285,15 @@ watch(event, (newEvent) => {
     const color = (newEvent.colorTemplate as ColorTemplate) || 'green'
     selectedColor.value = color
     savedColor.value = color
+    const titleFont = (newEvent.titleFontFamily as FontFamily) || 'system'
+    selectedTitleFont.value = titleFont
+    savedTitleFont.value = titleFont
+    const headingFont = (newEvent.fontFamily as FontFamily) || 'system'
+    selectedHeadingFont.value = headingFont
+    savedHeadingFont.value = headingFont
+    const bodyFont = (newEvent.bodyFontFamily as FontFamily) || 'system'
+    selectedBodyFont.value = bodyFont
+    savedBodyFont.value = bodyFont
     isInitialized.value = true
   }
 }, { immediate: true })
@@ -179,6 +362,72 @@ watch(selectedColor, async (newColor) => {
     })
     // Revert on error
     selectedColor.value = savedColor.value
+  }
+})
+
+// Auto-save appearance when title font changes
+watch(selectedTitleFont, async (newFont) => {
+  if (!isInitialized.value || !event.value) return
+  if (newFont === savedTitleFont.value) return
+
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}`, {
+      method: 'PATCH',
+      body: { titleFontFamily: newFont },
+    })
+    savedTitleFont.value = newFont
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to save title font',
+      color: 'red',
+    })
+    // Revert on error
+    selectedTitleFont.value = savedTitleFont.value
+  }
+})
+
+// Auto-save appearance when heading font changes
+watch(selectedHeadingFont, async (newFont) => {
+  if (!isInitialized.value || !event.value) return
+  if (newFont === savedHeadingFont.value) return
+
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}`, {
+      method: 'PATCH',
+      body: { fontFamily: newFont },
+    })
+    savedHeadingFont.value = newFont
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to save heading font',
+      color: 'red',
+    })
+    // Revert on error
+    selectedHeadingFont.value = savedHeadingFont.value
+  }
+})
+
+// Auto-save appearance when body font changes
+watch(selectedBodyFont, async (newFont) => {
+  if (!isInitialized.value || !event.value) return
+  if (newFont === savedBodyFont.value) return
+
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}`, {
+      method: 'PATCH',
+      body: { bodyFontFamily: newFont },
+    })
+    savedBodyFont.value = newFont
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to save body font',
+      color: 'red',
+    })
+    // Revert on error
+    selectedBodyFont.value = savedBodyFont.value
   }
 })
 
@@ -354,6 +603,77 @@ function getCategoryColor(category: string) {
             </div>
           </div>
 
+          <!-- Font Selectors -->
+          <div class="space-y-2">
+            <p class="text-xs text-gray-500">Fonts</p>
+            <!-- Title Font (Script fonts) -->
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Title</p>
+              <USelectMenu
+                v-model="selectedTitleFont"
+                :options="titleFontPalette"
+                value-attribute="name"
+                option-attribute="label"
+                size="xs"
+                class="w-full"
+              >
+                <template #label>
+                  <span :style="{ fontFamily: fontPalette.find(f => f.name === selectedTitleFont)?.family }">
+                    {{ fontPalette.find(f => f.name === selectedTitleFont)?.label }}
+                  </span>
+                </template>
+                <template #option="{ option }">
+                  <span :style="{ fontFamily: option.family }">{{ option.label }}</span>
+                  <UBadge v-if="option.category === 'script'" size="xs" color="pink" variant="soft" class="ml-2">Script</UBadge>
+                </template>
+              </USelectMenu>
+            </div>
+            <!-- Heading Font (Display fonts) -->
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Headings</p>
+              <USelectMenu
+                v-model="selectedHeadingFont"
+                :options="headingFontPalette"
+                value-attribute="name"
+                option-attribute="label"
+                size="xs"
+                class="w-full"
+              >
+                <template #label>
+                  <span :style="{ fontFamily: fontPalette.find(f => f.name === selectedHeadingFont)?.family }">
+                    {{ fontPalette.find(f => f.name === selectedHeadingFont)?.label }}
+                  </span>
+                </template>
+                <template #option="{ option }">
+                  <span :style="{ fontFamily: option.family }">{{ option.label }}</span>
+                  <UBadge v-if="option.category === 'display'" size="xs" color="primary" variant="soft" class="ml-2">Display</UBadge>
+                </template>
+              </USelectMenu>
+            </div>
+            <!-- Body Font (Sans-serif & Serif) -->
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Body</p>
+              <USelectMenu
+                v-model="selectedBodyFont"
+                :options="bodyFontPalette"
+                value-attribute="name"
+                option-attribute="label"
+                size="xs"
+                class="w-full"
+              >
+                <template #label>
+                  <span :style="{ fontFamily: fontPalette.find(f => f.name === selectedBodyFont)?.family }">
+                    {{ fontPalette.find(f => f.name === selectedBodyFont)?.label }}
+                  </span>
+                </template>
+                <template #option="{ option }">
+                  <span :style="{ fontFamily: option.family }">{{ option.label }}</span>
+                  <UBadge v-if="option.category === 'serif'" size="xs" color="gray" variant="soft" class="ml-2">Serif</UBadge>
+                </template>
+              </USelectMenu>
+            </div>
+          </div>
+
           <!-- Links -->
           <div class="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
             <UButton
@@ -401,6 +721,11 @@ function getCategoryColor(category: string) {
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           ></iframe>
+          <!-- Color tint overlay -->
+          <div
+            class="absolute inset-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen"
+            :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.30)` }"
+          />
         </div>
       </div>
 
@@ -412,6 +737,11 @@ function getCategoryColor(category: string) {
             :alt="event.title"
             class="absolute top-0 left-0 w-full h-full object-cover"
           >
+          <!-- Color tint overlay -->
+          <div
+            class="absolute inset-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen"
+            :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.30)` }"
+          />
         </div>
       </div>
 

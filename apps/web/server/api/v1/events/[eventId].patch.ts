@@ -145,6 +145,9 @@ export default defineEventHandler(async (event) => {
     if ('contributionsEnabled' in body) updateData.contributionsEnabled = data.contributionsEnabled
     if ('theme' in body) updateData.theme = data.theme ?? null // null = follow visitor's system preference
     if ('colorTemplate' in body) updateData.colorTemplate = data.colorTemplate
+    if ('titleFontFamily' in body) updateData.titleFontFamily = data.titleFontFamily
+    if ('fontFamily' in body) updateData.fontFamily = data.fontFamily
+    if ('bodyFontFamily' in body) updateData.bodyFontFamily = data.bodyFontFamily
   }
 
   // Update event
