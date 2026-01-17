@@ -201,7 +201,7 @@ const youtubeEmbedUrl = computed(() => {
 
   if (videoId) {
     const params = new URLSearchParams({
-      autoplay: '0',
+      autoplay: '1',
       mute: '1',
       loop: '1',
       playlist: videoId,
@@ -209,6 +209,7 @@ const youtubeEmbedUrl = computed(() => {
       showinfo: '0',
       rel: '0',
       modestbranding: '1',
+      playsinline: '1',
     })
     return `https://www.youtube.com/embed/${videoId}?${params.toString()}`
   }
