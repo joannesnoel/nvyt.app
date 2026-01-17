@@ -227,6 +227,26 @@ function formatDate(date: string) {
     minute: '2-digit',
   })
 }
+
+// Format currency
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+  }).format(amount)
+}
+
+// Get category color for contributions
+function getCategoryColor(category: string) {
+  const colors: Record<string, string> = {
+    food: 'orange',
+    drinks: 'blue',
+    supplies: 'green',
+    equipment: 'purple',
+    other: 'gray',
+  }
+  return colors[category] || 'gray'
+}
 </script>
 
 <template>
@@ -461,6 +481,160 @@ function formatDate(date: string) {
                     <p v-else class="text-gray-500">No description provided.</p>
                   </div>
                 </UCard>
+
+                <!-- Contribution List -->
+                <UCard v-if="event.contributionsEnabled && event.contributionItems?.length">
+                  <template #header>
+                    <div class="flex items-center justify-between">
+                      <h2 class="font-semibold text-gray-900 dark:text-white">Contribution List</h2>
+                      <p class="text-sm text-gray-500">Sign up to bring something!</p>
+                    </div>
+                  </template>
+                  <div class="space-y-3">
+                    <div
+                      v-for="item in event.contributionItems"
+                      :key="item.id"
+                      class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      :class="{ 'opacity-60': item.isFullyClaimed }"
+                    >
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1">
+                          <div class="flex items-center gap-2 mb-1">
+                            <p class="font-medium text-gray-900 dark:text-white">{{ item.name }}</p>
+                            <UBadge :color="getCategoryColor(item.category) as any" variant="soft" size="xs">
+                              {{ item.category }}
+                            </UBadge>
+                            <UBadge v-if="item.isFullyClaimed" color="green" variant="soft" size="xs">
+                              Complete
+                            </UBadge>
+                          </div>
+                          <p v-if="item.description" class="text-sm text-gray-500 mb-2">{{ item.description }}</p>
+                          <div class="flex items-center gap-3 text-sm">
+                            <span :class="item.isFullyClaimed ? 'text-green-600' : 'text-gray-600 dark:text-gray-400'">
+                              {{ item.quantityClaimed || 0 }}/{{ item.quantityNeeded }} claimed
+                            </span>
+                          </div>
+                        </div>
+                        <div class="flex-shrink-0">
+                          <UButton
+                            v-if="!item.isFullyClaimed"
+                            color="primary"
+                            size="sm"
+                            class="pointer-events-none"
+                          >
+                            I'll bring this
+                          </UButton>
+                        </div>
+                      </div>
+                      <UProgress
+                        :value="((item.quantityClaimed || 0) / item.quantityNeeded) * 100"
+                        :color="item.isFullyClaimed ? 'green' : 'primary'"
+                        size="xs"
+                        class="mt-2"
+                      />
+                    </div>
+                  </div>
+                </UCard>
+
+                <!-- Announcements Section -->
+                <UCard v-if="event.announcements?.length">
+                  <template #header>
+                    <div class="flex items-center gap-3">
+                      <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                        <UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <h2 class="font-semibold text-gray-900 dark:text-white">Announcements</h2>
+                        <p class="text-sm text-gray-500">Latest updates from the organizer</p>
+                      </div>
+                    </div>
+                  </template>
+                  <div class="space-y-4">
+                    <div
+                      v-for="announcement in event.announcements"
+                      :key="announcement.id"
+                      class="relative"
+                    >
+                      <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2 mb-1">
+                            <UIcon
+                              v-if="announcement.isPinned"
+                              name="i-heroicons-bookmark-solid"
+                              class="w-4 h-4 text-primary flex-shrink-0"
+                            />
+                            <h3 class="font-semibold text-gray-900 dark:text-white">
+                              {{ announcement.title }}
+                            </h3>
+                          </div>
+                          <p class="text-xs text-gray-500 mb-2">
+                            {{ new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                          </p>
+                          <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                            {{ announcement.content }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </UCard>
+
+                <!-- FAQs Section -->
+                <UCard v-if="event.faqs?.length">
+                  <template #header>
+                    <div class="flex items-center gap-3">
+                      <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                        <UIcon name="i-heroicons-question-mark-circle" class="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <h2 class="font-semibold text-gray-900 dark:text-white">Frequently Asked Questions</h2>
+                        <p class="text-sm text-gray-500">{{ event.faqs.length }} question{{ event.faqs.length !== 1 ? 's' : '' }}</p>
+                      </div>
+                    </div>
+                  </template>
+                  <div class="space-y-3">
+                    <div
+                      v-for="(faq, index) in event.faqs"
+                      :key="faq.id"
+                      class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                    >
+                      <UAccordion
+                        :items="[{ label: faq.question, content: faq.answer, slot: 'faq-' + index }]"
+                        :ui="{
+                          wrapper: '',
+                          item: { base: '', padding: '' },
+                        }"
+                      >
+                        <template #default="{ open }">
+                          <button
+                            class="w-full flex items-start gap-3 p-4 text-left transition-colors"
+                            :class="open ? 'bg-gray-50 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
+                          >
+                            <div
+                              class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                              :class="open ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                            >
+                              {{ index + 1 }}
+                            </div>
+                            <span class="flex-1 font-medium text-gray-900 dark:text-white">
+                              {{ faq.question }}
+                            </span>
+                            <UIcon
+                              name="i-heroicons-chevron-down"
+                              class="w-5 h-5 text-gray-400 transition-transform flex-shrink-0 mt-0.5"
+                              :class="{ 'rotate-180 text-primary': open }"
+                            />
+                          </button>
+                        </template>
+                        <template #[`faq-${index}`]>
+                          <div class="px-4 pb-4 pt-2">
+                            <div class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ faq.answer }}</div>
+                          </div>
+                        </template>
+                      </UAccordion>
+                    </div>
+                  </div>
+                </UCard>
               </div>
 
               <!-- Sidebar -->
@@ -498,19 +672,76 @@ function formatDate(date: string) {
                   </div>
                 </UCard>
 
-                <!-- Capacity -->
-                <UCard>
+                <!-- Capacity (for RSVP mode) -->
+                <UCard v-if="event.registrationMode === 'rsvp'">
                   <div class="flex items-start gap-3">
                     <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
                       <UIcon name="i-heroicons-users" class="w-5 h-5 text-primary" />
                     </div>
-                    <div>
-                      <p class="font-medium text-gray-900 dark:text-white">Capacity</p>
+                    <div class="flex-1">
+                      <p class="font-medium text-gray-900 dark:text-white">Attendees</p>
                       <p class="text-sm text-gray-600 dark:text-gray-400">
-                        {{ event.maxAttendees ? `${event.maxAttendees} spots` : 'Unlimited' }}
+                        {{ event.attendeeCount || 0 }}
+                        <span v-if="event.maxAttendees"> / {{ event.maxAttendees }}</span>
+                        <span v-else> attending</span>
+                      </p>
+                      <div v-if="event.maxAttendees" class="mt-2">
+                        <UProgress
+                          :value="((event.attendeeCount || 0) / event.maxAttendees) * 100"
+                          :color="(event.attendeeCount || 0) >= event.maxAttendees ? 'red' : 'primary'"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </UCard>
+
+                <!-- Registration Info (for Open mode) -->
+                <UCard v-if="event.registrationMode === 'open'">
+                  <div class="flex items-start gap-3">
+                    <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                      <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">Open Event</p>
+                      <p class="text-sm text-gray-600 dark:text-gray-400">
+                        No registration required. Everyone is welcome!
                       </p>
                     </div>
                   </div>
+                </UCard>
+
+                <!-- Ticket Types (for Tickets mode) -->
+                <UCard v-if="event.registrationMode === 'tickets' && event.ticketTypes?.length">
+                  <template #header>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Tickets</h3>
+                  </template>
+                  <div class="space-y-3">
+                    <div
+                      v-for="ticket in event.ticketTypes"
+                      :key="ticket.id"
+                      class="flex items-center justify-between"
+                    >
+                      <div>
+                        <p class="font-medium text-gray-900 dark:text-white">{{ ticket.name }}</p>
+                        <p class="text-sm text-gray-500">
+                          {{ ticket.quantity ? `${ticket.quantity - (ticket.quantitySold || 0)} left` : 'Unlimited' }}
+                        </p>
+                      </div>
+                      <p class="font-semibold text-primary">
+                        {{ Number(ticket.price) === 0 ? 'Free' : formatCurrency(Number(ticket.price)) }}
+                      </p>
+                    </div>
+                  </div>
+                  <template #footer>
+                    <UButton
+                      color="primary"
+                      block
+                      class="pointer-events-none"
+                    >
+                      Get Tickets
+                    </UButton>
+                  </template>
                 </UCard>
               </div>
             </div>
