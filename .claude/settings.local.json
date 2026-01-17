@@ -95,7 +95,11 @@
       "Bash(pnpm typecheck:*)",
       "Bash(npx tsc:*)",
       "Bash(sudo du:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git merge:*)",
+      "Bash(wc:*)",
+      "Bash(pnpm --filter web exec vue-tsc:*)",
+      "Bash(echo:*)"
     ]
   }
 }

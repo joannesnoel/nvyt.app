@@ -8,6 +8,22 @@ export const eventStatus = z.enum(['draft', 'published', 'cancelled', 'completed
 // - 'open': No registration needed, just show up (casual public events)
 export const registrationMode = z.enum(['rsvp', 'tickets', 'open'])
 export const eventMediaType = z.enum(['image', 'video'])
+// Event theme: 'light' or 'dark' - null/undefined means follow visitor's system preference
+export const eventTheme = z.enum(['light', 'dark'])
+// Event color template - primary accent color for the event page
+export const eventColorTemplate = z.enum([
+  'green',   // Default - matches NuxtUI default primary
+  'lime',    // Lime green
+  'cyan',    // Cyan
+  'blue',    // Blue
+  'indigo',  // Indigo
+  'violet',  // Violet
+  'purple',  // Purple
+  'pink',    // Pink
+  'red',     // Red
+  'orange',  // Orange
+  'amber',   // Amber/Gold
+])
 
 // Custom datetime parser that accepts both ISO 8601 and datetime-local format
 const dateTimeString = z.string().refine((val) => {
@@ -62,6 +78,10 @@ const baseEventFields = {
 
   ticketingEnabled: z.boolean().default(false), // Deprecated: use registrationMode='tickets'
   contributionsEnabled: z.boolean().default(false),
+
+  // Appearance - null/undefined means follow visitor's system preference
+  theme: eventTheme.nullable().optional(),
+  colorTemplate: eventColorTemplate.default('green'),
 }
 
 export const createEventSchema = z.object(baseEventFields).refine((data) => {
@@ -94,6 +114,8 @@ export type EventVisibility = z.infer<typeof eventVisibility>
 export type EventStatus = z.infer<typeof eventStatus>
 export type RegistrationMode = z.infer<typeof registrationMode>
 export type EventMediaType = z.infer<typeof eventMediaType>
+export type EventTheme = z.infer<typeof eventTheme>
+export type EventColorTemplate = z.infer<typeof eventColorTemplate>
 export type LocationDetails = z.infer<typeof locationDetailsSchema>
 export type CreateEventInput = z.infer<typeof createEventSchema>
 export type UpdateEventInput = z.infer<typeof updateEventSchema>

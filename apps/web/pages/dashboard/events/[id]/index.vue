@@ -437,6 +437,15 @@ function getStatusColor(status: string) {
                 </NuxtLink>
 
                 <NuxtLink
+                  :to="`/dashboard/events/${eventId}/preview`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-eye" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Preview</p>
+                  <p class="text-sm text-gray-500">See appearance</p>
+                </NuxtLink>
+
+                <NuxtLink
                   :to="`/dashboard/events/${eventId}/invite`"
                   class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
                 >

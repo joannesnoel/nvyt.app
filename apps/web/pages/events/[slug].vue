@@ -11,6 +11,25 @@ const inviteToken = computed(() => route.query.invite as string | undefined)
 const toast = useToast()
 const { user, isLoading: authLoading } = useAuth()
 
+// Theme management - apply event's theme preference
+const colorMode = useColorMode()
+const originalTheme = ref<string | null>(null)
+
+// Color template mapping to Tailwind RGB values
+const colorTemplateMap: Record<string, { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; 950: string }> = {
+  green: { 50: '240 253 244', 100: '220 252 231', 200: '187 247 208', 300: '134 239 172', 400: '74 222 128', 500: '34 197 94', 600: '22 163 74', 700: '21 128 61', 800: '22 101 52', 900: '20 83 45', 950: '5 46 22' },
+  lime: { 50: '247 254 231', 100: '236 252 203', 200: '217 249 157', 300: '190 242 100', 400: '163 230 53', 500: '132 204 22', 600: '101 163 13', 700: '77 124 15', 800: '63 98 18', 900: '54 83 20', 950: '26 46 5' },
+  cyan: { 50: '236 254 255', 100: '207 250 254', 200: '165 243 252', 300: '103 232 249', 400: '34 211 238', 500: '6 182 212', 600: '8 145 178', 700: '14 116 144', 800: '21 94 117', 900: '22 78 99', 950: '8 51 68' },
+  blue: { 50: '239 246 255', 100: '219 234 254', 200: '191 219 254', 300: '147 197 253', 400: '96 165 250', 500: '59 130 246', 600: '37 99 235', 700: '29 78 216', 800: '30 64 175', 900: '30 58 138', 950: '23 37 84' },
+  indigo: { 50: '238 242 255', 100: '224 231 255', 200: '199 210 254', 300: '165 180 252', 400: '129 140 248', 500: '99 102 241', 600: '79 70 229', 700: '67 56 202', 800: '55 48 163', 900: '49 46 129', 950: '30 27 75' },
+  violet: { 50: '245 243 255', 100: '237 233 254', 200: '221 214 254', 300: '196 181 253', 400: '167 139 250', 500: '139 92 246', 600: '124 58 237', 700: '109 40 217', 800: '91 33 182', 900: '76 29 149', 950: '46 16 101' },
+  purple: { 50: '250 245 255', 100: '243 232 255', 200: '233 213 255', 300: '216 180 254', 400: '192 132 252', 500: '168 85 247', 600: '147 51 234', 700: '126 34 206', 800: '107 33 168', 900: '88 28 135', 950: '59 7 100' },
+  pink: { 50: '253 242 248', 100: '252 231 243', 200: '251 207 232', 300: '249 168 212', 400: '244 114 182', 500: '236 72 153', 600: '219 39 119', 700: '190 24 93', 800: '157 23 77', 900: '131 24 67', 950: '80 7 36' },
+  red: { 50: '254 242 242', 100: '254 226 226', 200: '254 202 202', 300: '252 165 165', 400: '248 113 113', 500: '239 68 68', 600: '220 38 38', 700: '185 28 28', 800: '153 27 27', 900: '127 29 29', 950: '69 10 10' },
+  orange: { 50: '255 247 237', 100: '255 237 213', 200: '254 215 170', 300: '253 186 116', 400: '251 146 60', 500: '249 115 22', 600: '234 88 12', 700: '194 65 12', 800: '154 52 18', 900: '124 45 18', 950: '67 20 7' },
+  amber: { 50: '255 251 235', 100: '254 243 199', 200: '253 230 138', 300: '252 211 77', 400: '251 191 36', 500: '245 158 11', 600: '217 119 6', 700: '180 83 9', 800: '146 64 14', 900: '120 53 15', 950: '69 26 3' },
+}
+
 // Fetch event data - use $fetch for proper SSR support
 const { data: eventResponse, status, refresh, error: fetchError } = await useAsyncData(
   `event-${route.params.slug}`,
@@ -38,6 +57,40 @@ const apiError = computed(() => {
   return null
 })
 const isOrganizer = computed(() => event.value?.isOrganizer)
+
+// Computed CSS for color template (skip 'green' to use NuxtUI default)
+const colorTemplateStyle = computed(() => {
+  const colorTemplate = event.value?.colorTemplate || 'green'
+  if (colorTemplate === 'green') return ''
+
+  const colors = colorTemplateMap[colorTemplate] || colorTemplateMap.green
+
+  return `
+    :root {
+      --color-primary-50: ${colors[50]};
+      --color-primary-100: ${colors[100]};
+      --color-primary-200: ${colors[200]};
+      --color-primary-300: ${colors[300]};
+      --color-primary-400: ${colors[400]};
+      --color-primary-500: ${colors[500]};
+      --color-primary-600: ${colors[600]};
+      --color-primary-700: ${colors[700]};
+      --color-primary-800: ${colors[800]};
+      --color-primary-900: ${colors[900]};
+      --color-primary-950: ${colors[950]};
+    }
+  `
+})
+
+// Inject color template styles
+useHead({
+  style: [
+    {
+      key: 'event-color-template',
+      innerHTML: colorTemplateStyle,
+    },
+  ],
+})
 
 // SEO meta tags for social sharing
 const config = useRuntimeConfig()
@@ -674,13 +727,32 @@ function getCategoryColor(category: string) {
   }
   return colors[category] || 'gray'
 }
+
+// Apply event theme when event data loads
+watch(event, (newEvent) => {
+  if (newEvent?.theme) {
+    // Store original theme preference on first application
+    if (originalTheme.value === null) {
+      originalTheme.value = colorMode.preference
+    }
+    // Apply event's theme
+    colorMode.preference = newEvent.theme
+  }
+}, { immediate: true })
+
+// Restore original theme when leaving the page
+onBeforeUnmount(() => {
+  if (originalTheme.value !== null) {
+    colorMode.preference = originalTheme.value
+  }
+})
 </script>
 
 <template>
   <div>
     <!-- Full-width YouTube Video (scrolls with page, behind navbar and content) -->
     <!-- Capped at 1920px width so video height stays reasonable on 4K screens -->
-    <div v-if="event && event.mediaType === 'video' && youtubeEmbedUrl" class="relative w-full -mt-16 z-10 bg-black">
+    <div v-if="event && event.mediaType === 'video' && youtubeEmbedUrl" class="relative w-full -mt-16 z-10 bg-gray-100 dark:bg-black">
       <div class="max-w-[1920px] mx-auto relative" style="padding-bottom: clamp(400px, 56.25%, 1080px);">
         <iframe
           :src="youtubeEmbedUrl"
@@ -695,7 +767,7 @@ function getCategoryColor(category: string) {
     </div>
 
     <!-- Full-width Cover Image (same layout as video) -->
-    <div v-else-if="event && event.mediaType !== 'video' && event.coverImage" class="relative w-full -mt-16 z-10 bg-gray-900">
+    <div v-else-if="event && event.mediaType !== 'video' && event.coverImage" class="relative w-full -mt-16 z-10 bg-gray-100 dark:bg-gray-900">
       <div class="max-w-[1920px] mx-auto relative" style="padding-bottom: clamp(400px, 56.25%, 1080px);">
         <img
           :src="event.coverImage"

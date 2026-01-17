@@ -33,6 +33,7 @@ const form = reactive<Partial<UpdateEventInput>>({
   maxAttendees: undefined,
   requiresApproval: false,
   contributionsEnabled: false,
+  theme: undefined, // null/undefined = Auto (follow visitor's system preference)
 })
 
 // Media type toggle: 'image' or 'video'
@@ -53,6 +54,27 @@ const registrationModeOptions = [
     value: 'open',
     label: 'Open',
     description: 'No registration needed - just show up. Best for casual public events.',
+  },
+]
+
+const themeOptions = [
+  {
+    value: undefined,
+    label: 'Auto',
+    description: "Match visitor's system theme",
+    icon: 'i-heroicons-computer-desktop',
+  },
+  {
+    value: 'light',
+    label: 'Light',
+    description: 'Always light mode',
+    icon: 'i-heroicons-sun',
+  },
+  {
+    value: 'dark',
+    label: 'Dark',
+    description: 'Always dark mode',
+    icon: 'i-heroicons-moon',
   },
 ]
 
@@ -77,6 +99,7 @@ watch(event, (newEvent) => {
     form.maxAttendees = newEvent.maxAttendees || undefined
     form.requiresApproval = newEvent.requiresApproval || false
     form.contributionsEnabled = newEvent.contributionsEnabled || false
+    form.theme = newEvent.theme || undefined // null/undefined = Auto
     // Set media type from database field
     mediaType.value = newEvent.mediaType || 'image'
   }
@@ -414,6 +437,34 @@ async function handleSubmit() {
                 label="Enable contribution list"
                 help="Let attendees sign up to bring items"
               />
+
+              <UDivider class="my-6" />
+
+              <!-- Appearance -->
+              <UFormGroup label="Appearance" name="theme">
+                <p class="text-sm text-gray-500 mb-3">
+                  Choose the color theme visitors will see on your event page
+                </p>
+                <div class="grid grid-cols-3 gap-3">
+                  <div
+                    v-for="option in themeOptions"
+                    :key="option.value ?? 'auto'"
+                    class="relative flex flex-col items-center p-4 border rounded-lg cursor-pointer transition-colors"
+                    :class="form.theme === option.value
+                      ? 'border-primary bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
+                    @click="form.theme = option.value as 'light' | 'dark' | undefined"
+                  >
+                    <UIcon :name="option.icon" class="w-6 h-6 mb-2" :class="form.theme === option.value ? 'text-primary' : 'text-gray-500'" />
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ option.label }}
+                    </span>
+                    <span class="text-xs text-gray-500 text-center mt-1">
+                      {{ option.description }}
+                    </span>
+                  </div>
+                </div>
+              </UFormGroup>
             </div>
 
             <UDivider />

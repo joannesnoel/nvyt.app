@@ -37,6 +37,8 @@ export default defineEventHandler(async (event) => {
       requiresApproval: events.requiresApproval,
       ticketingEnabled: events.ticketingEnabled,
       contributionsEnabled: events.contributionsEnabled,
+      theme: events.theme,
+      colorTemplate: events.colorTemplate,
       inviteToken: events.inviteToken,
       organizerId: events.organizerId,
       createdAt: events.createdAt,

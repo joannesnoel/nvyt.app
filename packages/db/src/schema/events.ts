@@ -10,6 +10,26 @@ export const eventStatusEnum = pgEnum('event_status', ['draft', 'published', 'ca
 // - 'open': No registration needed, just show up (casual public events)
 export const registrationModeEnum = pgEnum('registration_mode', ['rsvp', 'tickets', 'open'])
 export const eventMediaTypeEnum = pgEnum('event_media_type', ['image', 'video'])
+// Event theme: 'light' or 'dark' - null means follow visitor's system preference
+export const eventThemeEnum = pgEnum('event_theme', ['light', 'dark'])
+// Event color template - primary accent color for the event page
+// Note: Database enum still contains emerald, teal, rose for backwards compatibility with existing events
+export const eventColorTemplateEnum = pgEnum('event_color_template', [
+  'green',   // Default - matches NuxtUI default primary
+  'lime',    // Lime green
+  'emerald', // Emerald (deprecated - kept for existing events)
+  'teal',    // Teal (deprecated - kept for existing events)
+  'cyan',    // Cyan
+  'blue',    // Blue
+  'indigo',  // Indigo
+  'violet',  // Violet
+  'purple',  // Purple
+  'pink',    // Pink
+  'rose',    // Rose (deprecated - kept for existing events)
+  'red',     // Red
+  'orange',  // Orange
+  'amber',   // Amber/Gold
+])
 
 export const events = pgTable('events', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -47,6 +67,10 @@ export const events = pgTable('events', {
   // Features
   ticketingEnabled: boolean('ticketing_enabled').default(false).notNull(), // Deprecated: use registrationMode='tickets'
   contributionsEnabled: boolean('contributions_enabled').default(false).notNull(),
+
+  // Appearance
+  theme: eventThemeEnum('theme'), // null = follow visitor's system preference
+  colorTemplate: eventColorTemplateEnum('color_template').default('green').notNull(), // Primary accent color
 
   // Invite-only settings
   inviteToken: text('invite_token').unique(), // For private events
