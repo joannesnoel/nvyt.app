@@ -39,6 +39,7 @@ export default defineEventHandler(async (event) => {
       contributionsEnabled: events.contributionsEnabled,
       theme: events.theme,
       colorTemplate: events.colorTemplate,
+      titleFontFamily: events.titleFontFamily,
       fontFamily: events.fontFamily,
       bodyFontFamily: events.bodyFontFamily,
       inviteToken: events.inviteToken,

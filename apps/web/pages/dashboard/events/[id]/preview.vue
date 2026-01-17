@@ -544,22 +544,13 @@ function getCategoryColor(category: string) {
             <p class="text-xs text-gray-500 mb-2">Theme</p>
             <div class="flex gap-1">
               <UButton
-                :color="selectedTheme === null ? 'primary' : 'gray'"
-                :variant="selectedTheme === null ? 'solid' : 'ghost'"
-                size="xs"
-                @click="selectedTheme = null"
-              >
-                <UIcon name="i-heroicons-computer-desktop" class="w-4 h-4" />
-                <span class="hidden sm:inline ml-1">Auto</span>
-              </UButton>
-              <UButton
                 :color="selectedTheme === 'light' ? 'primary' : 'gray'"
                 :variant="selectedTheme === 'light' ? 'solid' : 'ghost'"
                 size="xs"
                 @click="selectedTheme = 'light'"
               >
-                <UIcon name="i-heroicons-sun" class="w-4 h-4" />
-                <span class="hidden sm:inline ml-1">Light</span>
+                <UIcon name="i-heroicons-sun" class="w-3 h-3" />
+                <span class="ml-1">Light</span>
               </UButton>
               <UButton
                 :color="selectedTheme === 'dark' ? 'primary' : 'gray'"
@@ -567,8 +558,8 @@ function getCategoryColor(category: string) {
                 size="xs"
                 @click="selectedTheme = 'dark'"
               >
-                <UIcon name="i-heroicons-moon" class="w-4 h-4" />
-                <span class="hidden sm:inline ml-1">Dark</span>
+                <UIcon name="i-heroicons-moon" class="w-3 h-3" />
+                <span class="ml-1">Dark</span>
               </UButton>
             </div>
           </div>
