@@ -920,7 +920,7 @@ onBeforeUnmount(() => {
         <!-- Color tint overlay (also prevents hover interactions) -->
         <div
           class="absolute inset-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen"
-          :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.30)` }"
+          :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.15)` }"
         />
       </div>
     </div>
@@ -936,7 +936,7 @@ onBeforeUnmount(() => {
         <!-- Color tint overlay -->
         <div
           class="absolute inset-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen"
-          :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.30)` }"
+          :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.15)` }"
         />
       </div>
     </div>

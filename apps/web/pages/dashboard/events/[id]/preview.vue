@@ -705,7 +705,7 @@ function getCategoryColor(category: string) {
           <!-- Color tint overlay -->
           <div
             class="absolute inset-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen"
-            :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.30)` }"
+            :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.15)` }"
           />
         </div>
       </div>
@@ -721,7 +721,7 @@ function getCategoryColor(category: string) {
           <!-- Color tint overlay -->
           <div
             class="absolute inset-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen"
-            :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.30)` }"
+            :style="{ backgroundColor: `rgb(var(--color-primary-500) / 0.15)` }"
           />
         </div>
       </div>
