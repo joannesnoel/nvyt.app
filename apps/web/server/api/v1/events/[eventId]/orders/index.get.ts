@@ -1,5 +1,5 @@
 import { eq, desc, and, ilike, or, sql, inArray } from 'drizzle-orm'
-import { orders, tickets, ticketTypes, users, events } from '@nvyt/db'
+import { orders, tickets, ticketTypes, users, events, ticketRegistrationFields } from '@nvyt/db'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -95,26 +95,42 @@ export default defineEventHandler(async (event) => {
   // Execute with pagination
   const results = await orderQuery.limit(limit).offset(offset)
 
-  // Get ticket counts for each order
+  // Check if event has active registration fields
+  const [registrationFieldCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(ticketRegistrationFields)
+    .where(
+      and(
+        eq(ticketRegistrationFields.eventId, eventId),
+        eq(ticketRegistrationFields.isActive, true)
+      )
+    )
+  const hasRegistrationFields = (registrationFieldCount?.count ?? 0) > 0
+
+  // Get ticket counts and registration completion for each order
   const orderIds = results.map((r) => r.order.id)
 
-  let ticketCounts: Record<string, number> = {}
+  let ticketStats: Record<string, { count: number; registrationCompleted: number }> = {}
   if (orderIds.length > 0) {
     const counts = await db
       .select({
         orderId: tickets.orderId,
         count: sql<number>`count(*)::int`,
+        registrationCompleted: sql<number>`count(*) filter (where ${tickets.registrationCompleted} = true)::int`,
       })
       .from(tickets)
       .where(inArray(tickets.orderId, orderIds))
       .groupBy(tickets.orderId)
 
-    ticketCounts = counts.reduce(
+    ticketStats = counts.reduce(
       (acc, c) => {
-        acc[c.orderId] = c.count
+        acc[c.orderId] = {
+          count: c.count,
+          registrationCompleted: c.registrationCompleted,
+        }
         return acc
       },
-      {} as Record<string, number>
+      {} as Record<string, { count: number; registrationCompleted: number }>
     )
   }
 
@@ -139,11 +155,15 @@ export default defineEventHandler(async (event) => {
 
   return successResponse(
     {
-      orders: results.map(({ order, customer }) => ({
-        ...order,
-        customer,
-        ticketCount: ticketCounts[order.id] || 0,
-      })),
+      orders: results.map(({ order, customer }) => {
+        const orderStats = ticketStats[order.id] || { count: 0, registrationCompleted: 0 }
+        return {
+          ...order,
+          customer,
+          ticketCount: orderStats.count,
+          registrationCompleted: orderStats.registrationCompleted,
+        }
+      }),
       stats: {
         totalOrders: stats?.totalOrders || 0,
         paidOrders: stats?.paidOrders || 0,
@@ -151,6 +171,7 @@ export default defineEventHandler(async (event) => {
         refundedOrders: stats?.refundedOrders || 0,
         totalRevenue: parseFloat(String(stats?.totalRevenue || 0)),
       },
+      hasRegistrationFields,
     },
     {
       page,

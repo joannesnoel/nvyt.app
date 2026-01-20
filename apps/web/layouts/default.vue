@@ -150,10 +150,17 @@ const userMenuItems = computed(() => {
       </div>
     </footer>
 
+    <!-- Registration Reminder Banner (fixed above email banner) -->
+    <RegistrationReminderBanner />
+
     <!-- Email Verification Banner (fixed at bottom) -->
     <EmailVerificationBanner />
 
-    <!-- Bottom padding when banner is shown -->
-    <div v-if="isAuthenticated && user && !user.emailVerified" class="h-14 sm:h-12" />
+    <!-- Bottom padding when banners are shown -->
+    <div v-if="isAuthenticated && user && !user.emailVerified" class="h-28 sm:h-24" />
+    <div v-else-if="isAuthenticated" class="h-14 sm:h-12" />
+
+    <!-- Toast Notifications -->
+    <UNotifications />
   </div>
 </template>

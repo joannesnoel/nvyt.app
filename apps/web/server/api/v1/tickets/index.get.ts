@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
   const limit = Math.min(50, Math.max(1, Number(query.limit) || 20))
   const offset = (page - 1) * limit
   const status = query.status as string | undefined
+  const eventId = query.eventId as string | undefined
   const upcoming = query.upcoming === 'true'
 
   const db = useDatabase()
@@ -17,6 +18,9 @@ export default defineEventHandler(async (event) => {
   const conditions = [eq(tickets.userId, user.id)]
   if (status && ['pending', 'confirmed', 'cancelled', 'checked_in', 'refunded'].includes(status)) {
     conditions.push(eq(tickets.status, status as 'pending' | 'confirmed' | 'cancelled' | 'checked_in' | 'refunded'))
+  }
+  if (eventId) {
+    conditions.push(eq(tickets.eventId, eventId))
   }
 
   // Get total count

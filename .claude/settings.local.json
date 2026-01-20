@@ -95,7 +95,16 @@
       "Bash(pnpm typecheck:*)",
       "Bash(npx tsc:*)",
       "Bash(sudo du:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git merge:*)",
+      "Bash(wc:*)",
+      "Bash(pnpm --filter web exec vue-tsc:*)",
+      "Bash(echo:*)",
+      "Bash(node scripts/drop-font-family.mjs:*)",
+      "Bash(pnpm drizzle-kit:*)",
+      "Bash(node -e:*)",
+      "Bash(pnpm db:seed-psgc:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

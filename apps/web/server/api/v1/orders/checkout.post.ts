@@ -1,4 +1,4 @@
-import { orders, tickets, ticketTypes, events, users, eventRequirements, type User } from '@nvyt/db'
+import { orders, tickets, ticketTypes, events, users, eventRequirements, ticketRegistrationFields, type User } from '@nvyt/db'
 import { purchaseTicketsSchema } from '@nvyt/shared'
 import { eq, and, inArray, asc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -427,6 +427,18 @@ export default defineEventHandler(async (event) => {
       .where(eq(ticketTypes.id, item.ticketTypeId))
   }
 
+  // Check if event has active registration fields
+  const [registrationFieldCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(ticketRegistrationFields)
+    .where(
+      and(
+        eq(ticketRegistrationFields.eventId, data.eventId),
+        eq(ticketRegistrationFields.isActive, true)
+      )
+    )
+  const hasRegistrationFields = Number(registrationFieldCount?.count ?? 0) > 0
+
   // Send account setup email for guest users (reuse the token created earlier)
   if (needsAccountSetup && setupToken) {
     const appUrl = config.public.appUrl as string
@@ -489,6 +501,7 @@ export default defineEventHandler(async (event) => {
       order,
       checkoutUrl: null,
       requiresPayment: false,
+      registrationRequired: hasRegistrationFields,
       accountSetupRequired: needsAccountSetup,
       message: needsAccountSetup
         ? 'Order confirmed! Check your email to set up your account.'
@@ -500,6 +513,7 @@ export default defineEventHandler(async (event) => {
     order,
     checkoutUrl,
     requiresPayment: true,
+    registrationRequired: hasRegistrationFields,
     accountSetupRequired: needsAccountSetup,
     message: 'Redirecting to payment...',
   })

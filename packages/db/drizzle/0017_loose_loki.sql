@@ -1,0 +1,2 @@
+CREATE TYPE "public"."event_color_template" AS ENUM('lime', 'emerald', 'teal', 'cyan', 'blue', 'indigo', 'violet', 'purple', 'pink', 'rose', 'red', 'orange', 'amber');--> statement-breakpoint
+ALTER TABLE "events" ADD COLUMN "color_template" "event_color_template" DEFAULT 'lime' NOT NULL;

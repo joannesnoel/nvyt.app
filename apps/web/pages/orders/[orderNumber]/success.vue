@@ -36,6 +36,52 @@ const { data: orderResponse, pending, error } = await useFetch<{
 
 const order = computed(() => orderResponse.value?.data)
 
+// Check if registration is required (only after order loads and payment is confirmed)
+const { data: registrationResponse } = await useFetch<{
+  data?: {
+    registrationStatus: {
+      requiresRegistration: boolean
+      allCompleted: boolean
+    }
+  }
+}>(
+  () => `/api/v1/orders/${orderNumber.value}/registration`,
+  {
+    query: { token: queryToken.value },
+    watch: [orderNumber, queryToken],
+    // Only fetch if order is paid
+    immediate: false,
+  }
+)
+
+// Redirect to registration if needed
+watchEffect(() => {
+  const isPaid = order.value?.paymentStatus === 'paid'
+  if (!isPaid) return
+
+  const regStatus = registrationResponse.value?.data?.registrationStatus
+  if (regStatus?.requiresRegistration && !regStatus?.allCompleted) {
+    const registerUrl = token.value
+      ? `/orders/${orderNumber.value}/register?token=${token.value}`
+      : `/orders/${orderNumber.value}/register`
+    router.push(registerUrl)
+  }
+})
+
+// Fetch registration status when order is paid
+watch(() => order.value?.paymentStatus, async (paymentStatus) => {
+  if (paymentStatus === 'paid') {
+    // Trigger registration status fetch
+    await $fetch(`/api/v1/orders/${orderNumber.value}/registration`, {
+      query: { token: queryToken.value },
+    }).then((res: any) => {
+      registrationResponse.value = res
+    }).catch(() => {
+      // Ignore errors - registration might not be set up
+    })
+  }
+}, { immediate: true })
+
 // Determine if this is a guest user (has token but not logged in)
 const isGuest = computed(() => !!token.value && !user.value)
 

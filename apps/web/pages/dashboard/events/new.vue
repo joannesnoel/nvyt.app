@@ -95,8 +95,8 @@ async function handleSubmit() {
     })
 
     if (response.success && response.data) {
-      // Redirect ticket-based events to ticket creation page
       if (form.registrationMode === 'tickets') {
+        // Ticket-based events need ticket types first
         toast.add({
           title: 'Event created!',
           description: 'Now add ticket types for your event.',
@@ -104,12 +104,13 @@ async function handleSubmit() {
         })
         await navigateTo(`/dashboard/events/${response.data.id}/tickets`)
       } else {
+        // Other events go to preview for customization
         toast.add({
           title: 'Event created!',
-          description: 'Your event has been created as a draft.',
+          description: 'Customize how your event page looks.',
           color: 'green',
         })
-        await navigateTo(`/dashboard/events/${response.data.id}`)
+        await navigateTo(`/dashboard/events/${response.data.id}/preview`)
       }
     }
   } catch (e: any) {
@@ -355,6 +356,7 @@ async function handleSubmit() {
               label="Enable contribution list"
               help="Let attendees sign up to bring items"
             />
+
           </div>
 
           <UDivider />

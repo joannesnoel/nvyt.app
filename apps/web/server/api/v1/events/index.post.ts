@@ -57,6 +57,8 @@ export default defineEventHandler(async (event) => {
       requiresApproval: data.requiresApproval,
       ticketingEnabled: data.ticketingEnabled ?? data.registrationMode === 'tickets',
       contributionsEnabled: data.contributionsEnabled,
+      theme: data.theme ?? null, // null = follow visitor's system preference
+      colorTemplate: data.colorTemplate,
       inviteToken,
       status: 'draft',
     })

@@ -30,6 +30,7 @@ const orders = computed(() => response.value?.data?.orders ?? [])
 const stats = computed(() => response.value?.data?.stats ?? {
   totalOrders: 0, paidOrders: 0, pendingOrders: 0, refundedOrders: 0, totalRevenue: 0
 })
+const hasRegistrationFields = computed(() => response.value?.data?.hasRegistrationFields ?? false)
 const meta = computed(() => response.value?.meta)
 
 // Debounced search
@@ -79,6 +80,20 @@ const statusOptions = [
   { label: 'Failed', value: 'failed' },
   { label: 'Refunded', value: 'refunded' },
 ]
+
+// Registration status helpers
+function getRegistrationStatus(order: any) {
+  if (!hasRegistrationFields.value) return null
+  const completed = order.registrationCompleted || 0
+  const total = order.ticketCount || 0
+  return { completed, total, isComplete: completed === total && total > 0 }
+}
+
+function getRegistrationStatusColor(order: any) {
+  const status = getRegistrationStatus(order)
+  if (!status) return 'gray'
+  return status.isComplete ? 'green' : 'yellow'
+}
 </script>
 
 <template>
@@ -184,6 +199,12 @@ const statusOptions = [
                 <span class="text-sm text-gray-500">Tickets</span>
                 <span class="text-sm text-gray-900 dark:text-white">{{ order.ticketCount }}</span>
               </div>
+              <div v-if="hasRegistrationFields && order.paymentStatus === 'paid'" class="flex justify-between">
+                <span class="text-sm text-gray-500">Registration</span>
+                <UBadge :color="getRegistrationStatusColor(order)" variant="soft" size="xs">
+                  {{ getRegistrationStatus(order)?.isComplete ? 'Complete' : `${order.registrationCompleted || 0}/${order.ticketCount}` }}
+                </UBadge>
+              </div>
               <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Amount</span>
                 <span class="text-sm font-medium text-primary">{{ formatCurrency(order.totalAmount) }}</span>
@@ -211,6 +232,7 @@ const statusOptions = [
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Order</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Customer</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Tickets</th>
+                <th v-if="hasRegistrationFields" class="py-3 px-4 text-left text-sm font-medium text-gray-500">Registration</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Amount</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Status</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Date</th>
@@ -238,6 +260,14 @@ const statusOptions = [
                 </td>
                 <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                   {{ order.ticketCount }} ticket{{ order.ticketCount !== 1 ? 's' : '' }}
+                </td>
+                <td v-if="hasRegistrationFields" class="py-3 px-4">
+                  <template v-if="order.paymentStatus === 'paid'">
+                    <UBadge :color="getRegistrationStatusColor(order)" variant="soft" size="xs">
+                      {{ getRegistrationStatus(order)?.isComplete ? 'Complete' : `${order.registrationCompleted || 0}/${order.ticketCount}` }}
+                    </UBadge>
+                  </template>
+                  <span v-else class="text-sm text-gray-400">-</span>
                 </td>
                 <td class="py-3 px-4">
                   <span class="font-medium text-gray-900 dark:text-white">
