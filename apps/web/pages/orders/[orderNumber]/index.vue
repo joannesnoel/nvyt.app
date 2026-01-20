@@ -21,6 +21,12 @@ const { data: orderResponse, pending, error } = await useFetch<{
     customerEmail: string
     createdAt: string
     paidAt?: string | null
+    hasRegistrationFields?: boolean
+    registrationStats?: {
+      total: number
+      completed: number
+      pending: number
+    } | null
   }
 }>(
   () => `/api/v1/orders/${orderNumber.value}`,
@@ -28,6 +34,13 @@ const { data: orderResponse, pending, error } = await useFetch<{
 )
 
 const order = computed(() => orderResponse.value?.data)
+
+// Registration status
+const hasIncompleteRegistration = computed(() => {
+  if (!order.value?.hasRegistrationFields) return false
+  if (order.value?.paymentStatus !== 'paid') return false
+  return (order.value?.registrationStats?.pending ?? 0) > 0
+})
 
 // Subscribe to real-time updates for this order
 const { ticketUpdates } = useOrderUpdates(orderNumber)
@@ -317,6 +330,13 @@ async function retryPayment() {
                   >
                     {{ ticket.status.replace('_', ' ') }}
                   </UBadge>
+                  <UBadge
+                    v-if="order.hasRegistrationFields && order.paymentStatus === 'paid'"
+                    :color="ticket.registrationCompleted ? 'green' : 'yellow'"
+                    variant="soft"
+                  >
+                    {{ ticket.registrationCompleted ? 'Registered' : 'Pending' }}
+                  </UBadge>
                   <UButton
                     v-if="ticket.status === 'confirmed' || ticket.status === 'checked_in'"
                     color="gray"
@@ -369,6 +389,33 @@ async function retryPayment() {
               <span class="text-xl font-bold text-primary">
                 {{ parseFloat(order.totalAmount) === 0 ? 'Free' : formatCurrency(order.totalAmount) }}
               </span>
+            </div>
+          </div>
+        </UCard>
+
+        <!-- Registration Incomplete Alert -->
+        <UCard v-if="hasIncompleteRegistration" class="mb-6 border-2 border-primary">
+          <div class="flex items-start gap-4">
+            <div class="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-full">
+              <UIcon name="i-heroicons-clipboard-document-list" class="w-6 h-6 text-primary" />
+            </div>
+            <div class="flex-1">
+              <h3 class="font-semibold text-gray-900 dark:text-white mb-1">
+                Complete Your Registration
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                {{ order.registrationStats?.pending === order.registrationStats?.total
+                  ? 'Please provide attendee information for your tickets.'
+                  : `${order.registrationStats?.pending} of ${order.registrationStats?.total} tickets still need registration details.`
+                }}
+              </p>
+              <UButton
+                :to="`/orders/${order.orderNumber}/register`"
+                color="primary"
+                icon="i-heroicons-pencil-square"
+              >
+                Complete Registration
+              </UButton>
             </div>
           </div>
         </UCard>

@@ -11,6 +11,7 @@ export * from './eventAnnouncements'
 
 // Tickets & Payments
 export * from './tickets'
+export * from './ticketRegistrationFields'
 
 // Attendees (free events)
 export * from './attendees'
@@ -23,3 +24,6 @@ export * from './finance'
 
 // Event Verification (for paid events)
 export * from './eventVerification'
+
+// PSGC (Philippine Standard Geographic Code)
+export * from './psgc'

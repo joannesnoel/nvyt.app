@@ -8,6 +8,7 @@ const { getEventImage } = useYoutubeThumbnail()
 const route = useRoute()
 const page = computed(() => Number(route.query.page) || 1)
 const status = computed(() => (route.query.status as string) || '')
+const eventId = computed(() => (route.query.eventId as string) || '')
 
 // Fetch user's tickets
 const { data: ticketsResponse, pending, refresh } = await useFetch('/api/v1/tickets', {
@@ -15,12 +16,19 @@ const { data: ticketsResponse, pending, refresh } = await useFetch('/api/v1/tick
     page: page.value,
     limit: 20,
     status: status.value || undefined,
+    eventId: eventId.value || undefined,
   })),
-  watch: [page, status],
+  watch: [page, status, eventId],
 })
 
 const tickets = computed(() => ticketsResponse.value?.data ?? [])
 const meta = computed(() => ticketsResponse.value?.meta)
+
+// Get event info from the first ticket when filtering by event
+const filteredEvent = computed(() => {
+  if (!eventId.value || tickets.value.length === 0) return null
+  return tickets.value[0]?.event
+})
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', {
@@ -60,12 +68,24 @@ const statusOptions = [
 <template>
   <div class="py-8">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Back link when filtered by event -->
+      <NuxtLink
+        v-if="eventId"
+        to="/tickets"
+        class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-primary mb-4"
+      >
+        <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
+        Back to All Tickets
+      </NuxtLink>
+
       <!-- Header -->
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Tickets</h1>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            {{ eventId && filteredEvent ? `Tickets for ${filteredEvent.title}` : 'My Tickets' }}
+          </h1>
           <p class="text-gray-600 dark:text-gray-400">
-            View and manage your event tickets
+            {{ eventId ? `${meta?.total ?? tickets.length} ticket${(meta?.total ?? tickets.length) !== 1 ? 's' : ''} for this event` : 'View and manage your event tickets' }}
           </p>
         </div>
 

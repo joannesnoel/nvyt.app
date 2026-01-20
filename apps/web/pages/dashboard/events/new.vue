@@ -20,7 +20,6 @@ const form = reactive<Partial<CreateEventInput>>({
   maxAttendees: undefined,
   requiresApproval: false,
   contributionsEnabled: false,
-  theme: 'light' as 'light' | 'dark',
 })
 
 // Media type toggle: 'image' or 'video'
@@ -41,21 +40,6 @@ const registrationModeOptions = [
     value: 'open',
     label: 'Open',
     description: 'No registration needed - just show up. Best for casual public events.',
-  },
-]
-
-const themeOptions = [
-  {
-    value: 'light',
-    label: 'Light',
-    description: 'Light mode',
-    icon: 'i-heroicons-sun',
-  },
-  {
-    value: 'dark',
-    label: 'Dark',
-    description: 'Dark mode',
-    icon: 'i-heroicons-moon',
   },
 ]
 
@@ -111,8 +95,8 @@ async function handleSubmit() {
     })
 
     if (response.success && response.data) {
-      // Redirect ticket-based events to ticket creation page
       if (form.registrationMode === 'tickets') {
+        // Ticket-based events need ticket types first
         toast.add({
           title: 'Event created!',
           description: 'Now add ticket types for your event.',
@@ -120,12 +104,13 @@ async function handleSubmit() {
         })
         await navigateTo(`/dashboard/events/${response.data.id}/tickets`)
       } else {
+        // Other events go to preview for customization
         toast.add({
           title: 'Event created!',
-          description: 'Your event has been created as a draft.',
+          description: 'Customize how your event page looks.',
           color: 'green',
         })
-        await navigateTo(`/dashboard/events/${response.data.id}`)
+        await navigateTo(`/dashboard/events/${response.data.id}/preview`)
       }
     }
   } catch (e: any) {
@@ -372,33 +357,6 @@ async function handleSubmit() {
               help="Let attendees sign up to bring items"
             />
 
-            <UDivider class="my-6" />
-
-            <!-- Appearance -->
-            <UFormGroup label="Appearance" name="theme">
-              <p class="text-sm text-gray-500 mb-3">
-                Choose the color theme visitors will see on your event page
-              </p>
-              <div class="grid grid-cols-2 gap-3">
-                <div
-                  v-for="option in themeOptions"
-                  :key="option.value"
-                  class="relative flex flex-col items-center p-4 border rounded-lg cursor-pointer transition-colors"
-                  :class="form.theme === option.value
-                    ? 'border-primary bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
-                  @click="form.theme = option.value as 'light' | 'dark'"
-                >
-                  <UIcon :name="option.icon" class="w-6 h-6 mb-2" :class="form.theme === option.value ? 'text-primary' : 'text-gray-500'" />
-                  <span class="text-sm font-medium text-gray-900 dark:text-white">
-                    {{ option.label }}
-                  </span>
-                  <span class="text-xs text-gray-500 text-center mt-1">
-                    {{ option.description }}
-                  </span>
-                </div>
-              </div>
-            </UFormGroup>
           </div>
 
           <UDivider />

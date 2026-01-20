@@ -1,5 +1,5 @@
-import { orders, events, tickets, ticketTypes } from '@nvyt/db'
-import { eq } from 'drizzle-orm'
+import { orders, events, tickets, ticketTypes, ticketRegistrationFields } from '@nvyt/db'
+import { eq, and, sql } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')
@@ -91,15 +91,39 @@ export default defineEventHandler(async (event) => {
     .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
     .where(eq(tickets.orderId, result.order.id))
 
+  // Check if event has active registration fields
+  const [registrationFieldCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(ticketRegistrationFields)
+    .where(
+      and(
+        eq(ticketRegistrationFields.eventId, result.event.id),
+        eq(ticketRegistrationFields.isActive, true)
+      )
+    )
+  const hasRegistrationFields = (registrationFieldCount?.count ?? 0) > 0
+
+  // Calculate registration completion stats
+  const ticketList = orderTickets.map(({ ticket, ticketType }) => ({
+    ...ticket,
+    ticketType,
+  }))
+  const registrationCompleted = ticketList.filter(t => t.registrationCompleted).length
+  const registrationPending = ticketList.length - registrationCompleted
+
   // Exclude organizerId from response (only needed for permission check)
   const { organizerId: _, ...eventData } = result.event
 
   return successResponse({
     ...result.order,
     event: eventData,
-    tickets: orderTickets.map(({ ticket, ticketType }) => ({
-      ...ticket,
-      ticketType,
-    })),
+    tickets: ticketList,
+    // Registration info
+    hasRegistrationFields,
+    registrationStats: hasRegistrationFields ? {
+      total: ticketList.length,
+      completed: registrationCompleted,
+      pending: registrationPending,
+    } : null,
   })
 })

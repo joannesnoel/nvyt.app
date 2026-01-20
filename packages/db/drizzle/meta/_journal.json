@@ -169,6 +169,27 @@
       "when": 1768670790150,
       "tag": "0023_yielding_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1768841964281,
+      "tag": "0024_sweet_marrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1768905232109,
+      "tag": "0025_wise_wallow",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1768912742496,
+      "tag": "0026_psgc_tables",
+      "breakpoints": true
     }
   ]
 }

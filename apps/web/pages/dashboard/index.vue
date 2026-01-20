@@ -19,6 +19,39 @@ const { data: ticketsResponse, pending: ticketsPending } = await useFetch('/api/
 const myEvents = computed(() => eventsData.value?.data?.events ?? [])
 const myTickets = computed(() => ticketsResponse.value?.data ?? [])
 
+// Group tickets by event
+const ticketsByEvent = computed(() => {
+  const grouped = new Map<string, {
+    event: any
+    tickets: any[]
+    count: number
+  }>()
+
+  for (const ticket of myTickets.value) {
+    if (!ticket.event) continue
+
+    const eventId = ticket.event.id
+    if (!grouped.has(eventId)) {
+      grouped.set(eventId, {
+        event: ticket.event,
+        tickets: [],
+        count: 0,
+      })
+    }
+
+    const group = grouped.get(eventId)!
+    group.tickets.push(ticket)
+    group.count++
+  }
+
+  // Convert to array and sort by event date (upcoming first)
+  return Array.from(grouped.values()).sort((a, b) => {
+    const dateA = new Date(a.event.startDate).getTime()
+    const dateB = new Date(b.event.startDate).getTime()
+    return dateA - dateB
+  })
+})
+
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', {
     month: 'short',
@@ -145,12 +178,12 @@ function isUpcoming(date: string) {
           <USkeleton v-for="i in 3" :key="i" class="h-20" />
         </div>
 
-        <!-- Tickets List -->
+        <!-- Grouped by Event -->
         <div v-else class="space-y-3">
           <NuxtLink
-            v-for="ticket in myTickets"
-            :key="ticket.id"
-            :to="`/tickets/${ticket.id}`"
+            v-for="group in ticketsByEvent"
+            :key="group.event.id"
+            :to="`/tickets?eventId=${group.event.id}`"
             class="block"
           >
             <UCard class="hover:ring-2 hover:ring-primary transition-all">
@@ -158,13 +191,13 @@ function isUpcoming(date: string) {
                 <!-- Event Image -->
                 <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex-shrink-0 overflow-hidden">
                   <img
-                    v-if="ticket.event && getEventImage(ticket.event)"
-                    :src="getEventImage(ticket.event)!.src"
-                    :alt="ticket.event.title"
+                    v-if="getEventImage(group.event)"
+                    :src="getEventImage(group.event)!.src"
+                    :alt="group.event.title"
                     class="w-full h-full object-cover"
                     @error="(e: Event) => {
                       const img = e.target as HTMLImageElement
-                      const eventImg = ticket.event ? getEventImage(ticket.event) : null
+                      const eventImg = getEventImage(group.event)
                       if (eventImg?.fallback && img.src !== eventImg.fallback) {
                         img.src = eventImg.fallback
                       }
@@ -175,14 +208,14 @@ function isUpcoming(date: string) {
                   </div>
                 </div>
 
-                <!-- Ticket Info -->
+                <!-- Event Info -->
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <h3 class="font-medium text-gray-900 dark:text-white truncate">
-                      {{ ticket.event?.title }}
+                      {{ group.event.title }}
                     </h3>
                     <UBadge
-                      v-if="ticket.event?.startDate && isUpcoming(ticket.event.startDate)"
+                      v-if="isUpcoming(group.event.startDate)"
                       color="blue"
                       variant="soft"
                       size="xs"
@@ -192,18 +225,19 @@ function isUpcoming(date: string) {
                   </div>
                   <p class="text-sm text-gray-500 mt-1">
                     <UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 inline mr-1" />
-                    {{ formatDateTime(ticket.event?.startDate) }}
-                    <span v-if="ticket.event?.location" class="ml-2">
+                    {{ formatDateTime(group.event.startDate) }}
+                    <span v-if="group.event.location" class="ml-2">
                       <UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5 inline mr-1" />
-                      {{ ticket.event.location }}
+                      {{ group.event.location }}
                     </span>
                   </p>
                 </div>
 
-                <!-- Status -->
-                <UBadge :color="getTicketStatusColor(ticket.status)" variant="soft" size="sm">
-                  {{ ticket.status.replace('_', ' ') }}
-                </UBadge>
+                <!-- Ticket Count -->
+                <div class="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary rounded-full text-sm font-medium">
+                  <UIcon name="i-heroicons-ticket" class="w-4 h-4" />
+                  <span>{{ group.count }}</span>
+                </div>
               </div>
             </UCard>
           </NuxtLink>

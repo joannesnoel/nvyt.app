@@ -392,11 +392,11 @@ function openTicketModal() {
   guestForm.value = { name: '', email: '' }
   // Clear any previous error
   checkoutError.value = null
-  // Initialize requirement responses
+  // Initialize requirement responses (all checkboxes start unchecked)
   if (event.value?.requirements) {
     const responses: Record<string, boolean | undefined> = {}
     for (const req of event.value.requirements) {
-      responses[req.id] = req.type === 'checkbox' ? false : undefined
+      responses[req.id] = false
     }
     requirementResponses.value = responses
   }
@@ -434,21 +434,13 @@ const cartItemCount = computed(() => {
   return Object.values(ticketCart.value).reduce((a, b) => a + b, 0)
 })
 
-// Check if all requirements are satisfied (for disabling button)
+// Check if all requirements are satisfied (all checkboxes must be checked)
 const requirementsSatisfied = computed(() => {
   if (!event.value?.requirements?.length) return true
 
   for (const req of event.value.requirements) {
-    const response = requirementResponses.value[req.id]
-
-    if (req.type === 'checkbox' && response !== true) {
+    if (requirementResponses.value[req.id] !== true) {
       return false
-    }
-
-    if (req.type === 'yes_no') {
-      if (response === undefined || response !== req.requiredAnswer) {
-        return false
-      }
     }
   }
   return true
@@ -483,35 +475,13 @@ function validateRequirements(): boolean {
   if (!event.value?.requirements?.length) return true
 
   for (const req of event.value.requirements) {
-    const response = requirementResponses.value[req.id]
-
-    if (req.type === 'checkbox' && response !== true) {
+    if (requirementResponses.value[req.id] !== true) {
       toast.add({
         title: 'Requirements',
         description: `You must agree to: "${req.text}"`,
         color: 'yellow',
       })
       return false
-    }
-
-    if (req.type === 'yes_no') {
-      if (response === undefined) {
-        toast.add({
-          title: 'Requirements',
-          description: `Please answer: "${req.text}"`,
-          color: 'yellow',
-        })
-        return false
-      }
-      if (response !== req.requiredAnswer) {
-        const expected = req.requiredAnswer ? 'Yes' : 'No'
-        toast.add({
-          title: 'Requirements',
-          description: `You must answer "${expected}" to: "${req.text}"`,
-          color: 'yellow',
-        })
-        return false
-      }
     }
   }
   return true
@@ -603,7 +573,13 @@ async function checkout() {
         })
       }
       showTicketModal.value = false
-      navigateTo(`/orders/${response.data.order.orderNumber}/success`)
+
+      // Check if registration is required
+      if (response.data.registrationRequired) {
+        navigateTo(`/orders/${response.data.order.orderNumber}/register`)
+      } else {
+        navigateTo(`/orders/${response.data.order.orderNumber}/success`)
+      }
     }
   } catch (e: any) {
     console.error('Checkout error:', e)
@@ -1535,39 +1511,13 @@ onBeforeUnmount(() => {
           </h4>
           <div class="space-y-4">
             <div v-for="req in event.requirements" :key="req.id">
-              <!-- Checkbox type -->
-              <template v-if="req.type === 'checkbox'">
-                <div class="flex items-start gap-3">
-                  <UCheckbox
-                    v-model="requirementResponses[req.id]"
-                    :ui="{ wrapper: 'mt-0.5' }"
-                  />
-                  <div class="flex-1">
-                    <p class="text-sm text-gray-700 dark:text-gray-300">{{ req.text }}</p>
-                    <p v-if="req.description" class="text-xs text-gray-500 mt-1">
-                      {{ req.description }}
-                    </p>
-                  </div>
-                </div>
-              </template>
-
-              <!-- Yes/No type -->
-              <template v-else-if="req.type === 'yes_no'">
-                <div class="space-y-2">
-                  <p class="text-sm text-gray-700 dark:text-gray-300">{{ req.text }}</p>
-                  <p v-if="req.description" class="text-xs text-gray-500">
-                    {{ req.description }}
-                  </p>
-                  <URadioGroup
-                    v-model="requirementResponses[req.id]"
-                    :options="[
-                      { value: true, label: 'Yes' },
-                      { value: false, label: 'No' },
-                    ]"
-                    :ui="{ fieldset: 'flex gap-4' }"
-                  />
-                </div>
-              </template>
+              <div class="flex items-start gap-3">
+                <UCheckbox
+                  v-model="requirementResponses[req.id]"
+                  :ui="{ wrapper: 'mt-0.5' }"
+                />
+                <p class="text-sm text-gray-700 dark:text-gray-300">{{ req.text }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -1619,7 +1569,7 @@ onBeforeUnmount(() => {
               class="text-sm text-yellow-600 dark:text-yellow-500 flex items-center gap-2"
             >
               <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4" />
-              Please agree to all requirements above to continue
+              Please check all the boxes above to continue
             </p>
 
             <!-- Footer Actions -->

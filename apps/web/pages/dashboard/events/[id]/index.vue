@@ -379,6 +379,7 @@ function getStatusColor(status: string) {
               </template>
 
               <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Primary: Most used -->
                 <NuxtLink
                   :to="`/dashboard/events/${eventId}/attendees`"
                   class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
@@ -386,16 +387,6 @@ function getStatusColor(status: string) {
                   <UIcon name="i-heroicons-users" class="w-8 h-8 text-primary mx-auto mb-2" />
                   <p class="font-medium text-gray-900 dark:text-white">Attendees</p>
                   <p class="text-sm text-gray-500">Manage guests</p>
-                </NuxtLink>
-
-                <NuxtLink
-                  v-if="event.registrationMode === 'tickets'"
-                  :to="`/dashboard/events/${eventId}/tickets`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-ticket" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Tickets</p>
-                  <p class="text-sm text-gray-500">Manage pricing</p>
                 </NuxtLink>
 
                 <NuxtLink
@@ -409,16 +400,6 @@ function getStatusColor(status: string) {
                 </NuxtLink>
 
                 <NuxtLink
-                  v-if="event.registrationMode === 'tickets'"
-                  :to="`/dashboard/events/${eventId}/requirements`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-clipboard-document-check" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Requirements</p>
-                  <p class="text-sm text-gray-500">Terms & agreements</p>
-                </NuxtLink>
-
-                <NuxtLink
                   :to="`/dashboard/events/${eventId}/check-in`"
                   class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
                 >
@@ -427,6 +408,28 @@ function getStatusColor(status: string) {
                   <p class="text-sm text-gray-500">Scan QR codes</p>
                 </NuxtLink>
 
+                <!-- Ticket Configuration -->
+                <NuxtLink
+                  v-if="event.registrationMode === 'tickets'"
+                  :to="`/dashboard/events/${eventId}/tickets`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-ticket" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Tickets</p>
+                  <p class="text-sm text-gray-500">Manage pricing</p>
+                </NuxtLink>
+
+                <NuxtLink
+                  v-if="event.registrationMode === 'tickets'"
+                  :to="`/dashboard/events/${eventId}/registration`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-clipboard-document-list" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Registration Form</p>
+                  <p class="text-sm text-gray-500">Post-purchase fields</p>
+                </NuxtLink>
+
+                <!-- Event Setup -->
                 <NuxtLink
                   :to="`/dashboard/events/${eventId}/edit`"
                   class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
@@ -440,9 +443,19 @@ function getStatusColor(status: string) {
                   :to="`/dashboard/events/${eventId}/preview`"
                   class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
                 >
-                  <UIcon name="i-heroicons-eye" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Preview</p>
-                  <p class="text-sm text-gray-500">See appearance</p>
+                  <UIcon name="i-heroicons-paint-brush" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Customize</p>
+                  <p class="text-sm text-gray-500">Edit appearance</p>
+                </NuxtLink>
+
+                <!-- Collaboration & Outreach -->
+                <NuxtLink
+                  :to="`/dashboard/events/${eventId}/team`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-user-group" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Team</p>
+                  <p class="text-sm text-gray-500">Manage members</p>
                 </NuxtLink>
 
                 <NuxtLink
@@ -454,25 +467,7 @@ function getStatusColor(status: string) {
                   <p class="text-sm text-gray-500">Send invitations</p>
                 </NuxtLink>
 
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/team`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-user-group" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Team</p>
-                  <p class="text-sm text-gray-500">Manage members</p>
-                </NuxtLink>
-
-                <NuxtLink
-                  v-if="event.contributionsEnabled"
-                  :to="`/dashboard/events/${eventId}/contributions`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-gift" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Contributions</p>
-                  <p class="text-sm text-gray-500">Manage list</p>
-                </NuxtLink>
-
+                <!-- Content -->
                 <NuxtLink
                   :to="`/dashboard/events/${eventId}/announcements`"
                   class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
@@ -489,6 +484,17 @@ function getStatusColor(status: string) {
                   <UIcon name="i-heroicons-question-mark-circle" class="w-8 h-8 text-primary mx-auto mb-2" />
                   <p class="font-medium text-gray-900 dark:text-white">FAQs</p>
                   <p class="text-sm text-gray-500">Q&A section</p>
+                </NuxtLink>
+
+                <!-- Optional -->
+                <NuxtLink
+                  v-if="event.contributionsEnabled"
+                  :to="`/dashboard/events/${eventId}/contributions`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-gift" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Contributions</p>
+                  <p class="text-sm text-gray-500">Manage list</p>
                 </NuxtLink>
               </div>
             </UCard>

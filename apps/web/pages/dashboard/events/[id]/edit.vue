@@ -17,6 +17,13 @@ const { data: eventResponse, pending: loading } = await useFetch(
 
 const event = computed(() => eventResponse.value?.data)
 
+// Fetch requirements (for tickets mode)
+const { data: requirementsResponse, refresh: refreshRequirements } = await useFetch(
+  () => `/api/v1/events/${eventId.value}/requirements`,
+  { watch: [eventId] }
+)
+const requirements = computed(() => requirementsResponse.value?.data ?? [])
+
 // Form state - initialized from event data
 const form = reactive<Partial<UpdateEventInput>>({
   title: '',
@@ -33,7 +40,6 @@ const form = reactive<Partial<UpdateEventInput>>({
   maxAttendees: undefined,
   requiresApproval: false,
   contributionsEnabled: false,
-  theme: undefined, // null/undefined = Auto (follow visitor's system preference)
 })
 
 // Media type toggle: 'image' or 'video'
@@ -57,20 +63,6 @@ const registrationModeOptions = [
   },
 ]
 
-const themeOptions = [
-  {
-    value: 'light',
-    label: 'Light',
-    description: 'Light mode',
-    icon: 'i-heroicons-sun',
-  },
-  {
-    value: 'dark',
-    label: 'Dark',
-    description: 'Dark mode',
-    icon: 'i-heroicons-moon',
-  },
-]
 
 function updateLocationDetails(details: LocationDetails | undefined) {
   form.locationDetails = details
@@ -93,7 +85,6 @@ watch(event, (newEvent) => {
     form.maxAttendees = newEvent.maxAttendees || undefined
     form.requiresApproval = newEvent.requiresApproval || false
     form.contributionsEnabled = newEvent.contributionsEnabled || false
-    form.theme = newEvent.theme || undefined // null/undefined = Auto
     // Set media type from database field
     mediaType.value = newEvent.mediaType || 'image'
   }
@@ -128,6 +119,96 @@ function scrollToError() {
   nextTick(() => {
     errorAlert.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   })
+}
+
+// Requirements state and functions
+const showRequirementModal = ref(false)
+const editingRequirement = ref<any>(null)
+const requirementForm = ref({
+  text: '',
+})
+const savingRequirement = ref(false)
+
+function openAddRequirementModal() {
+  editingRequirement.value = null
+  requirementForm.value = { text: '' }
+  showRequirementModal.value = true
+}
+
+function openEditRequirementModal(requirement: any) {
+  editingRequirement.value = requirement
+  requirementForm.value = { text: requirement.text }
+  showRequirementModal.value = true
+}
+
+async function saveRequirement() {
+  if (!requirementForm.value.text) return
+
+  savingRequirement.value = true
+  try {
+    const body = {
+      type: 'checkbox' as const,
+      text: requirementForm.value.text,
+    }
+
+    if (editingRequirement.value) {
+      await $fetch(`/api/v1/events/${eventId.value}/requirements/${editingRequirement.value.id}`, {
+        method: 'PATCH',
+        body,
+      })
+      toast.add({ title: 'Requirement Updated', color: 'green' })
+    } else {
+      await $fetch(`/api/v1/events/${eventId.value}/requirements`, {
+        method: 'POST',
+        body,
+      })
+      toast.add({ title: 'Requirement Added', color: 'green' })
+    }
+    showRequirementModal.value = false
+    await refreshRequirements()
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to save requirement',
+      color: 'red',
+    })
+  } finally {
+    savingRequirement.value = false
+  }
+}
+
+async function toggleRequirementActive(requirement: any) {
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}/requirements/${requirement.id}`, {
+      method: 'PATCH',
+      body: { isActive: !requirement.isActive },
+    })
+    await refreshRequirements()
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to update requirement',
+      color: 'red',
+    })
+  }
+}
+
+async function deleteRequirement(requirement: any) {
+  if (!confirm('Are you sure you want to delete this requirement?')) return
+
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}/requirements/${requirement.id}`, {
+      method: 'DELETE',
+    })
+    toast.add({ title: 'Requirement Deleted', color: 'green' })
+    await refreshRequirements()
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to delete requirement',
+      color: 'red',
+    })
+  }
 }
 
 async function handleSubmit() {
@@ -413,6 +494,64 @@ async function handleSubmit() {
                   title="Manage ticket types"
                   description="Go to the Tickets tab to add or edit ticket types for this event."
                 />
+
+                <!-- Purchase Requirements -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-900 dark:text-white">Purchase Requirements</h4>
+                      <p class="text-xs text-gray-500">Terms attendees must agree to before checkout</p>
+                    </div>
+                    <UButton
+                      size="xs"
+                      color="gray"
+                      variant="outline"
+                      icon="i-heroicons-plus"
+                      @click="openAddRequirementModal"
+                    >
+                      Add
+                    </UButton>
+                  </div>
+
+                  <div v-if="requirements.length > 0" class="space-y-2">
+                    <div
+                      v-for="requirement in requirements"
+                      :key="requirement.id"
+                      class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      :class="{ 'opacity-50': !requirement.isActive }"
+                    >
+                      <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-primary flex-shrink-0" />
+                      <p class="flex-1 text-sm text-gray-900 dark:text-white">
+                        {{ requirement.text }}
+                      </p>
+                      <div class="flex items-center gap-1">
+                        <UToggle
+                          :model-value="requirement.isActive"
+                          size="xs"
+                          @update:model-value="toggleRequirementActive(requirement)"
+                        />
+                        <UButton
+                          size="xs"
+                          color="gray"
+                          variant="ghost"
+                          icon="i-heroicons-pencil"
+                          @click="openEditRequirementModal(requirement)"
+                        />
+                        <UButton
+                          size="xs"
+                          color="red"
+                          variant="ghost"
+                          icon="i-heroicons-trash"
+                          @click="deleteRequirement(requirement)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <p v-else class="text-sm text-gray-500 italic">
+                    No requirements yet. Add terms or agreements that buyers must accept.
+                  </p>
+                </div>
               </template>
 
               <!-- Open mode info -->
@@ -432,33 +571,6 @@ async function handleSubmit() {
                 help="Let attendees sign up to bring items"
               />
 
-              <UDivider class="my-6" />
-
-              <!-- Appearance -->
-              <UFormGroup label="Appearance" name="theme">
-                <p class="text-sm text-gray-500 mb-3">
-                  Choose the color theme visitors will see on your event page
-                </p>
-                <div class="grid grid-cols-2 gap-3">
-                  <div
-                    v-for="option in themeOptions"
-                    :key="option.value"
-                    class="relative flex flex-col items-center p-4 border rounded-lg cursor-pointer transition-colors"
-                    :class="form.theme === option.value
-                      ? 'border-primary bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
-                    @click="form.theme = option.value as 'light' | 'dark'"
-                  >
-                    <UIcon :name="option.icon" class="w-6 h-6 mb-2" :class="form.theme === option.value ? 'text-primary' : 'text-gray-500'" />
-                    <span class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ option.label }}
-                    </span>
-                    <span class="text-xs text-gray-500 text-center mt-1">
-                      {{ option.description }}
-                    </span>
-                  </div>
-                </div>
-              </UFormGroup>
             </div>
 
             <UDivider />
@@ -483,5 +595,54 @@ async function handleSubmit() {
         </UCard>
       </div>
     </div>
+
+    <!-- Requirement Modal -->
+    <UModal v-model="showRequirementModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+              <UIcon :name="editingRequirement ? 'i-heroicons-pencil-square' : 'i-heroicons-plus'" class="w-5 h-5 text-primary" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ editingRequirement ? 'Edit Requirement' : 'Add Requirement' }}
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <UFormGroup label="Requirement Text" required hint="Buyers must check a box to agree to this">
+            <UTextarea
+              v-model="requirementForm.text"
+              placeholder="e.g., I agree to the event terms and conditions"
+              :rows="2"
+            />
+          </UFormGroup>
+
+          <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <UCheckbox disabled :model-value="false" />
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {{ requirementForm.text || 'Preview will appear here...' }}
+            </p>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton color="gray" variant="outline" @click="showRequirementModal = false">
+              Cancel
+            </UButton>
+            <UButton
+              color="primary"
+              :loading="savingRequirement"
+              :disabled="!requirementForm.text"
+              @click="saveRequirement"
+            >
+              {{ editingRequirement ? 'Save Changes' : 'Add Requirement' }}
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
   </div>
 </template>

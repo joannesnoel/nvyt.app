@@ -102,7 +102,9 @@
       "Bash(echo:*)",
       "Bash(node scripts/drop-font-family.mjs:*)",
       "Bash(pnpm drizzle-kit:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(pnpm db:seed-psgc:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
