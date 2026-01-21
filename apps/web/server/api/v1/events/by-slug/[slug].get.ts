@@ -238,12 +238,15 @@ export default defineEventHandler(async (event) => {
         activePrice: activePriceInfo.price,
         activeTierName: activePriceInfo.tierName,
         activeTierId: activePriceInfo.tierId,
+        activeTierType: activePriceInfo.tierType,
         isBaseTier: activePriceInfo.isBaseTier,
+        tierQuantityRemaining: activePriceInfo.quantityRemaining,
         nextTier: activePriceInfo.nextTier
           ? {
               name: activePriceInfo.nextTier.name,
               price: activePriceInfo.nextTier.price,
-              startsAt: activePriceInfo.nextTier.startsAt.toISOString(),
+              startsAt: activePriceInfo.nextTier.startsAt?.toISOString(),
+              afterQuantity: activePriceInfo.nextTier.afterQuantity,
             }
           : null,
       }

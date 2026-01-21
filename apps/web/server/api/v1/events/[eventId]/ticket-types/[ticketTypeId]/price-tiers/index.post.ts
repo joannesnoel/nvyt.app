@@ -1,7 +1,7 @@
 import { ticketTypes, ticketPriceTiers } from '@nvyt/db'
 import { createPriceTierSchema } from '@nvyt/shared'
 import { eq } from 'drizzle-orm'
-import { checkTierOverlap } from '~/server/utils/pricing'
+import { checkTierOverlap, type PriceTierType } from '~/server/utils/pricing'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -45,16 +45,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const data = result.data
-  const startDate = new Date(data.startDate)
-  const endDate = new Date(data.endDate)
+  const tierType = (data.tierType || 'time') as PriceTierType
+  const startDate = data.startDate ? new Date(data.startDate) : null
+  const endDate = data.endDate ? new Date(data.endDate) : null
 
-  // Check for overlapping tiers
-  const hasOverlap = await checkTierOverlap(ticketTypeId, startDate, endDate)
-  if (hasOverlap) {
-    throw createError({
-      statusCode: 400,
-      message: 'Price tier dates overlap with an existing tier. Please adjust the dates.',
-    })
+  // Check for overlapping tiers (only for time-based and hybrid tiers)
+  if (tierType === 'time' || tierType === 'hybrid') {
+    const hasOverlap = await checkTierOverlap(ticketTypeId, startDate, endDate, undefined, tierType)
+    if (hasOverlap) {
+      throw createError({
+        statusCode: 400,
+        message: 'Price tier dates overlap with an existing tier. Please adjust the dates.',
+      })
+    }
   }
 
   // Create the price tier
@@ -64,8 +67,11 @@ export default defineEventHandler(async (event) => {
       ticketTypeId,
       name: data.name,
       price: String(data.price),
+      tierType,
       startDate,
       endDate,
+      quantityLimit: data.quantityLimit ?? null,
+      quantitySold: 0,
       sortOrder: data.sortOrder ?? 0,
     })
     .returning()

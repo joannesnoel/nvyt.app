@@ -1,7 +1,7 @@
 import { ticketTypes, ticketPriceTiers } from '@nvyt/db'
 import { updatePriceTierSchema } from '@nvyt/shared'
 import { eq, and } from 'drizzle-orm'
-import { checkTierOverlap } from '~/server/utils/pricing'
+import { checkTierOverlap, type PriceTierType } from '~/server/utils/pricing'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -66,28 +66,39 @@ export default defineEventHandler(async (event) => {
 
   const data = result.data
 
+  // Determine tier type for overlap check
+  const tierType = (data.tierType ?? existingTier.tierType) as PriceTierType
+
   // Determine dates for overlap check
-  const startDate = data.startDate ? new Date(data.startDate) : existingTier.startDate
-  const endDate = data.endDate ? new Date(data.endDate) : existingTier.endDate
+  const startDate = data.startDate !== undefined
+    ? (data.startDate ? new Date(data.startDate) : null)
+    : existingTier.startDate
+  const endDate = data.endDate !== undefined
+    ? (data.endDate ? new Date(data.endDate) : null)
+    : existingTier.endDate
 
   // Check for overlapping tiers (excluding the current tier)
-  const hasOverlap = await checkTierOverlap(ticketTypeId, startDate, endDate, tierId)
-  if (hasOverlap) {
-    throw createError({
-      statusCode: 400,
-      message: 'Price tier dates overlap with an existing tier. Please adjust the dates.',
-    })
+  if ((tierType === 'time' || tierType === 'hybrid') && startDate && endDate) {
+    const hasOverlap = await checkTierOverlap(ticketTypeId, startDate, endDate, tierId, tierType)
+    if (hasOverlap) {
+      throw createError({
+        statusCode: 400,
+        message: 'Price tier dates overlap with an existing tier. Please adjust the dates.',
+      })
+    }
   }
 
-  // Update the price tier
+  // Build update object
   const updateData: Record<string, any> = {
     updatedAt: new Date(),
   }
 
   if (data.name !== undefined) updateData.name = data.name
   if (data.price !== undefined) updateData.price = String(data.price)
-  if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate)
-  if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate)
+  if (data.tierType !== undefined) updateData.tierType = data.tierType
+  if (data.startDate !== undefined) updateData.startDate = data.startDate ? new Date(data.startDate) : null
+  if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate) : null
+  if (data.quantityLimit !== undefined) updateData.quantityLimit = data.quantityLimit
   if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder
 
   const [updatedTier] = await db

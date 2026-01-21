@@ -7,6 +7,7 @@ import type { TicketRegistrationData } from './ticketRegistrationFields'
 export const ticketTypeStatusEnum = pgEnum('ticket_type_status', ['active', 'sold_out', 'disabled'])
 export const ticketStatusEnum = pgEnum('ticket_status', ['pending', 'confirmed', 'cancelled', 'checked_in', 'refunded'])
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'refunded'])
+export const priceTierTypeEnum = pgEnum('price_tier_type', ['time', 'quantity', 'hybrid'])
 
 // Ticket types/tiers for an event (e.g., VIP, General Admission)
 export const ticketTypes = pgTable('ticket_types', {
@@ -116,7 +117,7 @@ export const orders = pgTable('orders', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
-// Price tiers for ticket types (time-based pricing like Early Bird, Regular, etc.)
+// Price tiers for ticket types (time-based, quantity-based, or hybrid pricing)
 export const ticketPriceTiers = pgTable('ticket_price_tiers', {
   id: uuid('id').defaultRandom().primaryKey(),
   ticketTypeId: uuid('ticket_type_id')
@@ -125,8 +126,18 @@ export const ticketPriceTiers = pgTable('ticket_price_tiers', {
 
   name: text('name').notNull(), // "Early Bird", "Regular", "Last Minute"
   price: decimal('price', { precision: 10, scale: 2 }).notNull(),
-  startDate: timestamp('start_date', { withTimezone: true }).notNull(),
-  endDate: timestamp('end_date', { withTimezone: true }).notNull(),
+
+  // Tier type: 'time' (date-based), 'quantity' (sold count-based), 'hybrid' (both)
+  tierType: priceTierTypeEnum('tier_type').default('time').notNull(),
+
+  // Time-based constraints (required for 'time' and 'hybrid' tiers)
+  startDate: timestamp('start_date', { withTimezone: true }),
+  endDate: timestamp('end_date', { withTimezone: true }),
+
+  // Quantity-based constraints (required for 'quantity' and 'hybrid' tiers)
+  quantityLimit: integer('quantity_limit'), // max tickets at this tier price
+  quantitySold: integer('quantity_sold').default(0).notNull(), // tickets sold at this tier
+
   sortOrder: integer('sort_order').default(0).notNull(),
 
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

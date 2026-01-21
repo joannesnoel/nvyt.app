@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid'
 import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail, ticketPurchaseConfirmationEmail } from '~/server/utils/email'
 import { calculateProcessingFees } from '~/server/utils/wallet'
-import { getActivePrice } from '~/server/utils/pricing'
+import { getActivePrice, validateTierAvailability, incrementTierQuantitySold } from '~/server/utils/pricing'
 
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -250,6 +250,7 @@ export default defineEventHandler(async (event) => {
     amount: number
     currency: string
     description?: string
+    tierId?: string | null // Track which tier this purchase is for
   }> = []
 
   const ticketsToCreate: Array<{
@@ -322,6 +323,17 @@ export default defineEventHandler(async (event) => {
     const itemTotal = price * item.quantity
     totalAmount += itemTotal
 
+    // Validate tier availability for quantity-based tiers
+    if (activePriceInfo.tierId && activePriceInfo.tierType !== 'time') {
+      const availability = await validateTierAvailability(activePriceInfo.tierId, item.quantity)
+      if (!availability.available) {
+        throw createError({
+          statusCode: 400,
+          message: `Only ${availability.remaining ?? 0} tickets available at ${activePriceInfo.tierName} price for "${ticketType.name}"`,
+        })
+      }
+    }
+
     // Include tier name in line item if applicable
     const tierSuffix = activePriceInfo.tierName ? ` (${activePriceInfo.tierName})` : ''
     lineItems.push({
@@ -330,6 +342,7 @@ export default defineEventHandler(async (event) => {
       amount: toCentavos(price),
       currency: 'PHP',
       description: ticketType.description || undefined,
+      tierId: activePriceInfo.tierId, // Track which tier this purchase is for
     })
 
     // Prepare tickets to create (will be created after order)
@@ -460,6 +473,13 @@ export default defineEventHandler(async (event) => {
         updatedAt: new Date(),
       })
       .where(eq(ticketTypes.id, item.ticketTypeId))
+  }
+
+  // Update tier quantities sold (for quantity-based and hybrid tiers)
+  for (const lineItem of lineItems) {
+    if (lineItem.tierId) {
+      await incrementTierQuantitySold(lineItem.tierId, lineItem.quantity)
+    }
   }
 
   // Check if event has active registration fields

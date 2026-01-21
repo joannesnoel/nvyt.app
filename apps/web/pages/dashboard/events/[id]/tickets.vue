@@ -214,8 +214,10 @@ const isTierSubmitting = ref(false)
 const tierFormData = ref({
   name: '',
   price: 0,
+  tierType: 'time' as 'time' | 'quantity' | 'hybrid',
   startDate: '',
   endDate: '',
+  quantityLimit: undefined as number | undefined,
   sortOrder: 0,
 })
 
@@ -253,8 +255,10 @@ function openCreateTierModal(ticketType: any) {
   tierFormData.value = {
     name: '',
     price: 0,
+    tierType: 'time',
     startDate: '',
     endDate: '',
+    quantityLimit: undefined,
     sortOrder: (priceTiersCache.value[ticketType.id]?.length ?? 0),
   }
   showTierModal.value = true
@@ -266,8 +270,10 @@ function openEditTierModal(ticketType: any, tier: any) {
   tierFormData.value = {
     name: tier.name,
     price: parseFloat(tier.price),
-    startDate: formatDateTimeLocal(tier.startDate),
-    endDate: formatDateTimeLocal(tier.endDate),
+    tierType: tier.tierType || 'time',
+    startDate: tier.startDate ? formatDateTimeLocal(tier.startDate) : '',
+    endDate: tier.endDate ? formatDateTimeLocal(tier.endDate) : '',
+    quantityLimit: tier.quantityLimit ?? undefined,
     sortOrder: tier.sortOrder ?? 0,
   }
   showTierModal.value = true
@@ -278,12 +284,23 @@ async function savePriceTier() {
 
   isTierSubmitting.value = true
   try {
-    const payload = {
+    const tierType = tierFormData.value.tierType
+    const payload: Record<string, any> = {
       name: tierFormData.value.name,
       price: tierFormData.value.price,
-      startDate: toISOString(tierFormData.value.startDate),
-      endDate: toISOString(tierFormData.value.endDate),
+      tierType,
       sortOrder: tierFormData.value.sortOrder,
+    }
+
+    // Include dates for time and hybrid tiers
+    if (tierType === 'time' || tierType === 'hybrid') {
+      payload.startDate = toISOString(tierFormData.value.startDate)
+      payload.endDate = toISOString(tierFormData.value.endDate)
+    }
+
+    // Include quantity limit for quantity and hybrid tiers
+    if (tierType === 'quantity' || tierType === 'hybrid') {
+      payload.quantityLimit = tierFormData.value.quantityLimit
     }
 
     const ticketTypeId = selectedTicketTypeForTier.value.id
@@ -357,9 +374,53 @@ function formatShortDate(dateStr: string) {
 
 function isTierActive(tier: any) {
   const now = new Date()
-  const start = new Date(tier.startDate)
-  const end = new Date(tier.endDate)
-  return now >= start && now <= end
+  const tierType = tier.tierType || 'time'
+
+  if (tierType === 'time') {
+    if (!tier.startDate || !tier.endDate) return false
+    const start = new Date(tier.startDate)
+    const end = new Date(tier.endDate)
+    return now >= start && now <= end
+  }
+
+  if (tierType === 'quantity') {
+    if (tier.quantityLimit === null) return true
+    return tier.quantitySold < tier.quantityLimit
+  }
+
+  if (tierType === 'hybrid') {
+    const timeActive = tier.startDate && tier.endDate
+      ? new Date(tier.startDate) <= now && new Date(tier.endDate) >= now
+      : true
+    const quantityActive = tier.quantityLimit === null || tier.quantitySold < tier.quantityLimit
+    return timeActive && quantityActive
+  }
+
+  return false
+}
+
+function isTierSoldOut(tier: any) {
+  if (tier.tierType === 'time') return false
+  if (tier.quantityLimit === null) return false
+  return tier.quantitySold >= tier.quantityLimit
+}
+
+function getTierTypeLabel(tierType: string) {
+  switch (tierType) {
+    case 'time': return 'Time-based'
+    case 'quantity': return 'Quantity-based'
+    case 'hybrid': return 'Hybrid'
+    default: return 'Time-based'
+  }
+}
+
+function getTierTypeColor(tierType: string) {
+  switch (tierType) {
+    case 'time': return 'blue'
+    case 'quantity': return 'purple'
+    case 'hybrid': return 'orange'
+    default: return 'blue'
+  }
 }
 </script>
 
@@ -560,19 +621,33 @@ function isTierActive(tier: any) {
                     v-for="tier in priceTiersCache[tt.id]"
                     :key="tier.id"
                     class="flex items-center justify-between p-3 rounded-lg border"
-                    :class="isTierActive(tier)
-                      ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800'
-                      : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'"
+                    :class="[
+                      isTierActive(tier)
+                        ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800'
+                        : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+                      isTierSoldOut(tier) ? 'opacity-60' : ''
+                    ]"
                   >
                     <div class="flex-1">
-                      <div class="flex items-center gap-2">
+                      <div class="flex items-center gap-2 flex-wrap">
                         <span class="font-medium text-gray-900 dark:text-white">{{ tier.name }}</span>
+                        <UBadge :color="getTierTypeColor(tier.tierType || 'time') as any" variant="soft" size="xs">
+                          {{ getTierTypeLabel(tier.tierType || 'time') }}
+                        </UBadge>
                         <UBadge v-if="isTierActive(tier)" color="green" variant="soft" size="xs">
                           Active
                         </UBadge>
+                        <UBadge v-if="isTierSoldOut(tier)" color="red" variant="soft" size="xs">
+                          Sold Out
+                        </UBadge>
                       </div>
-                      <div class="text-sm text-gray-500 mt-1">
-                        {{ formatShortDate(tier.startDate) }} - {{ formatShortDate(tier.endDate) }}
+                      <div class="text-sm text-gray-500 mt-1 space-y-0.5">
+                        <div v-if="tier.startDate && tier.endDate">
+                          {{ formatShortDate(tier.startDate) }} - {{ formatShortDate(tier.endDate) }}
+                        </div>
+                        <div v-if="tier.quantityLimit !== null">
+                          {{ tier.quantitySold }} / {{ tier.quantityLimit }} sold
+                        </div>
                       </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -787,23 +862,60 @@ function isTierActive(tier: any) {
             </template>
           </UFormGroup>
 
-          <div class="grid grid-cols-2 gap-4">
-            <UFormGroup label="Start Date" required>
+          <UFormGroup label="Tier Type" required>
+            <USelectMenu
+              v-model="tierFormData.tierType"
+              :options="[
+                { value: 'time', label: 'Time-based', description: 'Active during specific dates' },
+                { value: 'quantity', label: 'Quantity-based', description: 'Active until quantity sells out' },
+                { value: 'hybrid', label: 'Hybrid', description: 'Both time and quantity constraints' },
+              ]"
+              value-attribute="value"
+              option-attribute="label"
+            />
+            <template #hint>
+              <span v-if="tierFormData.tierType === 'time'">Price is active between start and end dates</span>
+              <span v-else-if="tierFormData.tierType === 'quantity'">Price is active until the quantity limit sells out</span>
+              <span v-else-if="tierFormData.tierType === 'hybrid'">Price is active within dates AND until quantity sells out</span>
+            </template>
+          </UFormGroup>
+
+          <!-- Date fields (for time and hybrid tiers) -->
+          <div v-if="tierFormData.tierType === 'time' || tierFormData.tierType === 'hybrid'" class="grid grid-cols-2 gap-4">
+            <UFormGroup label="Start Date" :required="tierFormData.tierType !== 'quantity'">
               <UInput
                 v-model="tierFormData.startDate"
                 type="datetime-local"
-                required
+                :required="tierFormData.tierType !== 'quantity'"
               />
             </UFormGroup>
 
-            <UFormGroup label="End Date" required>
+            <UFormGroup label="End Date" :required="tierFormData.tierType !== 'quantity'">
               <UInput
                 v-model="tierFormData.endDate"
                 type="datetime-local"
-                required
+                :required="tierFormData.tierType !== 'quantity'"
               />
             </UFormGroup>
           </div>
+
+          <!-- Quantity limit field (for quantity and hybrid tiers) -->
+          <UFormGroup
+            v-if="tierFormData.tierType === 'quantity' || tierFormData.tierType === 'hybrid'"
+            label="Quantity Limit"
+            :required="tierFormData.tierType !== 'time'"
+          >
+            <UInput
+              v-model.number="tierFormData.quantityLimit"
+              type="number"
+              min="1"
+              placeholder="e.g., 50"
+              :required="tierFormData.tierType !== 'time'"
+            />
+            <template #hint>
+              Number of tickets available at this tier price
+            </template>
+          </UFormGroup>
 
           <UAlert
             color="blue"
@@ -812,8 +924,18 @@ function isTierActive(tier: any) {
           >
             <template #title>How Price Tiers Work</template>
             <template #description>
-              When a tier is active (current date is between start and end), its price is used instead of the base price.
-              Tiers cannot have overlapping date ranges.
+              <span v-if="tierFormData.tierType === 'time'">
+                When a tier is active (current date is between start and end), its price is used instead of the base price.
+                Tiers cannot have overlapping date ranges.
+              </span>
+              <span v-else-if="tierFormData.tierType === 'quantity'">
+                This tier's price is active until its quantity limit sells out.
+                Tiers are processed in sort order - when one sells out, the next becomes active.
+              </span>
+              <span v-else-if="tierFormData.tierType === 'hybrid'">
+                Price is active when within the date range AND there's still quantity available.
+                Great for "first 50 tickets during early bird period" scenarios.
+              </span>
             </template>
           </UAlert>
 

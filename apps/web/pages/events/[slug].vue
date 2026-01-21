@@ -413,6 +413,9 @@ function updateTicketQuantity(ticketTypeId: string, delta: number) {
   // Validate min/max
   if (newValue < 0) return
   if (newValue > tt.maxPerOrder) return
+
+  // Check tier quantity limit first, then overall ticket quantity
+  if (tt.tierQuantityRemaining !== null && newValue > tt.tierQuantityRemaining) return
   if (tt.quantity && newValue > (tt.quantity - tt.quantitySold)) return
 
   ticketCart.value[ticketTypeId] = newValue
@@ -1589,16 +1592,43 @@ onBeforeUnmount(() => {
                       {{ Number(getDisplayPrice(ticket)) === 0 ? 'Free' : formatCurrency(Number(getDisplayPrice(ticket))) }}
                     </p>
                   </div>
+                  <!-- Show availability: tier quantity takes priority over ticket quantity -->
                   <p v-if="isTicketOnSale(ticket) && ticket.showAvailability !== false" class="text-sm text-gray-500 mb-1">
-                    {{ ticket.quantity ? `${ticket.quantity - ticket.quantitySold} left` : 'Unlimited' }}
+                    <template v-if="ticket.tierQuantityRemaining !== null">
+                      {{ ticket.tierQuantityRemaining }} left at this price
+                    </template>
+                    <template v-else-if="ticket.quantity">
+                      {{ ticket.quantity - ticket.quantitySold }} left
+                    </template>
+                    <template v-else>
+                      Unlimited
+                    </template>
                   </p>
-                  <!-- Show countdown if next tier has higher price -->
+                  <!-- Urgency message for low tier quantity -->
+                  <p
+                    v-if="isTicketOnSale(ticket) && ticket.tierQuantityRemaining !== null && ticket.tierQuantityRemaining <= 20 && ticket.tierQuantityRemaining > 0"
+                    class="text-xs text-amber-600 dark:text-amber-400 mb-1 font-medium"
+                  >
+                    Only {{ ticket.tierQuantityRemaining }} tickets left at this price!
+                  </p>
+                  <p
+                    v-else-if="isTicketOnSale(ticket) && ticket.nextTier && (ticket.nextTier.afterQuantity || ticket.nextTier.startsAt) && Number(ticket.nextTier.price) > Number(ticket.activePrice ?? ticket.price)"
+                    class="text-xs text-amber-600 dark:text-amber-400 mb-1"
+                  >
+                    Limited tickets only. Price increases once sold out.
+                  </p>
+                  <!-- Show countdown or quantity trigger info for next tier -->
                   <div
                     v-if="ticket.showNextTierPrice !== false && isTicketOnSale(ticket) && ticket.nextTier && Number(ticket.nextTier.price) > Number(ticket.activePrice ?? ticket.price)"
                     class="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 mt-2"
                   >
                     <UIcon name="i-heroicons-clock" class="w-3.5 h-3.5" />
-                    <span>Price increases to {{ formatCurrency(Number(ticket.nextTier.price)) }} in {{ formatCountdown(ticket.nextTier.startsAt) }}</span>
+                    <span v-if="ticket.nextTier.afterQuantity">
+                      Price increases to {{ formatCurrency(Number(ticket.nextTier.price)) }} after {{ ticket.nextTier.afterQuantity }} more tickets sold
+                    </span>
+                    <span v-else-if="ticket.nextTier.startsAt">
+                      Price increases to {{ formatCurrency(Number(ticket.nextTier.price)) }} in {{ formatCountdown(ticket.nextTier.startsAt) }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1691,21 +1721,50 @@ onBeforeUnmount(() => {
               </p>
             </div>
 
-            <!-- Show countdown if price increases soon -->
+            <!-- Show countdown or quantity trigger if price increases soon -->
             <div
               v-if="tt.showNextTierPrice !== false && isTicketOnSale(tt) && tt.nextTier && Number(tt.nextTier.price) > Number(tt.activePrice ?? tt.price)"
               class="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 mb-2"
             >
               <UIcon name="i-heroicons-clock" class="w-3.5 h-3.5" />
-              <span>Price increases to {{ formatCurrency(Number(tt.nextTier.price)) }} in {{ formatCountdown(tt.nextTier.startsAt) }}</span>
+              <span v-if="tt.nextTier.afterQuantity">
+                Price increases to {{ formatCurrency(Number(tt.nextTier.price)) }} after {{ tt.nextTier.afterQuantity }} more tickets sold
+              </span>
+              <span v-else-if="tt.nextTier.startsAt">
+                Price increases to {{ formatCurrency(Number(tt.nextTier.price)) }} in {{ formatCountdown(tt.nextTier.startsAt) }}
+              </span>
             </div>
 
             <div class="flex items-center justify-between">
-              <p class="text-sm text-gray-500">
-                <template v-if="isTicketOnSale(tt) && tt.showAvailability !== false">
-                  {{ tt.quantity ? `${tt.quantity - tt.quantitySold} available` : 'Unlimited' }}
-                </template>
-              </p>
+              <div>
+                <!-- Show availability: tier quantity takes priority over ticket quantity -->
+                <p class="text-sm text-gray-500">
+                  <template v-if="isTicketOnSale(tt) && tt.showAvailability !== false">
+                    <template v-if="tt.tierQuantityRemaining !== null">
+                      {{ tt.tierQuantityRemaining }} available at this price
+                    </template>
+                    <template v-else-if="tt.quantity">
+                      {{ tt.quantity - tt.quantitySold }} available
+                    </template>
+                    <template v-else>
+                      Unlimited
+                    </template>
+                  </template>
+                </p>
+                <!-- Urgency message for low tier quantity -->
+                <p
+                  v-if="isTicketOnSale(tt) && tt.tierQuantityRemaining !== null && tt.tierQuantityRemaining <= 20 && tt.tierQuantityRemaining > 0"
+                  class="text-xs text-amber-600 dark:text-amber-400 font-medium"
+                >
+                  Only {{ tt.tierQuantityRemaining }} tickets left at this price!
+                </p>
+                <p
+                  v-else-if="isTicketOnSale(tt) && tt.nextTier && (tt.nextTier.afterQuantity || tt.nextTier.startsAt) && Number(tt.nextTier.price) > Number(tt.activePrice ?? tt.price)"
+                  class="text-xs text-amber-600 dark:text-amber-400"
+                >
+                  Limited tickets only. Price increases once sold out.
+                </p>
+              </div>
 
               <div v-if="isTicketOnSale(tt)" class="flex items-center gap-3">
                 <UButton
@@ -1722,7 +1781,7 @@ onBeforeUnmount(() => {
                   variant="outline"
                   icon="i-heroicons-plus"
                   size="sm"
-                  :disabled="(ticketCart[tt.id] || 0) >= tt.maxPerOrder || (tt.quantity && (ticketCart[tt.id] || 0) >= (tt.quantity - tt.quantitySold))"
+                  :disabled="(ticketCart[tt.id] || 0) >= tt.maxPerOrder || (tt.tierQuantityRemaining !== null && (ticketCart[tt.id] || 0) >= tt.tierQuantityRemaining) || (tt.quantity && (ticketCart[tt.id] || 0) >= (tt.quantity - tt.quantitySold))"
                   @click="updateTicketQuantity(tt.id, 1)"
                 />
               </div>

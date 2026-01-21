@@ -129,21 +129,67 @@ const userMenuItems = computed(() => {
     <!-- Footer -->
     <footer class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
       <div class="max-w-7xl 2xl:max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p class="text-gray-500 dark:text-gray-400 text-sm">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+          <!-- Company Info -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">nvyt</h3>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">
+              Create events, sell tickets, and manage everything — all in one place.
+            </p>
+          </div>
+
+          <!-- Contact Info -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Contact Us</h3>
+            <ul class="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+              <li class="flex items-start gap-2">
+                <UIcon name="i-heroicons-map-pin" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>Soliman Street, Poblacion, Argao, Cebu, Philippines</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <UIcon name="i-heroicons-phone" class="w-4 h-4 flex-shrink-0" />
+                <a href="tel:+639524773274" class="hover:text-primary">+63 (952) 477-3274</a>
+              </li>
+              <li class="flex items-center gap-2">
+                <UIcon name="i-heroicons-envelope" class="w-4 h-4 flex-shrink-0" />
+                <a href="mailto:hello@nvyt.app" class="hover:text-primary">hello@nvyt.app</a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Links -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Links</h3>
+            <ul class="space-y-2 text-sm">
+              <li>
+                <NuxtLink to="/pricing" class="text-gray-500 dark:text-gray-400 hover:text-primary">
+                  Pricing
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="/privacy" class="text-gray-500 dark:text-gray-400 hover:text-primary">
+                  Privacy Policy
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="/terms" class="text-gray-500 dark:text-gray-400 hover:text-primary">
+                  Terms of Service
+                </NuxtLink>
+              </li>
+              <li>
+                <NuxtLink to="/refunds" class="text-gray-500 dark:text-gray-400 hover:text-primary">
+                  Refund Policy
+                </NuxtLink>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="border-t border-gray-200 dark:border-gray-800 pt-6">
+          <p class="text-gray-500 dark:text-gray-400 text-sm text-center">
             &copy; {{ new Date().getFullYear() }} nvyt. All rights reserved.
           </p>
-          <div class="flex items-center gap-4">
-            <NuxtLink to="/privacy" class="text-gray-500 dark:text-gray-400 hover:text-primary text-sm">
-              Privacy
-            </NuxtLink>
-            <NuxtLink to="/terms" class="text-gray-500 dark:text-gray-400 hover:text-primary text-sm">
-              Terms
-            </NuxtLink>
-            <NuxtLink to="/refunds" class="text-gray-500 dark:text-gray-400 hover:text-primary text-sm">
-              Refunds
-            </NuxtLink>
-          </div>
         </div>
       </div>
     </footer>

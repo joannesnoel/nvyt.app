@@ -1,5 +1,6 @@
-import { ticketTypes, ticketPriceTiers } from '@nvyt/db'
-import { eq, asc } from 'drizzle-orm'
+import { ticketTypes } from '@nvyt/db'
+import { eq } from 'drizzle-orm'
+import { getPriceTiers } from '~/server/utils/pricing'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -28,12 +29,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get all price tiers for this ticket type
-  const tiers = await db
-    .select()
-    .from(ticketPriceTiers)
-    .where(eq(ticketPriceTiers.ticketTypeId, ticketTypeId))
-    .orderBy(asc(ticketPriceTiers.sortOrder), asc(ticketPriceTiers.startDate))
+  // Get all price tiers with computed fields (isActive, isSoldOut, quantityRemaining)
+  const tiers = await getPriceTiers(ticketTypeId)
 
   return successResponse(tiers)
 })
