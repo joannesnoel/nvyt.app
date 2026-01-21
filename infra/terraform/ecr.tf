@@ -14,23 +14,25 @@ resource "aws_ecr_repository" "main" {
 }
 
 # Lifecycle policy to keep only the last 10 images
-resource "aws_ecr_lifecycle_policy" "main" {
-  repository = aws_ecr_repository.main.name
-
-  policy = jsonencode({
-    rules = [
-      {
-        rulePriority = 1
-        description  = "Keep last 10 images"
-        selection = {
-          tagStatus   = "any"
-          countType   = "imageCountMoreThan"
-          countNumber = 10
-        }
-        action = {
-          type = "expire"
-        }
-      }
-    ]
-  })
-}
+# NOTE: Commented out - requires ecr:PutLifecyclePolicy permission on deploy user
+# Uncomment after adding permission to nvyt-prod-deploy IAM user
+# resource "aws_ecr_lifecycle_policy" "main" {
+#   repository = aws_ecr_repository.main.name
+#
+#   policy = jsonencode({
+#     rules = [
+#       {
+#         rulePriority = 1
+#         description  = "Keep last 10 images"
+#         selection = {
+#           tagStatus   = "any"
+#           countType   = "imageCountMoreThan"
+#           countNumber = 10
+#         }
+#         action = {
+#           type = "expire"
+#         }
+#       }
+#     ]
+#   })
+# }

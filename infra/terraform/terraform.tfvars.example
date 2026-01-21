@@ -16,8 +16,7 @@ domain_name = "nvyt.app"
 # Application URL
 app_url = "https://nvyt.app"
 
-# Admin emails (comma-separated)
-admin_emails = "jon@creativelogik.net,hello@nvyt.app"
+# Note: ADMIN_EMAILS is managed in AWS Secrets Manager
 
 # PayMongo (get from PayMongo dashboard)
 paymongo_public_key     = "pk_live_xxx"

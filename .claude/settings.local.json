@@ -1,28 +1,4 @@
 {
-  "hooks": {
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -d 'Claude Code needs your input' ntfy.sh/nvyt-app-dev"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "curl -d 'Claude Code has finished' ntfy.sh/nvyt-app-dev"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(kubectl get:*)",
@@ -131,7 +107,32 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(pnpm reset:dev:*)",
       "Bash(source:*)",
-      "Bash(pnpm --filter @nvyt/web build:*)"
+      "Bash(pnpm --filter @nvyt/web build:*)",
+      "Bash(aws ecs:*)"
+    ]
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -d 'Claude Code needs your input' ntfy.sh/nvyt-app-dev"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -d 'Claude Code has finished' ntfy.sh/nvyt-app-dev"
+          }
+        ]
+      }
     ]
   }
 }

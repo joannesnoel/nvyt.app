@@ -58,10 +58,10 @@ resource "aws_ecs_task_definition" "main" {
         { name = "PORT", value = tostring(var.container_port) },
         { name = "NUXT_PUBLIC_APP_URL", value = var.app_url },
         { name = "APP_URL", value = var.app_url },
-        { name = "ADMIN_EMAILS", value = var.admin_emails },
       ]
 
       secrets = [
+        { name = "ADMIN_EMAILS", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:ADMIN_EMAILS::" },
         { name = "DATABASE_URL", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:DATABASE_URL::" },
         { name = "NUXT_DATABASE_URL", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_DATABASE_URL::" },
         { name = "JWT_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:JWT_SECRET::" },

@@ -114,13 +114,8 @@ variable "app_url" {
   default     = "https://nvyt.app"
 }
 
-variable "admin_emails" {
-  description = "Comma-separated list of admin email addresses"
-  type        = string
-  default     = "jon@creativelogik.net,hello@nvyt.app"
-}
-
 # Secrets (sensitive - provide via terraform.tfvars or env vars)
+# Note: ADMIN_EMAILS is now managed directly in AWS Secrets Manager
 variable "paymongo_public_key" {
   description = "PayMongo public key"
   type        = string
