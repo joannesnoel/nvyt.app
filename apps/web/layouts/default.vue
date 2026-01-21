@@ -61,7 +61,8 @@ const userMenuItems = computed(() => {
         <div class="flex justify-between items-center h-16">
           <!-- Logo -->
           <NuxtLink to="/" class="flex items-center gap-2">
-            <span class="text-2xl font-bold text-primary">nvyt</span>
+            <img :src="colorMode.value === 'dark' ? '/dark-logo.png' : '/light-logo.png'" alt="nvyt" class="h-14 w-auto" />
+            <span class="text-2xl font-bold text-primary ml-2">nvyt</span>
           </NuxtLink>
 
           <!-- Actions -->

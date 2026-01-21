@@ -36,6 +36,8 @@ const formData = ref({
   salesEnd: '',
   maxPerOrder: 10,
   minPerOrder: 1,
+  showAvailability: true,
+  showNextTierPrice: true,
 })
 
 function openCreateModal() {
@@ -49,6 +51,8 @@ function openCreateModal() {
     salesEnd: '',
     maxPerOrder: 10,
     minPerOrder: 1,
+    showAvailability: true,
+    showNextTierPrice: true,
   }
   showModal.value = true
 }
@@ -64,6 +68,8 @@ function openEditModal(ticketType: any) {
     salesEnd: ticketType.salesEnd ? formatDateTimeLocal(ticketType.salesEnd) : '',
     maxPerOrder: ticketType.maxPerOrder,
     minPerOrder: ticketType.minPerOrder,
+    showAvailability: ticketType.showAvailability ?? true,
+    showNextTierPrice: ticketType.showNextTierPrice ?? true,
   }
   showModal.value = true
 }
@@ -194,6 +200,166 @@ function getStatusColor(status: string) {
     case 'disabled': return 'gray'
     default: return 'gray'
   }
+}
+
+// Price tier management
+const expandedTiers = ref<Set<string>>(new Set())
+const priceTiersCache = ref<Record<string, any[]>>({})
+const loadingTiers = ref<Set<string>>(new Set())
+const showTierModal = ref(false)
+const editingTier = ref<any>(null)
+const selectedTicketTypeForTier = ref<any>(null)
+const isTierSubmitting = ref(false)
+
+const tierFormData = ref({
+  name: '',
+  price: 0,
+  startDate: '',
+  endDate: '',
+  sortOrder: 0,
+})
+
+function toggleTiers(ticketTypeId: string) {
+  if (expandedTiers.value.has(ticketTypeId)) {
+    expandedTiers.value.delete(ticketTypeId)
+  } else {
+    expandedTiers.value.add(ticketTypeId)
+    if (!priceTiersCache.value[ticketTypeId]) {
+      fetchPriceTiers(ticketTypeId)
+    }
+  }
+}
+
+async function fetchPriceTiers(ticketTypeId: string) {
+  loadingTiers.value.add(ticketTypeId)
+  try {
+    const response = await $fetch(`/api/v1/events/${eventId.value}/ticket-types/${ticketTypeId}/price-tiers`)
+    priceTiersCache.value[ticketTypeId] = (response as any).data ?? []
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to fetch price tiers',
+      color: 'red',
+    })
+    priceTiersCache.value[ticketTypeId] = []
+  } finally {
+    loadingTiers.value.delete(ticketTypeId)
+  }
+}
+
+function openCreateTierModal(ticketType: any) {
+  selectedTicketTypeForTier.value = ticketType
+  editingTier.value = null
+  tierFormData.value = {
+    name: '',
+    price: 0,
+    startDate: '',
+    endDate: '',
+    sortOrder: (priceTiersCache.value[ticketType.id]?.length ?? 0),
+  }
+  showTierModal.value = true
+}
+
+function openEditTierModal(ticketType: any, tier: any) {
+  selectedTicketTypeForTier.value = ticketType
+  editingTier.value = tier
+  tierFormData.value = {
+    name: tier.name,
+    price: parseFloat(tier.price),
+    startDate: formatDateTimeLocal(tier.startDate),
+    endDate: formatDateTimeLocal(tier.endDate),
+    sortOrder: tier.sortOrder ?? 0,
+  }
+  showTierModal.value = true
+}
+
+async function savePriceTier() {
+  if (!selectedTicketTypeForTier.value) return
+
+  isTierSubmitting.value = true
+  try {
+    const payload = {
+      name: tierFormData.value.name,
+      price: tierFormData.value.price,
+      startDate: toISOString(tierFormData.value.startDate),
+      endDate: toISOString(tierFormData.value.endDate),
+      sortOrder: tierFormData.value.sortOrder,
+    }
+
+    const ticketTypeId = selectedTicketTypeForTier.value.id
+
+    if (editingTier.value) {
+      await $fetch(`/api/v1/events/${eventId.value}/ticket-types/${ticketTypeId}/price-tiers/${editingTier.value.id}`, {
+        method: 'PATCH',
+        body: payload,
+      })
+      toast.add({
+        title: 'Price Tier Updated',
+        description: 'Your changes have been saved.',
+        color: 'green',
+      })
+    } else {
+      await $fetch(`/api/v1/events/${eventId.value}/ticket-types/${ticketTypeId}/price-tiers`, {
+        method: 'POST',
+        body: payload,
+      })
+      toast.add({
+        title: 'Price Tier Created',
+        description: 'New price tier has been added.',
+        color: 'green',
+      })
+    }
+
+    showTierModal.value = false
+    await fetchPriceTiers(ticketTypeId)
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to save price tier',
+      color: 'red',
+    })
+  } finally {
+    isTierSubmitting.value = false
+  }
+}
+
+async function deletePriceTier(ticketType: any, tier: any) {
+  if (!confirm(`Are you sure you want to delete the "${tier.name}" price tier? This cannot be undone.`)) {
+    return
+  }
+
+  try {
+    await ($fetch as any)(`/api/v1/events/${eventId.value}/ticket-types/${ticketType.id}/price-tiers/${tier.id}`, {
+      method: 'DELETE',
+    })
+    toast.add({
+      title: 'Price Tier Deleted',
+      description: 'The price tier has been removed.',
+      color: 'green',
+    })
+    await fetchPriceTiers(ticketType.id)
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to delete price tier',
+      color: 'red',
+    })
+  }
+}
+
+function formatShortDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function isTierActive(tier: any) {
+  const now = new Date()
+  const start = new Date(tier.startDate)
+  const end = new Date(tier.endDate)
+  return now >= start && now <= end
 }
 </script>
 
@@ -338,6 +504,112 @@ function getStatusColor(status: string) {
                 />
               </div>
             </div>
+
+            <!-- Price Tiers Section -->
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary w-full"
+                @click="toggleTiers(tt.id)"
+              >
+                <UIcon
+                  name="i-heroicons-chevron-right"
+                  class="w-4 h-4 transition-transform"
+                  :class="{ 'rotate-90': expandedTiers.has(tt.id) }"
+                />
+                <UIcon name="i-heroicons-tag" class="w-4 h-4" />
+                <span>Price Tiers</span>
+                <UBadge
+                  v-if="priceTiersCache[tt.id]?.length"
+                  color="primary"
+                  variant="soft"
+                  size="xs"
+                >
+                  {{ priceTiersCache[tt.id]?.length }}
+                </UBadge>
+              </button>
+
+              <!-- Expanded Tiers Content -->
+              <div v-if="expandedTiers.has(tt.id)" class="mt-4 space-y-3">
+                <!-- Loading state -->
+                <div v-if="loadingTiers.has(tt.id)" class="flex items-center gap-2 text-sm text-gray-500">
+                  <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+                  Loading price tiers...
+                </div>
+
+                <!-- Empty state -->
+                <div
+                  v-else-if="!priceTiersCache[tt.id]?.length"
+                  class="text-sm text-gray-500 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-center"
+                >
+                  <p class="mb-2">No price tiers defined. Using base price ({{ formatCurrency(tt.price) }}).</p>
+                  <p class="text-xs text-gray-400 mb-3">Add tiers for time-based pricing (e.g., Early Bird, Regular)</p>
+                  <UButton
+                    color="primary"
+                    variant="soft"
+                    size="sm"
+                    icon="i-heroicons-plus"
+                    @click="openCreateTierModal(tt)"
+                  >
+                    Add Price Tier
+                  </UButton>
+                </div>
+
+                <!-- Tiers list -->
+                <div v-else class="space-y-2">
+                  <div
+                    v-for="tier in priceTiersCache[tt.id]"
+                    :key="tier.id"
+                    class="flex items-center justify-between p-3 rounded-lg border"
+                    :class="isTierActive(tier)
+                      ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800'
+                      : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'"
+                  >
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-gray-900 dark:text-white">{{ tier.name }}</span>
+                        <UBadge v-if="isTierActive(tier)" color="green" variant="soft" size="xs">
+                          Active
+                        </UBadge>
+                      </div>
+                      <div class="text-sm text-gray-500 mt-1">
+                        {{ formatShortDate(tier.startDate) }} - {{ formatShortDate(tier.endDate) }}
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span class="font-semibold text-primary">{{ formatCurrency(tier.price) }}</span>
+                      <div class="flex items-center gap-1">
+                        <UButton
+                          color="gray"
+                          variant="ghost"
+                          icon="i-heroicons-pencil"
+                          size="xs"
+                          @click="openEditTierModal(tt, tier)"
+                        />
+                        <UButton
+                          color="red"
+                          variant="ghost"
+                          icon="i-heroicons-trash"
+                          size="xs"
+                          @click="deletePriceTier(tt, tier)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Add tier button -->
+                  <UButton
+                    color="gray"
+                    variant="soft"
+                    size="sm"
+                    icon="i-heroicons-plus"
+                    block
+                    @click="openCreateTierModal(tt)"
+                  >
+                    Add Price Tier
+                  </UButton>
+                </div>
+              </div>
+            </div>
           </UCard>
         </div>
       </div>
@@ -437,6 +709,27 @@ function getStatusColor(status: string) {
             </UFormGroup>
           </div>
 
+          <!-- Display Settings -->
+          <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Display Settings</p>
+            <div class="space-y-3">
+              <div class="flex items-center gap-3">
+                <UCheckbox v-model="formData.showAvailability" />
+                <div>
+                  <p class="text-sm text-gray-900 dark:text-white">Show availability</p>
+                  <p class="text-xs text-gray-500">Display "X left" or "X available" on the public page</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <UCheckbox v-model="formData.showNextTierPrice" />
+                <div>
+                  <p class="text-sm text-gray-900 dark:text-white">Show next tier price</p>
+                  <p class="text-xs text-gray-500">Display countdown and price increase info for upcoming tiers</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="flex justify-end gap-3 pt-4">
             <UButton
               color="gray"
@@ -451,6 +744,93 @@ function getStatusColor(status: string) {
               :loading="isSubmitting"
             >
               {{ editingTicketType ? 'Save Changes' : 'Create Ticket Type' }}
+            </UButton>
+          </div>
+        </form>
+      </UCard>
+    </UModal>
+
+    <!-- Price Tier Modal -->
+    <UModal v-model="showTierModal">
+      <UCard>
+        <template #header>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              {{ editingTier ? 'Edit Price Tier' : 'Create Price Tier' }}
+            </h3>
+            <p v-if="selectedTicketTypeForTier" class="text-sm text-gray-500 mt-1">
+              For: {{ selectedTicketTypeForTier.name }}
+            </p>
+          </div>
+        </template>
+
+        <form @submit.prevent="savePriceTier" class="space-y-4">
+          <UFormGroup label="Tier Name" required>
+            <UInput
+              v-model="tierFormData.name"
+              placeholder="e.g., Early Bird, Regular, Last Minute"
+              required
+            />
+          </UFormGroup>
+
+          <UFormGroup label="Price (PHP)" required>
+            <UInput
+              v-model.number="tierFormData.price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              required
+            />
+            <template v-if="selectedTicketTypeForTier" #hint>
+              Base price: {{ formatCurrency(selectedTicketTypeForTier.price) }}
+            </template>
+          </UFormGroup>
+
+          <div class="grid grid-cols-2 gap-4">
+            <UFormGroup label="Start Date" required>
+              <UInput
+                v-model="tierFormData.startDate"
+                type="datetime-local"
+                required
+              />
+            </UFormGroup>
+
+            <UFormGroup label="End Date" required>
+              <UInput
+                v-model="tierFormData.endDate"
+                type="datetime-local"
+                required
+              />
+            </UFormGroup>
+          </div>
+
+          <UAlert
+            color="blue"
+            variant="soft"
+            icon="i-heroicons-information-circle"
+          >
+            <template #title>How Price Tiers Work</template>
+            <template #description>
+              When a tier is active (current date is between start and end), its price is used instead of the base price.
+              Tiers cannot have overlapping date ranges.
+            </template>
+          </UAlert>
+
+          <div class="flex justify-end gap-3 pt-4">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showTierModal = false"
+            >
+              Cancel
+            </UButton>
+            <UButton
+              type="submit"
+              color="primary"
+              :loading="isTierSubmitting"
+            >
+              {{ editingTier ? 'Save Changes' : 'Create Price Tier' }}
             </UButton>
           </div>
         </form>

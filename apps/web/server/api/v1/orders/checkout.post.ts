@@ -1,9 +1,11 @@
-import { orders, tickets, ticketTypes, events, users, eventRequirements, ticketRegistrationFields, type User } from '@nvyt/db'
+import { orders, tickets, ticketTypes, events, users, eventRequirements, ticketRegistrationFields, eventVerifications, type User } from '@nvyt/db'
 import { purchaseTicketsSchema } from '@nvyt/shared'
 import { eq, and, inArray, asc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail, ticketPurchaseConfirmationEmail } from '~/server/utils/email'
+import { calculateProcessingFees } from '~/server/utils/wallet'
+import { getActivePrice } from '~/server/utils/pricing'
 
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -134,6 +136,15 @@ export default defineEventHandler(async (event) => {
       message: 'This event has been cancelled',
     })
   }
+
+  // Get event verification to retrieve admin fee rate (for paid events)
+  const [verification] = await db
+    .select({ adminFeeRate: eventVerifications.adminFeeRate })
+    .from(eventVerifications)
+    .where(eq(eventVerifications.eventId, data.eventId))
+    .limit(1)
+
+  const adminFeeRate = verification?.adminFeeRate ? parseFloat(verification.adminFeeRate) : 0
 
   // Calculate total tickets being purchased
   const totalTicketsRequested = data.items.reduce((sum, item) => sum + item.quantity, 0)
@@ -305,13 +316,16 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Calculate line item total
-    const price = parseFloat(ticketType.price)
+    // Get active price (may be from a tier or base price)
+    const activePriceInfo = await getActivePrice(ticketType.id, ticketType.price)
+    const price = parseFloat(activePriceInfo.price)
     const itemTotal = price * item.quantity
     totalAmount += itemTotal
 
+    // Include tier name in line item if applicable
+    const tierSuffix = activePriceInfo.tierName ? ` (${activePriceInfo.tierName})` : ''
     lineItems.push({
-      name: `${eventRecord.title} - ${ticketType.name}`,
+      name: `${eventRecord.title} - ${ticketType.name}${tierSuffix}`,
       quantity: item.quantity,
       amount: toCentavos(price),
       currency: 'PHP',
@@ -338,6 +352,23 @@ export default defineEventHandler(async (event) => {
 
   // Check for free tickets (no payment needed)
   const isFreeOrder = totalAmount === 0
+
+  // Calculate processing fees (only for paid orders)
+  const feeBreakdown = calculateProcessingFees(totalAmount, adminFeeRate)
+
+  // Add fees to line items for PayMongo (only for paid orders)
+  if (!isFreeOrder && feeBreakdown.totalFees > 0) {
+    lineItems.push({
+      name: 'Fees',
+      quantity: 1,
+      amount: toCentavos(feeBreakdown.totalFees),
+      currency: 'PHP',
+      description: 'Transaction and booking fees',
+    })
+  }
+
+  // Final total including fees
+  const finalTotal = isFreeOrder ? 0 : feeBreakdown.total
 
   // Generate order number
   const orderNumber = generateOrderNumber()
@@ -385,7 +416,11 @@ export default defineEventHandler(async (event) => {
       eventId: data.eventId,
       userId: user.id,
       orderNumber,
-      totalAmount: String(totalAmount),
+      subtotalAmount: String(totalAmount),
+      processingFee: String(feeBreakdown.processingFee),
+      adminFee: String(feeBreakdown.adminFee),
+      totalFees: String(feeBreakdown.totalFees),
+      totalAmount: String(finalTotal),
       currency: 'PHP',
       paymongoCheckoutSessionId: checkoutSession?.id,
       paymongoPaymentIntentId: checkoutSession?.attributes.payment_intent?.id,

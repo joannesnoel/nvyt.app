@@ -21,6 +21,10 @@ const { data: orderResponse, pending, error } = await useFetch<{
     event: any
     tickets: any[]
     totalAmount: string
+    subtotalAmount?: string
+    processingFee?: string
+    adminFee?: string
+    totalFees?: string
     paymentStatus: string
     customerName: string
     customerEmail: string

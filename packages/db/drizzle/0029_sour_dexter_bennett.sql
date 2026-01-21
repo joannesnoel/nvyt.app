@@ -1,0 +1,2 @@
+ALTER TABLE "ticket_types" ADD COLUMN "show_availability" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "ticket_types" ADD COLUMN "show_next_tier_price" boolean DEFAULT true NOT NULL;

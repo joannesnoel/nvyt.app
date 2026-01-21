@@ -1,8 +1,47 @@
 import { eq, sql } from 'drizzle-orm'
 import { wallets, transactions, type NewTransaction } from '@nvyt/db'
 
-// Platform fee percentage (3%)
+// Platform fee percentage (3%) - deducted from organizer earnings
 const PLATFORM_FEE_PERCENTAGE = 0.03
+
+// Processing fee constants (charged to buyer)
+export const PROCESSING_FEE_RATE = 0.035 // 3.5%
+export const PROCESSING_FEE_FIXED = 15 // ₱15 PHP
+
+/**
+ * Calculate processing fees for a ticket purchase (charged to buyer)
+ * @param subtotal - The ticket price before fees
+ * @param adminFeeRate - The admin fee rate (0-1, e.g., 0.02 = 2%)
+ * @returns Fee breakdown including subtotal, processing fee, admin fee, total fees, and total
+ */
+export function calculateProcessingFees(subtotal: number, adminFeeRate: number = 0) {
+  if (subtotal <= 0) {
+    return {
+      subtotal: 0,
+      processingFee: 0,
+      adminFee: 0,
+      totalFees: 0,
+      total: 0,
+    }
+  }
+
+  // Processing fee: 3.5% + ₱15 (always applied)
+  const processingFee = Math.round((subtotal * PROCESSING_FEE_RATE + PROCESSING_FEE_FIXED) * 100) / 100
+
+  // Admin fee: additional percentage set per event
+  const adminFee = Math.round(subtotal * adminFeeRate * 100) / 100
+
+  const totalFees = Math.round((processingFee + adminFee) * 100) / 100
+  const total = Math.round((subtotal + totalFees) * 100) / 100
+
+  return {
+    subtotal,
+    processingFee,
+    adminFee,
+    totalFees,
+    total,
+  }
+}
 
 export interface TransactionInput {
   walletId: string

@@ -1,5 +1,6 @@
 import { eq, and, sql, asc, desc } from 'drizzle-orm'
-import { events, users, ticketTypes, tickets, attendees, contributionItems, eventRequirements, eventFaqs, eventAnnouncements } from '@nvyt/db'
+import { events, users, ticketTypes, tickets, attendees, contributionItems, eventRequirements, eventFaqs, eventAnnouncements, eventVerifications, ticketPriceTiers } from '@nvyt/db'
+import { getActivePrice, getPriceTiers } from '~/server/utils/pricing'
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug')
@@ -100,23 +101,30 @@ export default defineEventHandler(async (event) => {
         .where(eq(ticketTypes.eventId, eventData.id))
         .orderBy(ticketTypes.sortOrder)
     } else {
-      // Public users only see active tickets within sales period
-      const nowIso = now.toISOString()
+      // Public users see all active tickets (sales window checked on frontend for display)
       ticketTypesData = await db
         .select()
         .from(ticketTypes)
         .where(
           and(
             eq(ticketTypes.eventId, eventData.id),
-            eq(ticketTypes.status, 'active'),
-            // Sales must have started (or no start date set)
-            sql`(${ticketTypes.salesStart} IS NULL OR ${ticketTypes.salesStart} <= ${nowIso}::timestamptz)`,
-            // Sales must not have ended (or no end date set)
-            sql`(${ticketTypes.salesEnd} IS NULL OR ${ticketTypes.salesEnd} >= ${nowIso}::timestamptz)`
+            eq(ticketTypes.status, 'active')
           )
         )
         .orderBy(ticketTypes.sortOrder)
     }
+  }
+
+  // Get admin fee rate from event verification (for paid ticket events)
+  let adminFeeRate = 0
+  if (eventData.registrationMode === 'tickets') {
+    const [verification] = await db
+      .select({ adminFeeRate: eventVerifications.adminFeeRate })
+      .from(eventVerifications)
+      .where(eq(eventVerifications.eventId, eventData.id))
+      .limit(1)
+
+    adminFeeRate = verification?.adminFeeRate ? parseFloat(verification.adminFeeRate) : 0
   }
 
   // Get contribution items if enabled
@@ -214,10 +222,38 @@ export default defineEventHandler(async (event) => {
   // Remove sensitive data
   const { inviteToken: _, ...safeEventData } = eventData
 
+  // Fetch price tiers and active prices for ticket types
+  const now = new Date()
+  const ticketTypesWithPricing = await Promise.all(
+    ticketTypesData.map(async (t) => {
+      // Get all price tiers for this ticket type
+      const priceTiers = await getPriceTiers(t.id)
+
+      // Get active price info
+      const activePriceInfo = await getActivePrice(t.id, t.price, now)
+
+      return {
+        ...t,
+        priceTiers: priceTiers.map(tier => ({ ...tier })),
+        activePrice: activePriceInfo.price,
+        activeTierName: activePriceInfo.tierName,
+        activeTierId: activePriceInfo.tierId,
+        isBaseTier: activePriceInfo.isBaseTier,
+        nextTier: activePriceInfo.nextTier
+          ? {
+              name: activePriceInfo.nextTier.name,
+              price: activePriceInfo.nextTier.price,
+              startsAt: activePriceInfo.nextTier.startsAt.toISOString(),
+            }
+          : null,
+      }
+    })
+  )
+
   // Ensure all data is plain objects (no Drizzle internal references)
   return successResponse({
     ...safeEventData,
-    ticketTypes: ticketTypesData.map(t => ({ ...t })),
+    ticketTypes: ticketTypesWithPricing,
     contributionItems: contributions.map(c => ({ ...c })),
     requirements: requirements.map(r => ({ ...r })),
     faqs: faqs.map(f => ({ ...f })),
@@ -226,5 +262,6 @@ export default defineEventHandler(async (event) => {
     ticketCount,
     userAttendee: userAttendee ? { ...userAttendee } : null,
     isOrganizer,
+    adminFeeRate, // Fee rate for ticket purchases (0-1)
   })
 })

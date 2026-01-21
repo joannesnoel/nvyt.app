@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, pgEnum, jsonb } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid, pgEnum, jsonb, decimal } from 'drizzle-orm/pg-core'
 import { events } from './events'
 import { users } from './users'
 
@@ -114,6 +114,9 @@ export const eventVerifications = pgTable('event_verifications', {
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
   reviewNotes: text('review_notes'), // Admin notes (internal)
   rejectionReason: text('rejection_reason'), // Reason shown to organizer
+
+  // Fee configuration (set by admin during approval)
+  adminFeeRate: decimal('admin_fee_rate', { precision: 5, scale: 4 }).default('0'), // e.g., 0.02 = 2%
 
   // Timestamps
   submittedAt: timestamp('submitted_at', { withTimezone: true }),

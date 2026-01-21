@@ -32,6 +32,10 @@ export const ticketTypes = pgTable('ticket_types', {
   status: ticketTypeStatusEnum('status').default('active').notNull(),
   sortOrder: integer('sort_order').default(0).notNull(),
 
+  // Display settings
+  showAvailability: boolean('show_availability').default(true).notNull(),
+  showNextTierPrice: boolean('show_next_tier_price').default(true).notNull(),
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
@@ -83,7 +87,13 @@ export const orders = pgTable('orders', {
     .references(() => users.id, { onDelete: 'cascade' }),
 
   orderNumber: text('order_number').notNull().unique(),
-  totalAmount: decimal('total_amount', { precision: 10, scale: 2 }).notNull(),
+
+  // Amount breakdown
+  subtotalAmount: decimal('subtotal_amount', { precision: 10, scale: 2 }).notNull(), // Ticket prices before fees
+  processingFee: decimal('processing_fee', { precision: 10, scale: 2 }).default('0').notNull(), // Platform fee (3.5% + P15)
+  adminFee: decimal('admin_fee', { precision: 10, scale: 2 }).default('0').notNull(), // Admin-configured fee
+  totalFees: decimal('total_fees', { precision: 10, scale: 2 }).default('0').notNull(), // Sum of all fees
+  totalAmount: decimal('total_amount', { precision: 10, scale: 2 }).notNull(), // Final amount charged
   currency: text('currency').default('PHP').notNull(),
 
   // PayMongo integration
@@ -106,6 +116,23 @@ export const orders = pgTable('orders', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
+// Price tiers for ticket types (time-based pricing like Early Bird, Regular, etc.)
+export const ticketPriceTiers = pgTable('ticket_price_tiers', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  ticketTypeId: uuid('ticket_type_id')
+    .notNull()
+    .references(() => ticketTypes.id, { onDelete: 'cascade' }),
+
+  name: text('name').notNull(), // "Early Bird", "Regular", "Last Minute"
+  price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+  startDate: timestamp('start_date', { withTimezone: true }).notNull(),
+  endDate: timestamp('end_date', { withTimezone: true }).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
 // Types
 export type TicketType = typeof ticketTypes.$inferSelect
 export type NewTicketType = typeof ticketTypes.$inferInsert
@@ -113,3 +140,5 @@ export type Ticket = typeof tickets.$inferSelect
 export type NewTicket = typeof tickets.$inferInsert
 export type Order = typeof orders.$inferSelect
 export type NewOrder = typeof orders.$inferInsert
+export type TicketPriceTier = typeof ticketPriceTiers.$inferSelect
+export type NewTicketPriceTier = typeof ticketPriceTiers.$inferInsert

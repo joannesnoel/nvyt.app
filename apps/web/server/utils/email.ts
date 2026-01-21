@@ -161,7 +161,7 @@ export function rsvpConfirmationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're confirmed!</h2>
@@ -212,7 +212,7 @@ export function rsvpPendingEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">RSVP Pending Approval</h2>
@@ -255,7 +255,7 @@ export function rsvpWaitlistEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're on the Waitlist</h2>
@@ -302,7 +302,7 @@ export function waitlistPromotedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're In!</h2>
@@ -356,7 +356,7 @@ export function rsvpApprovedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">RSVP Approved!</h2>
@@ -407,7 +407,7 @@ export function rsvpDeclinedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">RSVP Update</h2>
@@ -453,7 +453,7 @@ export function eventReminderEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Event Reminder</h2>
@@ -505,7 +505,7 @@ export function eventCancelledEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Event Cancelled</h2>
@@ -576,7 +576,7 @@ export function ticketPurchaseConfirmationEmail(data: {
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
         <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #6366f1; margin: 0; font-size: 28px;">nvyt</h1>
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
           </div>
 
           <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Your Tickets Are Confirmed!</h2>
@@ -633,7 +633,7 @@ export function accountSetupEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Set Up Your Account</h2>
@@ -678,7 +678,7 @@ export function accountSetupReminderEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Set Up Your Account</h2>
@@ -729,7 +729,7 @@ export function collaboratorInvitationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're Invited to Collaborate!</h2>
@@ -797,7 +797,7 @@ export function rsvpInvitationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're Invited!</h2>
@@ -856,7 +856,7 @@ export function passwordResetEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Reset Your Password</h2>
@@ -905,7 +905,7 @@ export function verificationApprovedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <div style="text-align: center; margin-bottom: 20px;">
@@ -966,7 +966,7 @@ export function verificationRejectedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Verification Update</h2>
@@ -1027,7 +1027,7 @@ export function verificationUnderReviewEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <div style="text-align: center; margin-bottom: 20px;">
@@ -1083,7 +1083,7 @@ export function verificationSubmittedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Verification Submitted</h2>
@@ -1140,7 +1140,7 @@ export function welcomeEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Welcome to nvyt!</h2>
@@ -1184,7 +1184,7 @@ export function emailVerificationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Verify Your Email</h2>
