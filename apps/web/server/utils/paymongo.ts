@@ -7,7 +7,11 @@ interface PayMongoConfig {
   secretKey: string
   publicKey: string
   webhookSecret?: string
+  paymentMethods?: string[]
 }
+
+// Default payment methods if not configured
+const DEFAULT_PAYMENT_METHODS = ['gcash', 'paymaya', 'card', 'grab_pay', 'qrph']
 
 interface LineItem {
   name: string
@@ -127,10 +131,17 @@ function getConfig(): PayMongoConfig {
     })
   }
   
+  // Parse payment methods from config (comma-separated string)
+  const paymentMethodsStr = config.paymongoPaymentMethods as string | undefined
+  const paymentMethods = paymentMethodsStr
+    ? paymentMethodsStr.split(',').map((m: string) => m.trim()).filter((m: string) => m.length > 0)
+    : undefined
+
   return {
     secretKey,
     publicKey,
     webhookSecret: config.paymongoWebhookSecret as string | undefined,
+    paymentMethods,
   }
 }
 
@@ -180,9 +191,11 @@ async function paymongoRequest<T>(
 export async function createCheckoutSession(
   options: CheckoutSessionOptions
 ): Promise<CheckoutSession> {
+  const config = getConfig()
+
   const {
     lineItems,
-    paymentMethodTypes = ['gcash', 'paymaya', 'card', 'grab_pay', 'qrph'], // dob, dob_ubp require activation
+    paymentMethodTypes = config.paymentMethods || DEFAULT_PAYMENT_METHODS,
     successUrl,
     cancelUrl,
     referenceNumber,

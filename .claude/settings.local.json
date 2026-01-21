@@ -108,7 +108,12 @@
       "Bash(pnpm reset:dev:*)",
       "Bash(source:*)",
       "Bash(pnpm --filter @nvyt/web build:*)",
-      "Bash(aws ecs:*)"
+      "Bash(aws ecs:*)",
+      "Bash(aws secretsmanager list-secrets:*)",
+      "Bash(aws sts:*)",
+      "Bash(AWS_PROFILE=nvyt-prod aws sts:*)",
+      "Bash(AWS_PROFILE=nvyt-prod aws secretsmanager:*)",
+      "Bash(AWS_PROFILE=nvyt-prod aws ecs:*)"
     ]
   },
   "hooks": {

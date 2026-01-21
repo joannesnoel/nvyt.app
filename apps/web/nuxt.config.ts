@@ -36,6 +36,8 @@ export default defineNuxtConfig({
     adminEmails: process.env.ADMIN_EMAILS || '',
     paymongoSecretKey: process.env.PAYMONGO_SECRET_KEY,
     paymongoWebhookSecret: process.env.PAYMONGO_WEBHOOK_SECRET,
+    // PayMongo payment methods (comma-separated, e.g., 'gcash,paymaya,card,grab_pay,qrph')
+    paymongoPaymentMethods: process.env.PAYMONGO_PAYMENT_METHODS || '',
     // Email - SMTP (Mailtrap in development)
     smtpHost: process.env.SMTP_HOST,
     smtpPort: process.env.SMTP_PORT || '587',
