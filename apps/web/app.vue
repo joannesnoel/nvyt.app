@@ -5,7 +5,7 @@ useHead({
     { name: 'description', content: 'Create and manage events, sell tickets, and track contributions with nvyt.' },
   ],
   link: [
-    { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+    { rel: 'icon', type: 'image/png', href: '/logo.png' },
   ],
 })
 </script>

@@ -66,6 +66,8 @@ export default defineEventHandler(async (event) => {
   if (data.salesEnd !== undefined) updateData.salesEnd = data.salesEnd ? new Date(data.salesEnd) : null
   if (data.maxPerOrder !== undefined) updateData.maxPerOrder = data.maxPerOrder
   if (data.minPerOrder !== undefined) updateData.minPerOrder = data.minPerOrder
+  if (data.showAvailability !== undefined) updateData.showAvailability = data.showAvailability
+  if (data.showNextTierPrice !== undefined) updateData.showNextTierPrice = data.showNextTierPrice
 
   // Update ticket type
   const [updatedTicketType] = await db

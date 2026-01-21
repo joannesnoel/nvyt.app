@@ -13,6 +13,7 @@ const updateVerificationSchema = z.object({
   action: z.enum(['approve', 'reject', 'start_review']),
   rejectionReason: z.string().max(1000).optional(),
   reviewNotes: z.string().max(2000).optional(), // Internal notes
+  adminFeeRate: z.number().min(0).max(1).optional(), // Admin fee rate (0-1, e.g., 0.02 = 2%)
 })
 
 export default defineEventHandler(async (event) => {
@@ -42,7 +43,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { action, rejectionReason, reviewNotes } = result.data
+  const { action, rejectionReason, reviewNotes, adminFeeRate } = result.data
   const db = useDatabase()
 
   // Get verification
@@ -94,6 +95,8 @@ export default defineEventHandler(async (event) => {
       updateData.reviewedAt = new Date()
       updateData.rejectionReason = null
       if (reviewNotes) updateData.reviewNotes = reviewNotes
+      // Save admin fee rate (default to 0 if not provided)
+      updateData.adminFeeRate = String(adminFeeRate ?? 0)
       break
 
     case 'reject':

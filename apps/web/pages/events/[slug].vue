@@ -424,10 +424,37 @@ const cartTotal = computed(() => {
   for (const [id, qty] of Object.entries(ticketCart.value)) {
     const tt = event.value.ticketTypes.find((t: any) => t.id === id)
     if (tt && qty > 0) {
-      total += parseFloat(tt.price) * qty
+      // Use active price (from tier or base)
+      const price = parseFloat(tt.activePrice ?? tt.price)
+      total += price * qty
     }
   }
   return total
+})
+
+// Processing fee constants (same as backend)
+const PROCESSING_FEE_RATE = 0.035 // 3.5%
+const PROCESSING_FEE_FIXED = 15 // ₱15 PHP
+
+// Calculate fee breakdown for display
+const feeBreakdown = computed(() => {
+  const subtotal = cartTotal.value
+  const adminFeeRate = event.value?.adminFeeRate ?? 0
+
+  if (subtotal <= 0) {
+    return { subtotal: 0, processingFee: 0, adminFee: 0, totalFees: 0, total: 0 }
+  }
+
+  // Processing fee: 3.5% + ₱15
+  const processingFee = Math.round((subtotal * PROCESSING_FEE_RATE + PROCESSING_FEE_FIXED) * 100) / 100
+
+  // Admin fee: additional percentage set per event
+  const adminFee = Math.round(subtotal * adminFeeRate * 100) / 100
+
+  const totalFees = Math.round((processingFee + adminFee) * 100) / 100
+  const total = Math.round((subtotal + totalFees) * 100) / 100
+
+  return { subtotal, processingFee, adminFee, totalFees, total }
 })
 
 const cartItemCount = computed(() => {
@@ -444,6 +471,98 @@ const requirementsSatisfied = computed(() => {
     }
   }
   return true
+})
+
+// Check if a specific ticket type is currently on sale
+function isTicketOnSale(ticket: any): boolean {
+  if (ticket.status !== 'active') return false
+  if (ticket.isSoldOut) return false
+
+  // If a tier is currently active, the ticket is on sale
+  if (!ticket.isBaseTier && ticket.activeTierName) {
+    return true
+  }
+
+  const now = new Date()
+
+  // Check ticket type's sales window
+  if (ticket.salesStart && new Date(ticket.salesStart) > now) return false
+  if (ticket.salesEnd && new Date(ticket.salesEnd) < now) return false
+
+  return true
+}
+
+// Get the display price for a ticket (upcoming tier price if not on sale, otherwise active price)
+function getDisplayPrice(ticket: any): string {
+  // If ticket is on sale, show active price
+  if (isTicketOnSale(ticket)) {
+    return ticket.activePrice ?? ticket.price
+  }
+
+  // If not on sale yet but has upcoming tier, show that tier's price
+  if (ticket.nextTier?.price) {
+    return ticket.nextTier.price
+  }
+
+  // Fallback to active/base price
+  return ticket.activePrice ?? ticket.price
+}
+
+// Get sales status message for a ticket
+function getTicketSalesStatus(ticket: any): { status: 'on_sale' | 'not_started' | 'ended' | 'sold_out' | 'disabled', message: string, upcomingTier?: string } {
+  if (ticket.status !== 'active') {
+    return { status: 'disabled', message: 'Not available' }
+  }
+  if (ticket.isSoldOut) {
+    return { status: 'sold_out', message: 'Sold out' }
+  }
+
+  // If a tier is currently active, ticket is on sale
+  if (!ticket.isBaseTier && ticket.activeTierName) {
+    return { status: 'on_sale', message: '' }
+  }
+
+  const now = new Date()
+
+  // Check if sales haven't started yet (and no active tier)
+  if (ticket.salesStart && new Date(ticket.salesStart) > now) {
+    // If there's a next tier, show when that tier starts instead
+    const startDate = ticket.nextTier?.startsAt
+      ? new Date(ticket.nextTier.startsAt)
+      : new Date(ticket.salesStart)
+
+    const tierName = ticket.nextTier?.name ? ` (${ticket.nextTier.name})` : ''
+
+    return {
+      status: 'not_started',
+      message: `Sales start ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}${tierName}`
+    }
+  }
+
+  if (ticket.salesEnd && new Date(ticket.salesEnd) < now) {
+    return { status: 'ended', message: 'Sales ended' }
+  }
+
+  // Sales window is open - ticket is on sale
+  // But if using base price and there's an upcoming tier, include that info
+  if (ticket.isBaseTier && ticket.nextTier) {
+    const tierStart = new Date(ticket.nextTier.startsAt)
+    if (tierStart > now) {
+      return {
+        status: 'on_sale',
+        message: '',
+        upcomingTier: `${ticket.nextTier.name} starts ${tierStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+      }
+    }
+  }
+
+  return { status: 'on_sale', message: '' }
+}
+
+// Check if any ticket is currently on sale
+const hasTicketsOnSale = computed(() => {
+  if (!event.value?.ticketTypes?.length) return false
+  return event.value.ticketTypes.some((t: any) => isTicketOnSale(t))
 })
 
 // Check if event is sold out (capacity reached)
@@ -743,6 +862,39 @@ function formatDate(date: string) {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+// Price tier countdown
+const currentTime = ref(new Date())
+let countdownInterval: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  // Update current time every minute for countdown display
+  countdownInterval = setInterval(() => {
+    currentTime.value = new Date()
+  }, 60000) // Update every minute
+})
+
+onBeforeUnmount(() => {
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+  }
+})
+
+function formatCountdown(targetDate: string): string {
+  const target = new Date(targetDate)
+  const now = currentTime.value
+  const diff = target.getTime() - now.getTime()
+
+  if (diff <= 0) return 'soon'
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
 }
 
 // Status badge color
@@ -1400,21 +1552,54 @@ onBeforeUnmount(() => {
               <template #header>
                 <h3 class="font-semibold text-gray-900 dark:text-white">Tickets</h3>
               </template>
-              <div class="space-y-3">
+              <div class="space-y-4">
                 <div
                   v-for="ticket in event.ticketTypes"
                   :key="ticket.id"
-                  class="flex items-center justify-between"
+                  class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                  :class="{ 'opacity-60': !isTicketOnSale(ticket) }"
                 >
-                  <div>
-                    <p class="font-medium text-gray-900 dark:text-white">{{ ticket.name }}</p>
-                    <p class="text-sm text-gray-500">
-                      {{ ticket.quantity ? `${ticket.quantity - ticket.quantitySold} left` : 'Unlimited' }}
+                  <div class="flex items-start justify-between mb-1">
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">{{ ticket.name }}</p>
+                      <div class="flex flex-wrap items-center gap-2 mt-1">
+                        <UBadge v-if="ticket.activeTierName && isTicketOnSale(ticket)" color="primary" variant="soft" size="xs">
+                          {{ ticket.activeTierName }}
+                        </UBadge>
+                        <UBadge
+                          v-if="getTicketSalesStatus(ticket).status !== 'on_sale'"
+                          :color="getTicketSalesStatus(ticket).status === 'not_started' ? 'blue' : 'gray'"
+                          variant="soft"
+                          size="xs"
+                        >
+                          {{ getTicketSalesStatus(ticket).message }}
+                        </UBadge>
+                        <UBadge
+                          v-if="ticket.showNextTierPrice !== false && getTicketSalesStatus(ticket).upcomingTier"
+                          color="blue"
+                          variant="soft"
+                          size="xs"
+                        >
+                          {{ getTicketSalesStatus(ticket).upcomingTier }}
+                        </UBadge>
+                      </div>
+                    </div>
+                    <p class="font-semibold text-primary text-lg">
+                      <!-- Show upcoming tier price if not on sale yet, otherwise show active price -->
+                      {{ Number(getDisplayPrice(ticket)) === 0 ? 'Free' : formatCurrency(Number(getDisplayPrice(ticket))) }}
                     </p>
                   </div>
-                  <p class="font-semibold text-primary">
-                    {{ Number(ticket.price) === 0 ? 'Free' : formatCurrency(Number(ticket.price)) }}
+                  <p v-if="isTicketOnSale(ticket) && ticket.showAvailability !== false" class="text-sm text-gray-500 mb-1">
+                    {{ ticket.quantity ? `${ticket.quantity - ticket.quantitySold} left` : 'Unlimited' }}
                   </p>
+                  <!-- Show countdown if next tier has higher price -->
+                  <div
+                    v-if="ticket.showNextTierPrice !== false && isTicketOnSale(ticket) && ticket.nextTier && Number(ticket.nextTier.price) > Number(ticket.activePrice ?? ticket.price)"
+                    class="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 mt-2"
+                  >
+                    <UIcon name="i-heroicons-clock" class="w-3.5 h-3.5" />
+                    <span>Price increases to {{ formatCurrency(Number(ticket.nextTier.price)) }} in {{ formatCountdown(ticket.nextTier.startsAt) }}</span>
+                  </div>
                 </div>
               </div>
               <template #footer>
@@ -1425,6 +1610,14 @@ onBeforeUnmount(() => {
                   disabled
                 >
                   Sold Out
+                </UButton>
+                <UButton
+                  v-else-if="!hasTicketsOnSale"
+                  color="gray"
+                  block
+                  disabled
+                >
+                  Sales Not Active
                 </UButton>
                 <UButton
                   v-else
@@ -1465,23 +1658,56 @@ onBeforeUnmount(() => {
             v-for="tt in event.ticketTypes"
             :key="tt.id"
             class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+            :class="{ 'opacity-60': !isTicketOnSale(tt) }"
           >
-            <div class="flex items-center justify-between mb-2">
+            <div class="flex items-start justify-between mb-2">
               <div>
-                <h4 class="font-medium text-gray-900 dark:text-white">{{ tt.name }}</h4>
-                <p v-if="tt.description" class="text-sm text-gray-500">{{ tt.description }}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h4 class="font-medium text-gray-900 dark:text-white">{{ tt.name }}</h4>
+                  <UBadge v-if="tt.activeTierName && isTicketOnSale(tt)" color="primary" variant="soft" size="xs">
+                    {{ tt.activeTierName }}
+                  </UBadge>
+                  <UBadge
+                    v-if="getTicketSalesStatus(tt).status !== 'on_sale'"
+                    :color="getTicketSalesStatus(tt).status === 'not_started' ? 'blue' : 'gray'"
+                    variant="soft"
+                    size="xs"
+                  >
+                    {{ getTicketSalesStatus(tt).message }}
+                  </UBadge>
+                  <UBadge
+                    v-if="tt.showNextTierPrice !== false && getTicketSalesStatus(tt).upcomingTier"
+                    color="blue"
+                    variant="soft"
+                    size="xs"
+                  >
+                    {{ getTicketSalesStatus(tt).upcomingTier }}
+                  </UBadge>
+                </div>
+                <p v-if="tt.description" class="text-sm text-gray-500 mt-1">{{ tt.description }}</p>
               </div>
               <p class="font-semibold text-primary text-lg">
-                {{ Number(tt.price) === 0 ? 'Free' : formatCurrency(Number(tt.price)) }}
+                {{ Number(getDisplayPrice(tt)) === 0 ? 'Free' : formatCurrency(Number(getDisplayPrice(tt))) }}
               </p>
+            </div>
+
+            <!-- Show countdown if price increases soon -->
+            <div
+              v-if="tt.showNextTierPrice !== false && isTicketOnSale(tt) && tt.nextTier && Number(tt.nextTier.price) > Number(tt.activePrice ?? tt.price)"
+              class="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 mb-2"
+            >
+              <UIcon name="i-heroicons-clock" class="w-3.5 h-3.5" />
+              <span>Price increases to {{ formatCurrency(Number(tt.nextTier.price)) }} in {{ formatCountdown(tt.nextTier.startsAt) }}</span>
             </div>
 
             <div class="flex items-center justify-between">
               <p class="text-sm text-gray-500">
-                {{ tt.quantity ? `${tt.quantity - tt.quantitySold} available` : 'Unlimited' }}
+                <template v-if="isTicketOnSale(tt) && tt.showAvailability !== false">
+                  {{ tt.quantity ? `${tt.quantity - tt.quantitySold} available` : 'Unlimited' }}
+                </template>
               </p>
 
-              <div class="flex items-center gap-3">
+              <div v-if="isTicketOnSale(tt)" class="flex items-center gap-3">
                 <UButton
                   color="gray"
                   variant="outline"
@@ -1572,13 +1798,36 @@ onBeforeUnmount(() => {
               Please check all the boxes above to continue
             </p>
 
+            <!-- Fee Breakdown (only for paid tickets) -->
+            <div v-if="cartTotal > 0" class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
+                <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.subtotal) }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600 dark:text-gray-400">Transaction Fee</span>
+                <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.processingFee) }}</span>
+              </div>
+              <div v-if="feeBreakdown.adminFee > 0" class="flex justify-between text-sm">
+                <span class="text-gray-600 dark:text-gray-400">Booking Fee</span>
+                <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.adminFee) }}</span>
+              </div>
+              <div class="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between font-semibold">
+                <span class="text-gray-900 dark:text-white">Total</span>
+                <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.total) }}</span>
+              </div>
+            </div>
+
             <!-- Footer Actions -->
             <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-gray-500">{{ cartItemCount }} ticket(s)</p>
+              <div v-if="cartItemCount > 0">
+                <p class="text-sm text-gray-500">{{ cartItemCount }} ticket{{ cartItemCount === 1 ? '' : 's' }}</p>
                 <p class="text-xl font-bold text-gray-900 dark:text-white">
-                  {{ cartTotal === 0 ? 'Free' : formatCurrency(cartTotal) }}
+                  {{ cartTotal === 0 ? 'Free' : formatCurrency(feeBreakdown.total) }}
                 </p>
+              </div>
+              <div v-else>
+                <p class="text-sm text-gray-500">Select tickets above</p>
               </div>
               <UButton
                 color="primary"
@@ -1587,7 +1836,10 @@ onBeforeUnmount(() => {
                 :disabled="cartItemCount === 0 || !requirementsSatisfied"
                 @click="checkout"
               >
-                <template v-if="user">
+                <template v-if="cartItemCount === 0">
+                  Select Tickets
+                </template>
+                <template v-else-if="user">
                   {{ cartTotal === 0 ? 'Get Free Tickets' : 'Proceed to Payment' }}
                 </template>
                 <template v-else-if="!showGuestForm">

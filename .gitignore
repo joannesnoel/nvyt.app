@@ -36,6 +36,7 @@ coverage/
 
 # Misc
 *.local
+db-dump/
 
 # Terraform
 infra/terraform/.terraform/

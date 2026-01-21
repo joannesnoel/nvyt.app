@@ -27,6 +27,9 @@ export const createTicketTypeSchema = z.object({
   salesEnd: optionalDatetime,
   maxPerOrder: z.number().int().positive().default(10),
   minPerOrder: z.number().int().positive().default(1),
+  // Display settings
+  showAvailability: z.boolean().default(true),
+  showNextTierPrice: z.boolean().default(true),
 })
 
 export const updateTicketTypeSchema = createTicketTypeSchema.partial().omit({ eventId: true })
@@ -56,6 +59,43 @@ export const checkInSchema = z.object({
   qrCode: z.string(),
 })
 
+// Price tier base schema (without refinements for partial use)
+const priceTierBaseSchema = z.object({
+  ticketTypeId: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  price: z.number().min(0),
+  startDate: z.string().refine((val) => {
+    const date = new Date(val)
+    return !isNaN(date.getTime())
+  }, { message: 'Invalid start date' }),
+  endDate: z.string().refine((val) => {
+    const date = new Date(val)
+    return !isNaN(date.getTime())
+  }, { message: 'Invalid end date' }),
+  sortOrder: z.number().int().optional().default(0),
+})
+
+// Price tier schemas
+export const createPriceTierSchema = priceTierBaseSchema.refine((data) => {
+  const start = new Date(data.startDate)
+  const end = new Date(data.endDate)
+  return end > start
+}, { message: 'End date must be after start date' })
+
+export const updatePriceTierSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  price: z.number().min(0).optional(),
+  startDate: z.string().refine((val) => {
+    const date = new Date(val)
+    return !isNaN(date.getTime())
+  }, { message: 'Invalid start date' }).optional(),
+  endDate: z.string().refine((val) => {
+    const date = new Date(val)
+    return !isNaN(date.getTime())
+  }, { message: 'Invalid end date' }).optional(),
+  sortOrder: z.number().int().optional(),
+})
+
 // Types
 export type TicketTypeStatus = z.infer<typeof ticketTypeStatus>
 export type TicketStatus = z.infer<typeof ticketStatus>
@@ -64,3 +104,5 @@ export type CreateTicketTypeInput = z.infer<typeof createTicketTypeSchema>
 export type UpdateTicketTypeInput = z.infer<typeof updateTicketTypeSchema>
 export type PurchaseTicketsInput = z.infer<typeof purchaseTicketsSchema>
 export type CheckInInput = z.infer<typeof checkInSchema>
+export type CreatePriceTierInput = z.infer<typeof createPriceTierSchema>
+export type UpdatePriceTierInput = z.infer<typeof updatePriceTierSchema>

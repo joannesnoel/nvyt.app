@@ -179,7 +179,7 @@ export default defineEventHandler(async (_event) => {
             </head>
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
               <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #6366f1; margin: 0;">nvyt</h1>
+                <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
               </div>
 
               <h2 style="color: #111; margin-bottom: 10px;">Refund Processed</h2>

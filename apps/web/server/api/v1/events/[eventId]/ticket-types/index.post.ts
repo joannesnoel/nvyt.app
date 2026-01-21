@@ -66,6 +66,8 @@ export default defineEventHandler(async (event) => {
       maxPerOrder: data.maxPerOrder,
       minPerOrder: data.minPerOrder,
       status: 'active',
+      showAvailability: data.showAvailability ?? true,
+      showNextTierPrice: data.showNextTierPrice ?? true,
     })
     .returning()
 

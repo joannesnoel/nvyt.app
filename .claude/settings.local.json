@@ -1,4 +1,28 @@
 {
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -d 'Claude Code needs your input' ntfy.sh/nvyt-app-dev"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -d 'Claude Code has finished' ntfy.sh/nvyt-app-dev"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(kubectl get:*)",
@@ -104,7 +128,10 @@
       "Bash(pnpm drizzle-kit:*)",
       "Bash(node -e:*)",
       "Bash(pnpm db:seed-psgc:*)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(pnpm reset:dev:*)",
+      "Bash(source:*)",
+      "Bash(pnpm --filter @nvyt/web build:*)"
     ]
   }
 }

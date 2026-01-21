@@ -59,6 +59,7 @@ const showReviewModal = ref(false)
 const modalAction = ref<'approve' | 'reject' | 'start_review' | null>(null)
 const rejectionReason = ref('')
 const reviewNotes = ref('')
+const adminFeeRate = ref(0) // Admin fee percentage (0-100)
 const processing = ref(false)
 
 function formatDate(date: string | Date | null) {
@@ -126,6 +127,7 @@ function openReviewModal(action: 'approve' | 'reject' | 'start_review') {
   modalAction.value = action
   rejectionReason.value = ''
   reviewNotes.value = ''
+  adminFeeRate.value = 0
   showReviewModal.value = true
 }
 
@@ -140,6 +142,7 @@ async function processAction() {
         action: modalAction.value,
         rejectionReason: modalAction.value === 'reject' ? rejectionReason.value : undefined,
         reviewNotes: reviewNotes.value || undefined,
+        adminFeeRate: modalAction.value === 'approve' ? adminFeeRate.value / 100 : undefined, // Convert percentage to decimal
       },
     })
 
@@ -564,6 +567,21 @@ const statusOptions = [
               />
             </UFormGroup>
 
+            <UFormGroup v-if="modalAction === 'approve'" label="Admin Fee (%)" hint="Additional fee added to ticket purchases">
+              <UInput
+                v-model.number="adminFeeRate"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                placeholder="0"
+              >
+                <template #trailing>
+                  <span class="text-gray-500 text-sm">%</span>
+                </template>
+              </UInput>
+            </UFormGroup>
+
             <UFormGroup label="Internal Notes (optional)">
               <UTextarea
                 v-model="reviewNotes"
@@ -571,6 +589,16 @@ const statusOptions = [
                 :rows="2"
               />
             </UFormGroup>
+
+            <div v-if="modalAction === 'approve'" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p class="text-sm text-blue-800 dark:text-blue-200 mb-2">
+                <strong>Fee Structure:</strong>
+              </p>
+              <ul class="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
+                <li>Transaction Fee: 3.5% + ₱15 (always applied)</li>
+                <li>Booking Fee: {{ adminFeeRate }}% (set above)</li>
+              </ul>
+            </div>
 
             <div v-if="modalAction === 'approve'" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <p class="text-sm text-green-800 dark:text-green-200">
