@@ -62,7 +62,7 @@ const userMenuItems = computed(() => {
           <!-- Logo -->
           <NuxtLink to="/" class="flex items-center gap-2">
             <img :src="colorMode.value === 'dark' ? '/dark-logo.png' : '/light-logo.png'" alt="nvyt" class="h-14 w-auto" />
-            <span class="text-2xl font-bold text-green-600 dark:text-green-500 ml-2">nvyt</span>
+            <span class="text-2xl font-bold text-green-500 dark:text-green-400 ml-2">nvyt</span>
           </NuxtLink>
 
           <!-- Actions -->
@@ -114,9 +114,6 @@ const userMenuItems = computed(() => {
             <template v-else>
               <UButton to="/login" color="gray" variant="ghost">
                 Sign In
-              </UButton>
-              <UButton to="/register" color="primary">
-                Get Started
               </UButton>
             </template>
           </div>
