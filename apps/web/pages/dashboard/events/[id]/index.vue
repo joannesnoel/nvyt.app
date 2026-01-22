@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import QRCode from 'qrcode'
+
 definePageMeta({
   layout: 'default',
 })
@@ -95,6 +97,7 @@ function formatCurrency(amount: number | string) {
 
 // Publish/Unpublish
 const isUpdating = ref(false)
+const isGeneratingQR = ref(false)
 
 // Cancel confirmation modal
 const showCancelModal = ref(false)
@@ -192,6 +195,66 @@ async function copyInviteLink() {
   })
 }
 
+async function downloadQRCode() {
+  if (!event.value) return
+
+  isGeneratingQR.value = true
+  try {
+    const config = useRuntimeConfig()
+    const baseUrl = config.public.appUrl
+
+    // Build the event URL
+    let eventUrl = `${baseUrl}/events/${event.value.slug}`
+
+    // Add invite token for private events
+    if (event.value.visibility === 'private' && event.value.inviteToken) {
+      eventUrl += `?token=${event.value.inviteToken}`
+    }
+
+    // Add tracking parameters
+    const trackingParams = new URLSearchParams()
+    trackingParams.set('utm_source', 'qr_code')
+    trackingParams.set('utm_medium', 'offline')
+    trackingParams.set('utm_campaign', event.value.slug)
+    trackingParams.set('ref', 'qr')
+
+    const separator = eventUrl.includes('?') ? '&' : '?'
+    eventUrl += separator + trackingParams.toString()
+
+    // Generate QR code as PNG data URL
+    const qrDataUrl = await QRCode.toDataURL(eventUrl, {
+      width: 1024,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF',
+      },
+    })
+
+    // Trigger download
+    const link = document.createElement('a')
+    link.href = qrDataUrl
+    link.download = `qr-${event.value.slug}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast.add({
+      title: 'QR Code Downloaded',
+      description: 'Your event QR code has been downloaded.',
+      color: 'green',
+    })
+  } catch (e: any) {
+    toast.add({
+      title: 'Download Failed',
+      description: 'Failed to generate QR code. Please try again.',
+      color: 'red',
+    })
+  } finally {
+    isGeneratingQR.value = false
+  }
+}
+
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', {
     weekday: 'short',
@@ -259,6 +322,15 @@ function getStatusColor(status: string) {
               @click="copyInviteLink"
             >
               Copy Link
+            </UButton>
+            <UButton
+              color="gray"
+              variant="outline"
+              icon="i-heroicons-qr-code"
+              :loading="isGeneratingQR"
+              @click="downloadQRCode"
+            >
+              Download QR
             </UButton>
             <UButton
               :to="`/events/${event.slug}`"

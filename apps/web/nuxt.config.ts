@@ -5,12 +5,30 @@ import { resolve } from 'path'
 // Load .env from monorepo root
 config({ path: resolve(__dirname, '../../.env') })
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
   app: {
     head: {
       viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+      script: isProduction
+        ? [
+            {
+              src: 'https://www.googletagmanager.com/gtag/js?id=G-56XD48QPN8',
+              async: true,
+            },
+            {
+              innerHTML: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'G-56XD48QPN8');
+              `,
+            },
+          ]
+        : [],
     },
   },
 
