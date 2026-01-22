@@ -4,7 +4,7 @@ import { eq, and, inArray, asc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail, ticketPurchaseConfirmationEmail } from '~/server/utils/email'
-import { calculateProcessingFees } from '~/server/utils/wallet'
+import { calculateProcessingFees, type PaymentProvider } from '~/server/utils/wallet'
 import { getActivePrice, validateTierAvailability, incrementTierQuantitySold } from '~/server/utils/pricing'
 
 function generateOrderNumber(): string {
@@ -366,8 +366,11 @@ export default defineEventHandler(async (event) => {
   // Check for free tickets (no payment needed)
   const isFreeOrder = totalAmount === 0
 
-  // Calculate processing fees (only for paid orders)
-  const feeBreakdown = calculateProcessingFees(totalAmount, adminFeeRate)
+  // Determine payment provider early (needed for fee calculation)
+  const paymentProvider = (data.paymentProvider || 'paymongo') as PaymentProvider
+
+  // Calculate processing fees (only for paid orders, rate depends on payment provider)
+  const feeBreakdown = calculateProcessingFees(totalAmount, adminFeeRate, paymentProvider)
 
   // Add fees to line items for PayMongo (only for paid orders)
   if (!isFreeOrder && feeBreakdown.totalFees > 0) {
@@ -391,9 +394,6 @@ export default defineEventHandler(async (event) => {
   if (needsAccountSetup) {
     setupToken = await createAccountSetupToken(user.id)
   }
-
-  // Determine payment provider
-  const paymentProvider = data.paymentProvider || 'paymongo'
 
   // Create PayMongo checkout session (only for paid orders using PayMongo)
   let checkoutSession = null

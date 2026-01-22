@@ -144,8 +144,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Calculate fees
-  const feeBreakdown = calculateProcessingFees(subtotal, adminFeeRate)
+  // Calculate fees (using PayPal rate since this is PayPal checkout)
+  const feeBreakdown = calculateProcessingFees(subtotal, adminFeeRate, 'paypal')
 
   // Add fees line item
   if (feeBreakdown.totalFees > 0) {

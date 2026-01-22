@@ -5,15 +5,24 @@ import { wallets, transactions, type NewTransaction } from '@nvyt/db'
 const PLATFORM_FEE_PERCENTAGE = 0.03
 
 // Processing fee constants (charged to buyer)
-export const PROCESSING_FEE_RATE = 0.035 // 3.5%
+export const PROCESSING_FEE_RATE = 0.035 // 3.5% for PayMongo (GCash, Maya, etc.)
+export const PAYPAL_PROCESSING_FEE_RATE = 0.039 // 3.9% for PayPal
+export const PAYPAL_FIXED_FEE = 15 // ₱15 fixed fee for PayPal
+
+export type PaymentProvider = 'paymongo' | 'paypal'
 
 /**
  * Calculate processing fees for a ticket purchase (charged to buyer)
  * @param subtotal - The ticket price before fees
  * @param adminFeeRate - The admin fee rate (0-1, e.g., 0.02 = 2%)
+ * @param paymentProvider - The payment provider ('paymongo' or 'paypal')
  * @returns Fee breakdown including subtotal, processing fee, admin fee, total fees, and total
  */
-export function calculateProcessingFees(subtotal: number, adminFeeRate: number = 0) {
+export function calculateProcessingFees(
+  subtotal: number,
+  adminFeeRate: number = 0,
+  paymentProvider: PaymentProvider = 'paymongo'
+) {
   if (subtotal <= 0) {
     return {
       subtotal: 0,
@@ -24,8 +33,15 @@ export function calculateProcessingFees(subtotal: number, adminFeeRate: number =
     }
   }
 
-  // Processing fee: 3.5% (always applied)
-  const processingFee = Math.round(subtotal * PROCESSING_FEE_RATE * 100) / 100
+  // Processing fee: depends on payment provider
+  let processingFee: number
+  if (paymentProvider === 'paypal') {
+    // PayPal: 3.9% + ₱15 fixed fee
+    processingFee = Math.round((subtotal * PAYPAL_PROCESSING_FEE_RATE + PAYPAL_FIXED_FEE) * 100) / 100
+  } else {
+    // PayMongo: 3.5%
+    processingFee = Math.round(subtotal * PROCESSING_FEE_RATE * 100) / 100
+  }
 
   // Admin fee: additional percentage set per event
   const adminFee = Math.round(subtotal * adminFeeRate * 100) / 100

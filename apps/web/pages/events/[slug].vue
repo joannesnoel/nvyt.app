@@ -446,9 +446,11 @@ const cartTotal = computed(() => {
 })
 
 // Processing fee constants (same as backend)
-const PROCESSING_FEE_RATE = 0.035 // 3.5%
+const PROCESSING_FEE_RATE = 0.035 // 3.5% for PayMongo (GCash, Maya, etc.)
+const PAYPAL_PROCESSING_FEE_RATE = 0.039 // 3.9% for PayPal
+const PAYPAL_FIXED_FEE = 15 // ₱15 fixed fee for PayPal
 
-// Calculate fee breakdown for display
+// Calculate fee breakdown for display (updates when payment provider changes)
 const feeBreakdown = computed(() => {
   const subtotal = cartTotal.value
   const adminFeeRate = event.value?.adminFeeRate ?? 0
@@ -457,8 +459,15 @@ const feeBreakdown = computed(() => {
     return { subtotal: 0, processingFee: 0, adminFee: 0, totalFees: 0, total: 0 }
   }
 
-  // Processing fee: 3.5%
-  const processingFee = Math.round(subtotal * PROCESSING_FEE_RATE * 100) / 100
+  // Processing fee: depends on payment provider
+  let processingFee: number
+  if (selectedPaymentProvider.value === 'paypal') {
+    // PayPal: 3.9% + ₱15 fixed fee
+    processingFee = Math.round((subtotal * PAYPAL_PROCESSING_FEE_RATE + PAYPAL_FIXED_FEE) * 100) / 100
+  } else {
+    // PayMongo: 3.5%
+    processingFee = Math.round(subtotal * PROCESSING_FEE_RATE * 100) / 100
+  }
 
   // Admin fee: additional percentage set per event
   const adminFee = Math.round(subtotal * adminFeeRate * 100) / 100
@@ -640,11 +649,6 @@ async function checkout() {
 
   // For PayMongo or free tickets, need guest info if not logged in
   if (!user.value) {
-    if (!showGuestForm.value) {
-      showGuestForm.value = true
-      return
-    }
-
     // Validate guest form
     if (!guestForm.value.name || guestForm.value.name.length < 2) {
       toast.add({
@@ -1940,38 +1944,63 @@ onBeforeUnmount(() => {
             <div v-if="cartTotal > 0 && requirementsSatisfied && isPayPalConfigured" class="space-y-3">
               <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</p>
               <div class="grid grid-cols-2 gap-3">
+                <!-- PayMongo: E-wallets & Bank Transfers -->
                 <button
                   type="button"
-                  class="flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all"
+                  class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all"
                   :class="selectedPaymentProvider === 'paymongo'
                     ? 'border-primary bg-primary/5 dark:bg-primary/10'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
                   @click="selectedPaymentProvider = 'paymongo'"
                 >
-                  <UIcon name="i-heroicons-credit-card" class="w-5 h-5" />
-                  <span class="text-sm font-medium">GCash / Maya</span>
+                  <span class="text-xs font-medium text-gray-600 dark:text-gray-400">E-wallets & Banks</span>
+                  <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    <!-- GCash -->
+                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
+                      <img src="/gcash.svg" alt="GCash" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    </div>
+                    <!-- Maya -->
+                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
+                      <img src="/maya.png" alt="Maya" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    </div>
+                    <!-- Bank -->
+                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
+                      <svg class="h-5 w-5 sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="#0066b2">
+                        <path d="M12 2L2 7v2h20V7L12 2zm0 2.5L18 7H6l6-2.5zM4 10v8h2v-8H4zm5 0v8h2v-8H9zm5 0v8h2v-8h-2zm5 0v8h2v-8h-2zM2 19v2h20v-2H2z"/>
+                      </svg>
+                    </div>
+                  </div>
                 </button>
+                <!-- PayPal: PayPal & Cards -->
                 <button
                   type="button"
-                  class="flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all"
+                  class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all"
                   :class="selectedPaymentProvider === 'paypal'
                     ? 'border-primary bg-primary/5 dark:bg-primary/10'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
                   @click="selectedPaymentProvider = 'paypal'"
                 >
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/>
-                  </svg>
-                  <span class="text-sm font-medium">PayPal</span>
+                  <span class="text-xs font-medium text-gray-600 dark:text-gray-400">PayPal & Cards</span>
+                  <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                    <!-- PayPal -->
+                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
+                      <img src="/paypal.svg" alt="PayPal" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    </div>
+                    <!-- Visa -->
+                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
+                      <img src="/visa.webp" alt="Visa" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    </div>
+                    <!-- Mastercard -->
+                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
+                      <img src="/mastercard.png" alt="Mastercard" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    </div>
+                  </div>
                 </button>
               </div>
-              <p v-if="selectedPaymentProvider === 'paypal'" class="text-xs text-gray-500">
-                You'll be redirected to PayPal to complete your payment
-              </p>
             </div>
 
             <!-- Guest Form (shown when not logged in, for PayMongo or free tickets) -->
-            <div v-if="!user && showGuestForm && (selectedPaymentProvider === 'paymongo' || cartTotal === 0)" class="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div v-if="!user && (selectedPaymentProvider === 'paymongo' || cartTotal === 0)" class="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
               <p class="text-sm text-gray-600 dark:text-gray-400">
                 Enter your details to continue as a guest. We'll send you an email to set up your account.
               </p>
@@ -2021,15 +2050,6 @@ onBeforeUnmount(() => {
                 </template>
                 <template v-else-if="cartTotal === 0">
                   Get Free Tickets
-                </template>
-                <template v-else-if="selectedPaymentProvider === 'paypal'">
-                  Pay with PayPal
-                </template>
-                <template v-else-if="user">
-                  Proceed to Payment
-                </template>
-                <template v-else-if="!showGuestForm">
-                  Continue as Guest
                 </template>
                 <template v-else>
                   Proceed to Payment
