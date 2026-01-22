@@ -32,8 +32,11 @@ pusher_key     = "your-key"
 pusher_secret  = "your-secret"
 pusher_cluster = "ap1"
 
-# SendGrid (for production emails)
-sendgrid_api_key = "SG.xxx"
+# PayPal (get from PayPal Developer Dashboard)
+paypal_client_id     = "your-client-id"
+paypal_client_secret = "your-client-secret"
+paypal_mode          = "live"  # or "sandbox" for testing
+paypal_webhook_id    = "your-webhook-id"
 
 # Database (optional - defaults are fine for most cases)
 # db_instance_class    = "db.t3.micro"

@@ -61,24 +61,27 @@ resource "aws_ecs_task_definition" "main" {
       ]
 
       secrets = [
-        { name = "ADMIN_EMAILS", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:ADMIN_EMAILS::" },
+        # Admin
         { name = "NUXT_ADMIN_EMAILS", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:ADMIN_EMAILS::" },
+        # Database
         { name = "DATABASE_URL", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:DATABASE_URL::" },
         { name = "NUXT_DATABASE_URL", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_DATABASE_URL::" },
-        { name = "JWT_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:JWT_SECRET::" },
+        # JWT
         { name = "NUXT_JWT_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_JWT_SECRET::" },
-        { name = "PAYMONGO_PUBLIC_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:PAYMONGO_PUBLIC_KEY::" },
-        { name = "PAYMONGO_SECRET_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:PAYMONGO_SECRET_KEY::" },
-        { name = "PAYMONGO_WEBHOOK_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:PAYMONGO_WEBHOOK_SECRET::" },
-        { name = "PAYMONGO_PAYMENT_METHODS", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:PAYMONGO_PAYMENT_METHODS::" },
+        # PayMongo
         { name = "NUXT_PAYMONGO_SECRET_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYMONGO_SECRET_KEY::" },
         { name = "NUXT_PAYMONGO_WEBHOOK_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYMONGO_WEBHOOK_SECRET::" },
-        { name = "NUXT_PAYMONGO_PAYMENT_METHODS", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:PAYMONGO_PAYMENT_METHODS::" },
         { name = "NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY::" },
-        { name = "GOOGLE_MAPS_API_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:GOOGLE_MAPS_API_KEY::" },
+        # PayPal
+        { name = "NUXT_PAYPAL_CLIENT_ID", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYPAL_CLIENT_ID::" },
+        { name = "NUXT_PAYPAL_CLIENT_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYPAL_CLIENT_SECRET::" },
+        { name = "NUXT_PAYPAL_MODE", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYPAL_MODE::" },
+        { name = "NUXT_PAYPAL_WEBHOOK_ID", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYPAL_WEBHOOK_ID::" },
+        { name = "NUXT_PUBLIC_PAYPAL_CLIENT_ID", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_PAYPAL_CLIENT_ID::" },
+        { name = "NUXT_PUBLIC_PAYPAL_MODE", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_PAYPAL_MODE::" },
+        # Google Maps
         { name = "NUXT_PUBLIC_GOOGLE_MAPS_API_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_GOOGLE_MAPS_API_KEY::" },
-        { name = "PUSHER_APP_ID", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:PUSHER_APP_ID::" },
-        { name = "PUSHER_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:PUSHER_SECRET::" },
+        # Pusher
         { name = "NUXT_PUSHER_APP_ID", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUSHER_APP_ID::" },
         { name = "NUXT_PUSHER_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUSHER_SECRET::" },
         { name = "NUXT_PUBLIC_PUSHER_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_PUSHER_KEY::" },
