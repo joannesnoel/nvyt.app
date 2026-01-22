@@ -123,8 +123,8 @@ export default defineEventHandler(async (event) => {
 
     // For PayPal, create a new PayPal order and redirect
     const subtotal = parseFloat(result.order.subtotalAmount)
-    const totalFees = parseFloat(result.order.totalFees)
-    const total = parseFloat(result.order.totalAmount)
+    const processingFee = parseFloat(result.order.processingFee || '0')
+    const adminFee = parseFloat(result.order.adminFee || '0')
 
     const lineItems = [
       {
@@ -136,13 +136,23 @@ export default defineEventHandler(async (event) => {
       },
     ]
 
-    if (totalFees > 0) {
+    if (processingFee > 0) {
       lineItems.push({
-        name: 'Fees',
+        name: 'Processing Fee',
         quantity: 1,
-        amount: toCents(totalFees),
+        amount: toCents(processingFee),
         currency: result.order.currency,
-        description: 'Transaction and booking fees',
+        description: 'Payment processing fee',
+      })
+    }
+
+    if (adminFee > 0) {
+      lineItems.push({
+        name: 'Service Fee',
+        quantity: 1,
+        amount: toCents(adminFee),
+        currency: result.order.currency,
+        description: 'Booking service fee',
       })
     }
 
@@ -282,13 +292,43 @@ export default defineEventHandler(async (event) => {
   }
 
   // Build line items for PayMongo
-  const lineItems = Array.from(ticketTypeGroups.values()).map(({ ticketType, quantity }) => ({
+  const lineItems: Array<{
+    name: string
+    quantity: number
+    amount: number
+    currency: string
+    description?: string
+  }> = Array.from(ticketTypeGroups.values()).map(({ ticketType, quantity }) => ({
     name: `${result.event.title} - ${ticketType.name}`,
     quantity,
     amount: toCentavos(parseFloat(ticketType.price)),
     currency: 'PHP',
     description: ticketType.description || undefined,
   }))
+
+  // Add fees as separate line items if present
+  const processingFee = parseFloat(result.order.processingFee || '0')
+  const adminFee = parseFloat(result.order.adminFee || '0')
+
+  if (processingFee > 0) {
+    lineItems.push({
+      name: 'Processing Fee',
+      quantity: 1,
+      amount: toCentavos(processingFee),
+      currency: 'PHP',
+      description: 'Payment processing fee',
+    })
+  }
+
+  if (adminFee > 0) {
+    lineItems.push({
+      name: 'Service Fee',
+      quantity: 1,
+      amount: toCentavos(adminFee),
+      currency: 'PHP',
+      description: 'Booking service fee',
+    })
+  }
 
   // Create new PayMongo checkout session
   // (setupTokenForUrl and appUrl already defined above for PayPal flow)

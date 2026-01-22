@@ -71,6 +71,7 @@ resource "aws_ecs_task_definition" "main" {
         # PayMongo
         { name = "NUXT_PAYMONGO_SECRET_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYMONGO_SECRET_KEY::" },
         { name = "NUXT_PAYMONGO_WEBHOOK_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYMONGO_WEBHOOK_SECRET::" },
+        { name = "NUXT_PAYMONGO_PAYMENT_METHODS", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYMONGO_PAYMENT_METHODS::" },
         { name = "NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY::" },
         # PayPal
         { name = "NUXT_PAYPAL_CLIENT_ID", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYPAL_CLIENT_ID::" },

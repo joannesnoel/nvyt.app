@@ -15,6 +15,10 @@ const { data: orderResponse, pending, error } = await useFetch<{
     orderNumber: string
     event: any
     tickets: any[]
+    subtotalAmount?: string
+    processingFee?: string
+    adminFee?: string
+    totalFees?: string
     totalAmount: string
     paymentStatus: string
     customerName: string
@@ -382,8 +386,30 @@ async function retryPayment() {
             </div>
           </div>
 
-          <!-- Total -->
-          <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <!-- Fee Breakdown (for pending/failed orders with fees) -->
+          <div v-if="canRetryPayment && order.totalFees && parseFloat(order.totalFees) > 0" class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
+              <span class="text-gray-900 dark:text-white">{{ formatCurrency(order.subtotalAmount || '0') }}</span>
+            </div>
+            <div v-if="order.processingFee && parseFloat(order.processingFee) > 0" class="flex items-center justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400">Processing Fee</span>
+              <span class="text-gray-900 dark:text-white">{{ formatCurrency(order.processingFee) }}</span>
+            </div>
+            <div v-if="order.adminFee && parseFloat(order.adminFee) > 0" class="flex items-center justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400">Service Fee</span>
+              <span class="text-gray-900 dark:text-white">{{ formatCurrency(order.adminFee) }}</span>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+              <span class="font-medium text-gray-900 dark:text-white">Total</span>
+              <span class="text-xl font-bold text-primary">
+                {{ formatCurrency(order.totalAmount) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Total (for paid orders or orders without fee breakdown) -->
+          <div v-else class="pt-4 border-t border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between">
               <span class="font-medium text-gray-900 dark:text-white">Total</span>
               <span class="text-xl font-bold text-primary">

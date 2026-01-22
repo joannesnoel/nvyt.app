@@ -13,9 +13,12 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
   secret_id = aws_secretsmanager_secret.app_secrets.id
 
   secret_string = jsonencode({
-    # Database
-    DATABASE_URL      = "postgresql://${var.db_username}:${random_password.db_password.result}@${aws_db_instance.main.endpoint}/${var.db_name}"
-    NUXT_DATABASE_URL = "postgresql://${var.db_username}:${random_password.db_password.result}@${aws_db_instance.main.endpoint}/${var.db_name}"
+    # Admin
+    ADMIN_EMAILS = var.admin_emails
+
+    # Database (password is URL-encoded to handle special characters)
+    DATABASE_URL      = "postgresql://${var.db_username}:${urlencode(random_password.db_password.result)}@${aws_db_instance.main.endpoint}/${var.db_name}"
+    NUXT_DATABASE_URL = "postgresql://${var.db_username}:${urlencode(random_password.db_password.result)}@${aws_db_instance.main.endpoint}/${var.db_name}"
 
     # JWT
     NUXT_JWT_SECRET = random_password.jwt_secret.result
@@ -23,6 +26,7 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
     # PayMongo
     NUXT_PAYMONGO_SECRET_KEY        = var.paymongo_secret_key
     NUXT_PAYMONGO_WEBHOOK_SECRET    = var.paymongo_webhook_secret
+    NUXT_PAYMONGO_PAYMENT_METHODS   = var.paymongo_payment_methods
     NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY = var.paymongo_public_key
 
     # PayPal
@@ -41,6 +45,13 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
     NUXT_PUSHER_SECRET         = var.pusher_secret
     NUXT_PUBLIC_PUSHER_KEY     = var.pusher_key
     NUXT_PUBLIC_PUSHER_CLUSTER = var.pusher_cluster
+
+    # SMTP (use variables if set, otherwise dummy values)
+    NUXT_SMTP_HOST = var.smtp_host != "" ? var.smtp_host : "smtp.example.com"
+    NUXT_SMTP_PORT = var.smtp_port != "" ? var.smtp_port : "587"
+    NUXT_SMTP_USER = var.smtp_user != "" ? var.smtp_user : "not-configured"
+    NUXT_SMTP_PASS = var.smtp_pass != "" ? var.smtp_pass : "not-configured"
+    NUXT_SMTP_FROM = var.smtp_from != "" ? var.smtp_from : "nvyt <noreply@nvyt.app>"
 
     # S3
     NUXT_S3_ENDPOINT          = "https://s3.${var.aws_region}.amazonaws.com"

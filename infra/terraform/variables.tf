@@ -115,7 +115,12 @@ variable "app_url" {
 }
 
 # Secrets (sensitive - provide via terraform.tfvars or env vars)
-# Note: ADMIN_EMAILS is now managed directly in AWS Secrets Manager
+variable "admin_emails" {
+  description = "Comma-separated list of admin email addresses"
+  type        = string
+  default     = ""
+}
+
 variable "paymongo_public_key" {
   description = "PayMongo public key"
   type        = string
@@ -134,6 +139,12 @@ variable "paymongo_webhook_secret" {
   description = "PayMongo webhook secret"
   type        = string
   sensitive   = true
+  default     = ""
+}
+
+variable "paymongo_payment_methods" {
+  description = "PayMongo payment methods (comma-separated, e.g., 'gcash,paymaya,card,qrph')"
+  type        = string
   default     = ""
 }
 
@@ -193,4 +204,36 @@ variable "paypal_webhook_id" {
   description = "PayPal webhook ID"
   type        = string
   default     = ""
+}
+
+# SMTP
+variable "smtp_host" {
+  description = "SMTP server host"
+  type        = string
+  default     = ""
+}
+
+variable "smtp_port" {
+  description = "SMTP server port"
+  type        = string
+  default     = "587"
+}
+
+variable "smtp_user" {
+  description = "SMTP username"
+  type        = string
+  default     = ""
+}
+
+variable "smtp_pass" {
+  description = "SMTP password"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "smtp_from" {
+  description = "SMTP from address"
+  type        = string
+  default     = "nvyt <noreply@nvyt.app>"
 }

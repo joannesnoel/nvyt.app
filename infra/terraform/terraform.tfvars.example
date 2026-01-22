@@ -16,7 +16,8 @@ domain_name = "nvyt.app"
 # Application URL
 app_url = "https://nvyt.app"
 
-# Note: ADMIN_EMAILS is managed in AWS Secrets Manager
+# Admin emails (comma-separated)
+admin_emails = "admin@example.com"
 
 # PayMongo (get from PayMongo dashboard)
 paymongo_public_key     = "pk_live_xxx"
@@ -37,6 +38,13 @@ paypal_client_id     = "your-client-id"
 paypal_client_secret = "your-client-secret"
 paypal_mode          = "live"  # or "sandbox" for testing
 paypal_webhook_id    = "your-webhook-id"
+
+# SMTP (for sending emails)
+smtp_host = "smtp.example.com"
+smtp_port = "587"
+smtp_user = "your-smtp-user"
+smtp_pass = "your-smtp-password"
+smtp_from = "nvyt <noreply@nvyt.app>"
 
 # Database (optional - defaults are fine for most cases)
 # db_instance_class    = "db.t3.micro"
