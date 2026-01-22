@@ -1907,34 +1907,6 @@ onBeforeUnmount(() => {
               @close="checkoutError = null"
             />
 
-            <!-- Guest Form (shown when not logged in and showGuestForm is true) -->
-            <div v-if="!user && showGuestForm" class="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                Enter your details to continue as a guest. We'll send you an email to set up your account.
-              </p>
-              <UFormGroup label="Full Name" name="guestName">
-                <UInput
-                  v-model="guestForm.name"
-                  placeholder="Enter your full name"
-                  icon="i-heroicons-user"
-                />
-              </UFormGroup>
-              <UFormGroup label="Email Address" name="guestEmail">
-                <UInput
-                  v-model="guestForm.email"
-                  type="email"
-                  placeholder="Enter your email address"
-                  icon="i-heroicons-envelope"
-                />
-              </UFormGroup>
-              <p class="text-xs text-gray-500">
-                Already have an account?
-                <NuxtLink :to="`/login?redirect=/events/${event?.slug}`" class="text-primary hover:underline">
-                  Log in
-                </NuxtLink>
-              </p>
-            </div>
-
             <!-- Requirements hint -->
             <p
               v-if="event?.requirements?.length && !requirementsSatisfied"
@@ -1977,7 +1949,7 @@ onBeforeUnmount(() => {
                   @click="selectedPaymentProvider = 'paymongo'"
                 >
                   <UIcon name="i-heroicons-credit-card" class="w-5 h-5" />
-                  <span class="text-sm font-medium">GCash / Card</span>
+                  <span class="text-sm font-medium">GCash / Maya</span>
                 </button>
                 <button
                   type="button"
@@ -1995,6 +1967,34 @@ onBeforeUnmount(() => {
               </div>
               <p v-if="selectedPaymentProvider === 'paypal'" class="text-xs text-gray-500">
                 You'll be redirected to PayPal to complete your payment
+              </p>
+            </div>
+
+            <!-- Guest Form (shown when not logged in, for PayMongo or free tickets) -->
+            <div v-if="!user && showGuestForm && (selectedPaymentProvider === 'paymongo' || cartTotal === 0)" class="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Enter your details to continue as a guest. We'll send you an email to set up your account.
+              </p>
+              <UFormGroup label="Full Name" name="guestName">
+                <UInput
+                  v-model="guestForm.name"
+                  placeholder="Enter your full name"
+                  icon="i-heroicons-user"
+                />
+              </UFormGroup>
+              <UFormGroup label="Email Address" name="guestEmail">
+                <UInput
+                  v-model="guestForm.email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  icon="i-heroicons-envelope"
+                />
+              </UFormGroup>
+              <p class="text-xs text-gray-500">
+                Already have an account?
+                <NuxtLink :to="`/login?redirect=/events/${event?.slug}`" class="text-primary hover:underline">
+                  Log in
+                </NuxtLink>
               </p>
             </div>
 
