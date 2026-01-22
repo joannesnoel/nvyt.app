@@ -168,3 +168,29 @@ variable "pusher_cluster" {
   type        = string
   default     = "ap1"
 }
+
+# PayPal
+variable "paypal_client_id" {
+  description = "PayPal client ID"
+  type        = string
+  default     = ""
+}
+
+variable "paypal_client_secret" {
+  description = "PayPal client secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "paypal_mode" {
+  description = "PayPal mode (sandbox or live)"
+  type        = string
+  default     = "live"
+}
+
+variable "paypal_webhook_id" {
+  description = "PayPal webhook ID"
+  type        = string
+  default     = ""
+}

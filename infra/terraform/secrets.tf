@@ -25,6 +25,14 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
     NUXT_PAYMONGO_WEBHOOK_SECRET    = var.paymongo_webhook_secret
     NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY = var.paymongo_public_key
 
+    # PayPal
+    NUXT_PAYPAL_CLIENT_ID        = var.paypal_client_id
+    NUXT_PAYPAL_CLIENT_SECRET    = var.paypal_client_secret
+    NUXT_PAYPAL_MODE             = var.paypal_mode
+    NUXT_PAYPAL_WEBHOOK_ID       = var.paypal_webhook_id
+    NUXT_PUBLIC_PAYPAL_CLIENT_ID = var.paypal_client_id
+    NUXT_PUBLIC_PAYPAL_MODE      = var.paypal_mode
+
     # Google Maps
     NUXT_PUBLIC_GOOGLE_MAPS_API_KEY = var.google_maps_api_key
 
