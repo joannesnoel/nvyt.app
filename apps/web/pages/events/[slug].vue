@@ -10,6 +10,7 @@ const inviteToken = computed(() => route.query.invite as string | undefined)
 
 const toast = useToast()
 const { user, isLoading: authLoading } = useAuth()
+const { trackBeginCheckout } = useAnalytics()
 
 // Theme management - apply event's theme preference
 const colorMode = useColorMode()
@@ -654,6 +655,22 @@ async function checkout() {
     const items = Object.entries(ticketCart.value)
       .filter(([_, qty]) => qty > 0)
       .map(([ticketTypeId, quantity]) => ({ ticketTypeId, quantity }))
+
+    // Track begin_checkout event in Google Analytics
+    trackBeginCheckout({
+      value: feeBreakdown.value.total,
+      currency: 'PHP',
+      items: items.map(({ ticketTypeId, quantity }) => {
+        const tt = event.value!.ticketTypes?.find((t: any) => t.id === ticketTypeId)
+        return {
+          item_id: ticketTypeId,
+          item_name: tt?.name || 'Ticket',
+          price: parseFloat(tt?.price || '0'),
+          quantity,
+          item_category: event.value!.title,
+        }
+      }),
+    })
 
     // Build requirement responses array
     const reqResponses = event.value.requirements?.length

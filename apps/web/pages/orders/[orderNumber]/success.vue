@@ -7,6 +7,10 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const { user } = useAuth()
+const { trackPurchase } = useAnalytics()
+
+// Track if we've already fired the purchase event (prevent duplicates)
+const hasFiredPurchaseEvent = ref(false)
 const orderNumber = computed(() => route.params.orderNumber as string)
 const token = computed(() => route.query.token as string | undefined)
 
@@ -75,6 +79,23 @@ watchEffect(() => {
 // Fetch registration status when order is paid
 watch(() => order.value?.paymentStatus, async (paymentStatus) => {
   if (paymentStatus === 'paid') {
+    // Track purchase event in Google Analytics (only once)
+    if (!hasFiredPurchaseEvent.value && order.value) {
+      hasFiredPurchaseEvent.value = true
+      trackPurchase({
+        transactionId: order.value.orderNumber,
+        value: parseFloat(order.value.totalAmount),
+        currency: 'PHP',
+        items: order.value.tickets.map((ticket: any) => ({
+          item_id: ticket.ticketType?.id || ticket.ticketTypeId,
+          item_name: ticket.ticketType?.name || 'Ticket',
+          price: parseFloat(ticket.ticketType?.price || '0'),
+          quantity: 1,
+          item_category: order.value!.event?.title,
+        })),
+      })
+    }
+
     // Trigger registration status fetch
     await $fetch(`/api/v1/orders/${orderNumber.value}/registration`, {
       query: { token: queryToken.value },
