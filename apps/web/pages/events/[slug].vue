@@ -379,7 +379,7 @@ const checkoutError = ref<string | null>(null)
 // Payment provider state
 type PaymentProvider = 'paymongo' | 'paypal'
 const selectedPaymentProvider = ref<PaymentProvider>('paymongo')
-const pendingPayPalOrder = ref<{ id: string; orderNumber: string } | null>(null)
+const pendingPayPalOrder = ref<{ id: string; orderNumber: string; setupToken?: string } | null>(null)
 const showPayPalButtons = ref(false)
 
 // PayPal configuration check (uses config from SEO meta section)
@@ -710,6 +710,7 @@ async function checkout() {
       pendingPayPalOrder.value = {
         id: response.data.order.id,
         orderNumber: response.data.order.orderNumber,
+        setupToken: response.data.setupToken,
       }
       showPayPalButtons.value = true
       isCheckingOut.value = false
@@ -782,6 +783,9 @@ async function checkout() {
 
 // PayPal payment handlers
 function handlePayPalSuccess(result: { orderNumber: string; captureId: string }) {
+  // Get setup token before clearing state
+  const setupToken = pendingPayPalOrder.value?.setupToken
+
   showPayPalButtons.value = false
   pendingPayPalOrder.value = null
   showTicketModal.value = false
@@ -792,7 +796,11 @@ function handlePayPalSuccess(result: { orderNumber: string; captureId: string })
     color: 'green',
   })
 
-  navigateTo(`/orders/${result.orderNumber}/success`)
+  // Include setup token for guest checkout
+  const successUrl = setupToken
+    ? `/orders/${result.orderNumber}/success?token=${setupToken}`
+    : `/orders/${result.orderNumber}/success`
+  navigateTo(successUrl)
 }
 
 function handlePayPalError(error: Error) {
