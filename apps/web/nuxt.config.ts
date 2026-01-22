@@ -5,7 +5,7 @@ import { resolve } from 'path'
 // Load .env from monorepo root
 config({ path: resolve(__dirname, '../../.env') })
 
-const isProduction = process.env.NODE_ENV === 'production'
+const isProduction = process.env.NODE_ENV === 'production' && process.env.NUXT_PUBLIC_APP_URL === 'https://nvyt.app'
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
