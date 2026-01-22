@@ -202,7 +202,6 @@ const userMenuItems = computed(() => {
 
     <!-- Bottom padding when banners are shown -->
     <div v-if="isAuthenticated && user && !user.emailVerified" class="h-28 sm:h-24" />
-    <div v-else-if="isAuthenticated" class="h-14 sm:h-12" />
 
     <!-- Toast Notifications -->
     <UNotifications />
