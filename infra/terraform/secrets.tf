@@ -18,31 +18,21 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
     NUXT_DATABASE_URL = "postgresql://${var.db_username}:${random_password.db_password.result}@${aws_db_instance.main.endpoint}/${var.db_name}"
 
     # JWT
-    JWT_SECRET      = random_password.jwt_secret.result
     NUXT_JWT_SECRET = random_password.jwt_secret.result
 
     # PayMongo
-    PAYMONGO_PUBLIC_KEY             = var.paymongo_public_key
-    PAYMONGO_SECRET_KEY             = var.paymongo_secret_key
-    PAYMONGO_WEBHOOK_SECRET         = var.paymongo_webhook_secret
     NUXT_PAYMONGO_SECRET_KEY        = var.paymongo_secret_key
     NUXT_PAYMONGO_WEBHOOK_SECRET    = var.paymongo_webhook_secret
     NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY = var.paymongo_public_key
 
     # Google Maps
-    GOOGLE_MAPS_API_KEY             = var.google_maps_api_key
     NUXT_PUBLIC_GOOGLE_MAPS_API_KEY = var.google_maps_api_key
 
     # Pusher
-    PUSHER_APP_ID              = var.pusher_app_id
-    PUSHER_SECRET              = var.pusher_secret
     NUXT_PUSHER_APP_ID         = var.pusher_app_id
     NUXT_PUSHER_SECRET         = var.pusher_secret
     NUXT_PUBLIC_PUSHER_KEY     = var.pusher_key
     NUXT_PUBLIC_PUSHER_CLUSTER = var.pusher_cluster
-
-    # SendGrid (production email)
-    SENDGRID_API_KEY = var.sendgrid_api_key
 
     # S3
     NUXT_S3_ENDPOINT          = "https://s3.${var.aws_region}.amazonaws.com"

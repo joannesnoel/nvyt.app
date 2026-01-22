@@ -168,10 +168,3 @@ variable "pusher_cluster" {
   type        = string
   default     = "ap1"
 }
-
-variable "sendgrid_api_key" {
-  description = "SendGrid API key for production email"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
