@@ -1,7 +1,7 @@
 import { orders, events, tickets, ticketTypes } from '@nvyt/db'
 import { eq } from 'drizzle-orm'
 import { createCheckoutSession, toCentavos, getPaymentIntent } from '~/server/utils/paymongo'
-import { getPayPalOrder } from '~/server/utils/paypal'
+import { getPayPalOrder, createPayPalOrder, toCents } from '~/server/utils/paypal'
 
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')
@@ -82,6 +82,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Determine if user needs setup token for success URL
+  const userRecord = await getUserFromEvent(event)
+  const setupTokenForUrl = !userRecord ? (setupToken || null) : null
+  const appUrl = config.public.appUrl as string
+
   // Check PayPal order status if this is a PayPal order
   if (result.order.paymentProvider === 'paypal' && result.order.paypalOrderId) {
     try {
@@ -116,12 +121,72 @@ export default defineEventHandler(async (event) => {
       console.log('[Retry Payment] Could not check PayPal order status, proceeding with retry:', e.message)
     }
 
-    // For PayPal, return order info for frontend to show PayPal buttons
+    // For PayPal, create a new PayPal order and redirect
+    const subtotal = parseFloat(result.order.subtotalAmount)
+    const totalFees = parseFloat(result.order.totalFees)
+    const total = parseFloat(result.order.totalAmount)
+
+    const lineItems = [
+      {
+        name: `Tickets for ${result.event.title}`,
+        quantity: 1,
+        amount: toCents(subtotal),
+        currency: result.order.currency,
+        description: `Order ${result.order.orderNumber}`,
+      },
+    ]
+
+    if (totalFees > 0) {
+      lineItems.push({
+        name: 'Fees',
+        quantity: 1,
+        amount: toCents(totalFees),
+        currency: result.order.currency,
+        description: 'Transaction and booking fees',
+      })
+    }
+
+    // Build return URL with retry params - goes to PayPal return page
+    const returnParams = new URLSearchParams({
+      retry: orderNumber,
+    })
+    if (setupTokenForUrl) {
+      returnParams.set('setupToken', setupTokenForUrl)
+    }
+    const returnUrl = `${appUrl}/checkout/paypal/return?${returnParams.toString()}`
+
+    const paypalOrder = await createPayPalOrder({
+      lineItems,
+      currency: result.order.currency,
+      referenceId: `${orderNumber}-R${Date.now().toString(36).toUpperCase()}`,
+      description: `Tickets for ${result.event.title}`,
+      returnUrl,
+      cancelUrl: `${appUrl}/events/${result.event.slug}?checkout=cancelled`,
+    })
+
+    // Update order with new PayPal order ID
+    await db
+      .update(orders)
+      .set({
+        paypalOrderId: paypalOrder.id,
+        paymentStatus: 'pending',
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, result.order.id))
+
+    // Get approval URL
+    const approvalLink = paypalOrder.links.find(link => link.rel === 'payer-action')
+    if (!approvalLink) {
+      throw createError({
+        statusCode: 500,
+        message: 'Failed to get PayPal approval URL',
+      })
+    }
+
     return successResponse({
       paymentProvider: 'paypal',
-      orderId: result.order.id,
-      orderNumber: result.order.orderNumber,
-      message: 'Complete payment with PayPal',
+      approvalUrl: approvalLink.href,
+      message: 'Redirecting to PayPal...',
     })
   }
 
@@ -225,16 +290,8 @@ export default defineEventHandler(async (event) => {
     description: ticketType.description || undefined,
   }))
 
-  // Generate new setup token if user needs account setup
-  let setupTokenForUrl: string | null = null
-  const userRecord = await getUserFromEvent(event)
-  if (!userRecord) {
-    // User accessed via setup token - they need account setup
-    setupTokenForUrl = setupToken || null
-  }
-
   // Create new PayMongo checkout session
-  const appUrl = config.public.appUrl as string
+  // (setupTokenForUrl and appUrl already defined above for PayPal flow)
   const successUrl = setupTokenForUrl
     ? `${appUrl}/orders/${orderNumber}/success?token=${setupTokenForUrl}`
     : `${appUrl}/orders/${orderNumber}/success`

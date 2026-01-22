@@ -288,6 +288,7 @@ export async function createPayPalOrder(options: CreateOrderOptions): Promise<Pa
         paypal: {
           experience_context: {
             payment_method_preference: 'IMMEDIATE_PAYMENT_REQUIRED',
+            shipping_preference: 'NO_SHIPPING', // Digital goods - no shipping needed
             brand_name: 'nvyt',
             locale: 'en-US',
             landing_page: 'LOGIN',
