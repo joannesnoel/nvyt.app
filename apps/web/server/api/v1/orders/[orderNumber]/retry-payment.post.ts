@@ -1,6 +1,7 @@
 import { orders, events, tickets, ticketTypes } from '@nvyt/db'
 import { eq } from 'drizzle-orm'
 import { createCheckoutSession, toCentavos, getPaymentIntent } from '~/server/utils/paymongo'
+import { getPayPalOrder } from '~/server/utils/paypal'
 
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')
@@ -78,6 +79,49 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       message: 'This order has been refunded and cannot be retried',
+    })
+  }
+
+  // Check PayPal order status if this is a PayPal order
+  if (result.order.paymentProvider === 'paypal' && result.order.paypalOrderId) {
+    try {
+      const paypalOrder = await getPayPalOrder(result.order.paypalOrderId)
+
+      if (paypalOrder.status === 'COMPLETED') {
+        // Payment actually succeeded - update our database and inform user
+        await db
+          .update(orders)
+          .set({
+            paymentStatus: 'paid',
+            paidAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(orders.id, result.order.id))
+
+        await db
+          .update(tickets)
+          .set({
+            status: 'confirmed',
+            updatedAt: new Date(),
+          })
+          .where(eq(tickets.orderId, result.order.id))
+
+        return successResponse({
+          alreadyPaid: true,
+          message: 'Good news! Your payment has been confirmed.',
+        })
+      }
+    } catch (e: any) {
+      // PayPal API error - proceed with retry
+      console.log('[Retry Payment] Could not check PayPal order status, proceeding with retry:', e.message)
+    }
+
+    // For PayPal, return order info for frontend to show PayPal buttons
+    return successResponse({
+      paymentProvider: 'paypal',
+      orderId: result.order.id,
+      orderNumber: result.order.orderNumber,
+      message: 'Complete payment with PayPal',
     })
   }
 

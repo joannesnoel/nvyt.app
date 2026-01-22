@@ -35,6 +35,8 @@ export const createTicketTypeSchema = z.object({
 
 export const updateTicketTypeSchema = createTicketTypeSchema.partial().omit({ eventId: true })
 
+export const paymentProviderEnum = z.enum(['paymongo', 'paypal'])
+
 export const purchaseTicketsSchema = z.object({
   eventId: z.string().uuid(),
   items: z.array(z.object({
@@ -49,6 +51,8 @@ export const purchaseTicketsSchema = z.object({
   customerEmail: z.string().email(),
   customerPhone: z.string().optional(),
   isGuest: z.boolean().optional().default(false),
+  // Payment provider selection
+  paymentProvider: paymentProviderEnum.optional().default('paymongo'),
   // Event requirement responses
   requirementResponses: z.array(z.object({
     requirementId: z.string().uuid(),
@@ -137,3 +141,4 @@ export type PurchaseTicketsInput = z.infer<typeof purchaseTicketsSchema>
 export type CheckInInput = z.infer<typeof checkInSchema>
 export type CreatePriceTierInput = z.infer<typeof createPriceTierSchema>
 export type UpdatePriceTierInput = z.infer<typeof updatePriceTierSchema>
+export type PaymentProvider = z.infer<typeof paymentProviderEnum>

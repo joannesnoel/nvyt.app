@@ -218,6 +218,13 @@
       "when": 1769004781441,
       "tag": "0030_illegal_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1769066897793,
+      "tag": "0031_faulty_rumiko_fujikawa",
+      "breakpoints": true
     }
   ]
 }

@@ -376,6 +376,15 @@ const guestForm = ref({
 // Checkout error state
 const checkoutError = ref<string | null>(null)
 
+// Payment provider state
+type PaymentProvider = 'paymongo' | 'paypal'
+const selectedPaymentProvider = ref<PaymentProvider>('paymongo')
+const pendingPayPalOrder = ref<{ id: string; orderNumber: string } | null>(null)
+const showPayPalButtons = ref(false)
+
+// PayPal configuration check (uses config from SEO meta section)
+const isPayPalConfigured = computed(() => !!config.public.paypalClientId)
+
 // Requirements state
 const requirementResponses = ref<Record<string, boolean | undefined>>({})
 
@@ -393,6 +402,10 @@ function openTicketModal() {
   guestForm.value = { name: '', email: '' }
   // Clear any previous error
   checkoutError.value = null
+  // Reset payment provider state
+  selectedPaymentProvider.value = 'paymongo'
+  pendingPayPalOrder.value = null
+  showPayPalButtons.value = false
   // Initialize requirement responses (all checkboxes start unchecked)
   if (event.value?.requirements) {
     const responses: Record<string, boolean | undefined> = {}
@@ -687,9 +700,21 @@ async function checkout() {
         customerName: user.value?.name || guestForm.value.name,
         customerEmail: user.value?.email || guestForm.value.email,
         isGuest: !user.value,
+        paymentProvider: selectedPaymentProvider.value,
         requirementResponses: reqResponses,
       },
     }) as any
+
+    // Handle PayPal flow - show PayPal buttons
+    if (response.data.paymentProvider === 'paypal' && response.data.requiresPayment) {
+      pendingPayPalOrder.value = {
+        id: response.data.order.id,
+        orderNumber: response.data.order.orderNumber,
+      }
+      showPayPalButtons.value = true
+      isCheckingOut.value = false
+      return
+    }
 
     if (response.data.checkoutUrl) {
       // Redirect to PayMongo checkout
@@ -753,6 +778,45 @@ async function checkout() {
   } finally {
     isCheckingOut.value = false
   }
+}
+
+// PayPal payment handlers
+function handlePayPalSuccess(result: { orderNumber: string; captureId: string }) {
+  showPayPalButtons.value = false
+  pendingPayPalOrder.value = null
+  showTicketModal.value = false
+
+  toast.add({
+    title: 'Payment Successful!',
+    description: 'Your tickets have been confirmed.',
+    color: 'green',
+  })
+
+  navigateTo(`/orders/${result.orderNumber}/success`)
+}
+
+function handlePayPalError(error: Error) {
+  checkoutError.value = error.message || 'Payment failed. Please try again.'
+  toast.add({
+    title: 'Payment Failed',
+    description: error.message || 'Failed to process payment. Please try again.',
+    color: 'red',
+  })
+}
+
+function handlePayPalCancel() {
+  // User cancelled - stay on the page with PayPal buttons
+  toast.add({
+    title: 'Payment Cancelled',
+    description: 'You can try again or select a different payment method.',
+    color: 'yellow',
+  })
+}
+
+function resetPayPalFlow() {
+  showPayPalButtons.value = false
+  pendingPayPalOrder.value = null
+  selectedPaymentProvider.value = 'paymongo'
 }
 
 function formatCurrency(amount: number) {
@@ -1893,8 +1957,61 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
+            <!-- Payment Method Selection (only for paid tickets, when ready to pay) -->
+            <div v-if="cartTotal > 0 && (user || showGuestForm) && requirementsSatisfied && !showPayPalButtons" class="space-y-3">
+              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</p>
+              <div class="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  class="flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all"
+                  :class="selectedPaymentProvider === 'paymongo'
+                    ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
+                  @click="selectedPaymentProvider = 'paymongo'"
+                >
+                  <UIcon name="i-heroicons-credit-card" class="w-5 h-5" />
+                  <span class="text-sm font-medium">GCash / Card</span>
+                </button>
+                <button
+                  v-if="isPayPalConfigured"
+                  type="button"
+                  class="flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all"
+                  :class="selectedPaymentProvider === 'paypal'
+                    ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
+                  @click="selectedPaymentProvider = 'paypal'"
+                >
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/>
+                  </svg>
+                  <span class="text-sm font-medium">PayPal</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- PayPal Buttons (shown after order is created) -->
+            <div v-if="showPayPalButtons && pendingPayPalOrder" class="space-y-3">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Complete your payment</p>
+                <button
+                  type="button"
+                  class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  @click="resetPayPalFlow"
+                >
+                  Change payment method
+                </button>
+              </div>
+              <PayPalButtons
+                :order-id="pendingPayPalOrder.id"
+                currency="PHP"
+                @success="handlePayPalSuccess"
+                @error="handlePayPalError"
+                @cancel="handlePayPalCancel"
+              />
+            </div>
+
             <!-- Footer Actions -->
-            <div class="flex items-center justify-between">
+            <div v-if="!showPayPalButtons" class="flex items-center justify-between">
               <div v-if="cartItemCount > 0">
                 <p class="text-sm text-gray-500">{{ cartItemCount }} ticket{{ cartItemCount === 1 ? '' : 's' }}</p>
                 <p class="text-xl font-bold text-gray-900 dark:text-white">
@@ -1915,13 +2032,13 @@ onBeforeUnmount(() => {
                   Select Tickets
                 </template>
                 <template v-else-if="user">
-                  {{ cartTotal === 0 ? 'Get Free Tickets' : 'Proceed to Payment' }}
+                  {{ cartTotal === 0 ? 'Get Free Tickets' : (selectedPaymentProvider === 'paypal' ? 'Continue with PayPal' : 'Proceed to Payment') }}
                 </template>
                 <template v-else-if="!showGuestForm">
                   Continue as Guest
                 </template>
                 <template v-else>
-                  {{ cartTotal === 0 ? 'Get Free Tickets' : 'Proceed to Payment' }}
+                  {{ cartTotal === 0 ? 'Get Free Tickets' : (selectedPaymentProvider === 'paypal' ? 'Continue with PayPal' : 'Proceed to Payment') }}
                 </template>
               </UButton>
             </div>

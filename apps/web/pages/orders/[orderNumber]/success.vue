@@ -253,6 +253,8 @@ const canRetryPayment = computed(() => {
 
 // Retry payment
 const retryingPayment = ref(false)
+const showPayPalButtons = ref(false)
+const paypalOrderId = ref<string | null>(null)
 
 async function retryPayment() {
   if (!order.value) return
@@ -274,6 +276,11 @@ async function retryPayment() {
       })
       // Refresh the page to show updated status
       window.location.reload()
+    } else if (response.data?.paymentProvider === 'paypal') {
+      // Show PayPal buttons for PayPal orders
+      paypalOrderId.value = response.data.orderId
+      showPayPalButtons.value = true
+      retryingPayment.value = false
     } else if (response.data?.checkoutUrl) {
       window.location.href = response.data.checkoutUrl
     }
@@ -285,6 +292,34 @@ async function retryPayment() {
     })
     retryingPayment.value = false
   }
+}
+
+function handlePayPalSuccess(result: { orderNumber: string; captureId: string }) {
+  showPayPalButtons.value = false
+  paypalOrderId.value = null
+  toast.add({
+    title: 'Payment Successful!',
+    description: 'Your tickets have been confirmed.',
+    color: 'green',
+  })
+  // Refresh the page to show updated status
+  window.location.reload()
+}
+
+function handlePayPalError(error: Error) {
+  toast.add({
+    title: 'Payment Failed',
+    description: error.message || 'Failed to process payment. Please try again.',
+    color: 'red',
+  })
+}
+
+function handlePayPalCancel() {
+  toast.add({
+    title: 'Payment Cancelled',
+    description: 'You can try again when ready.',
+    color: 'yellow',
+  })
 }
 </script>
 
@@ -450,8 +485,20 @@ async function retryPayment() {
 
         <!-- Actions -->
         <div class="flex flex-col gap-3">
+          <!-- PayPal Buttons for retry -->
+          <div v-if="showPayPalButtons && paypalOrderId" class="space-y-3">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Complete your payment with PayPal</p>
+            <PayPalButtons
+              :order-id="paypalOrderId"
+              currency="PHP"
+              @success="handlePayPalSuccess"
+              @error="handlePayPalError"
+              @cancel="handlePayPalCancel"
+            />
+          </div>
+
           <UButton
-            v-if="canRetryPayment"
+            v-if="canRetryPayment && !showPayPalButtons"
             color="primary"
             block
             size="lg"

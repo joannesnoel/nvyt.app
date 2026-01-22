@@ -74,6 +74,11 @@ export default defineNuxtConfig({
     s3AccessKeyId: process.env.S3_ACCESS_KEY_ID,
     s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
     s3Bucket: process.env.S3_BUCKET || 'nvyt-uploads',
+    // PayPal
+    paypalClientId: process.env.PAYPAL_CLIENT_ID,
+    paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET,
+    paypalMode: process.env.PAYPAL_MODE || 'sandbox',
+    paypalWebhookId: process.env.PAYPAL_WEBHOOK_ID,
 
     // Public keys (exposed to client)
     public: {
@@ -86,6 +91,9 @@ export default defineNuxtConfig({
       pusherCluster: process.env.PUSHER_CLUSTER || 'ap1',
       // S3 public URL for images
       s3PublicUrl: process.env.S3_PUBLIC_URL || '',
+      // PayPal (client-side)
+      paypalClientId: process.env.PAYPAL_CLIENT_ID,
+      paypalMode: process.env.PAYPAL_MODE || 'sandbox',
     },
   },
 

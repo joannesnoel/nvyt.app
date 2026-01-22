@@ -102,6 +102,11 @@ export const orders = pgTable('orders', {
   paymongoCheckoutSessionId: text('paymongo_checkout_session_id'),
   paymentMethod: text('payment_method'), // gcash, maya, card, etc.
 
+  // PayPal integration
+  paypalOrderId: text('paypal_order_id'),
+  paypalCaptureId: text('paypal_capture_id'), // For refunds
+  paymentProvider: text('payment_provider').default('paymongo'), // 'paymongo' | 'paypal'
+
   paymentStatus: paymentStatusEnum('payment_status').default('pending').notNull(),
   paidAt: timestamp('paid_at', { withTimezone: true }),
 

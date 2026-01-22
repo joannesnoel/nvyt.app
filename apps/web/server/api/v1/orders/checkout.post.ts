@@ -392,11 +392,14 @@ export default defineEventHandler(async (event) => {
     setupToken = await createAccountSetupToken(user.id)
   }
 
-  // Create PayMongo checkout session (only for paid orders)
+  // Determine payment provider
+  const paymentProvider = data.paymentProvider || 'paymongo'
+
+  // Create PayMongo checkout session (only for paid orders using PayMongo)
   let checkoutSession = null
   let checkoutUrl = null
 
-  if (!isFreeOrder) {
+  if (!isFreeOrder && paymentProvider === 'paymongo') {
     const appUrl = config.public.appUrl as string
 
     // Include setup token in success URL for guest users
@@ -437,6 +440,7 @@ export default defineEventHandler(async (event) => {
       currency: 'PHP',
       paymongoCheckoutSessionId: checkoutSession?.id,
       paymongoPaymentIntentId: checkoutSession?.attributes.payment_intent?.id,
+      paymentProvider: paymentProvider,
       paymentStatus: isFreeOrder ? 'paid' : 'pending',
       paidAt: isFreeOrder ? new Date() : null,
       customerName: data.customerName,
@@ -555,6 +559,7 @@ export default defineEventHandler(async (event) => {
     return successResponse({
       order,
       checkoutUrl: null,
+      paymentProvider: null,
       requiresPayment: false,
       registrationRequired: hasRegistrationFields,
       accountSetupRequired: needsAccountSetup,
@@ -564,9 +569,24 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // For PayPal, return order ID for frontend SDK to render buttons
+  if (paymentProvider === 'paypal') {
+    return successResponse({
+      order,
+      checkoutUrl: null,
+      paymentProvider: 'paypal',
+      requiresPayment: true,
+      registrationRequired: hasRegistrationFields,
+      accountSetupRequired: needsAccountSetup,
+      setupToken: setupToken || undefined,
+      message: 'Complete payment with PayPal',
+    })
+  }
+
   return successResponse({
     order,
     checkoutUrl,
+    paymentProvider: 'paymongo',
     requiresPayment: true,
     registrationRequired: hasRegistrationFields,
     accountSetupRequired: needsAccountSetup,

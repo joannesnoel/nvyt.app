@@ -27,8 +27,8 @@ useSeoMeta({
             1. Introduction
           </h2>
           <p class="text-gray-600 dark:text-gray-300 mb-4">
-            NVYT ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy 
-            explains how we collect, use, disclose, and safeguard your information when you use our 
+            NVYT, operated by <strong>NVYT EVENTS ORGANIZING SERVICES</strong> ("we," "our," or "us"), is committed to protecting your privacy. This Privacy Policy
+            explains how we collect, use, disclose, and safeguard your information when you use our
             event management and ticketing platform at nvyt.app ("the Platform").
           </p>
           <p class="text-gray-600 dark:text-gray-300">

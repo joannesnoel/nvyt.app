@@ -27,12 +27,15 @@ useSeoMeta({
             1. Acceptance of Terms
           </h2>
           <p class="text-gray-600 dark:text-gray-300 mb-4">
-            By accessing or using NVYT ("the Platform"), you agree to be bound by these Terms of Service. 
+            By accessing or using NVYT ("the Platform"), you agree to be bound by these Terms of Service.
             If you do not agree to these terms, please do not use the Platform.
           </p>
+          <p class="text-gray-600 dark:text-gray-300 mb-4">
+            NVYT is owned and operated by <strong>NVYT EVENTS ORGANIZING SERVICES</strong>, based in the Philippines.
+          </p>
           <p class="text-gray-600 dark:text-gray-300">
-            NVYT is an event management and ticketing platform that enables organizers to create events, 
-            sell tickets, and manage attendees. Attendees can discover events, purchase tickets, and 
+            NVYT is an event management and ticketing platform that enables organizers to create events,
+            sell tickets, and manage attendees. Attendees can discover events, purchase tickets, and
             register for events through the Platform.
           </p>
         </section>
