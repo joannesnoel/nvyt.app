@@ -6,7 +6,6 @@ const PLATFORM_FEE_PERCENTAGE = 0.03
 
 // Processing fee constants (charged to buyer)
 export const PROCESSING_FEE_RATE = 0.035 // 3.5%
-export const PROCESSING_FEE_FIXED = 15 // ₱15 PHP
 
 /**
  * Calculate processing fees for a ticket purchase (charged to buyer)
@@ -25,8 +24,8 @@ export function calculateProcessingFees(subtotal: number, adminFeeRate: number =
     }
   }
 
-  // Processing fee: 3.5% + ₱15 (always applied)
-  const processingFee = Math.round((subtotal * PROCESSING_FEE_RATE + PROCESSING_FEE_FIXED) * 100) / 100
+  // Processing fee: 3.5% (always applied)
+  const processingFee = Math.round(subtotal * PROCESSING_FEE_RATE * 100) / 100
 
   // Admin fee: additional percentage set per event
   const adminFee = Math.round(subtotal * adminFeeRate * 100) / 100

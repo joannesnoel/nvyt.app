@@ -114,7 +114,8 @@
       "Bash(AWS_PROFILE=nvyt-prod aws sts:*)",
       "Bash(AWS_PROFILE=nvyt-prod aws secretsmanager:*)",
       "Bash(AWS_PROFILE=nvyt-prod aws ecs:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(chmod:*)"
     ]
   },
   "hooks": {

@@ -438,7 +438,6 @@ const cartTotal = computed(() => {
 
 // Processing fee constants (same as backend)
 const PROCESSING_FEE_RATE = 0.035 // 3.5%
-const PROCESSING_FEE_FIXED = 15 // ₱15 PHP
 
 // Calculate fee breakdown for display
 const feeBreakdown = computed(() => {
@@ -449,8 +448,8 @@ const feeBreakdown = computed(() => {
     return { subtotal: 0, processingFee: 0, adminFee: 0, totalFees: 0, total: 0 }
   }
 
-  // Processing fee: 3.5% + ₱15
-  const processingFee = Math.round((subtotal * PROCESSING_FEE_RATE + PROCESSING_FEE_FIXED) * 100) / 100
+  // Processing fee: 3.5%
+  const processingFee = Math.round(subtotal * PROCESSING_FEE_RATE * 100) / 100
 
   // Admin fee: additional percentage set per event
   const adminFee = Math.round(subtotal * adminFeeRate * 100) / 100
