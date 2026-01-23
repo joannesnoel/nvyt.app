@@ -117,7 +117,8 @@
       "Bash(head:*)",
       "Bash(chmod:*)",
       "Bash(python3:*)",
-      "Bash(pip3 install:*)"
+      "Bash(pip3 install:*)",
+      "WebFetch(domain:developers.paymongo.com)"
     ]
   },
   "hooks": {

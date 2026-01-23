@@ -359,6 +359,7 @@ export default defineEventHandler(async (event) => {
         attendeeName: attendee?.name,
         attendeeEmail: attendee?.email,
         status: 'pending',
+        sortOrder: ticketsToCreate.length, // Sequential order within the order
       })
     }
   }

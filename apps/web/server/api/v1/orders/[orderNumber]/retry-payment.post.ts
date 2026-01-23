@@ -1,6 +1,6 @@
-import { orders, events, tickets, ticketTypes } from '@nvyt/db'
+import { orders, events, tickets } from '@nvyt/db'
 import { eq } from 'drizzle-orm'
-import { createCheckoutSession, toCentavos, getPaymentIntent } from '~/server/utils/paymongo'
+import { createPaymentIntent, toCentavos, getPaymentIntent } from '~/server/utils/paymongo'
 import { getPayPalOrder, createPayPalOrder, toCents } from '~/server/utils/paypal'
 
 export default defineEventHandler(async (event) => {
@@ -258,110 +258,27 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get order tickets with ticket type info to rebuild line items
-  const orderTickets = await db
-    .select({
-      ticket: tickets,
-      ticketType: {
-        id: ticketTypes.id,
-        name: ticketTypes.name,
-        description: ticketTypes.description,
-        price: ticketTypes.price,
-      },
-    })
-    .from(tickets)
-    .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
-    .where(eq(tickets.orderId, result.order.id))
+  // Get the total amount from the order
+  const totalAmount = parseFloat(result.order.totalAmount)
 
-  if (orderTickets.length === 0) {
-    throw createError({
-      statusCode: 400,
-      message: 'No tickets found for this order',
-    })
-  }
-
-  // Group tickets by ticket type to build line items
-  const ticketTypeGroups = new Map<string, { ticketType: typeof orderTickets[0]['ticketType']; quantity: number }>()
-  for (const { ticketType } of orderTickets) {
-    const existing = ticketTypeGroups.get(ticketType.id)
-    if (existing) {
-      existing.quantity++
-    } else {
-      ticketTypeGroups.set(ticketType.id, { ticketType, quantity: 1 })
-    }
-  }
-
-  // Build line items for PayMongo
-  const lineItems: Array<{
-    name: string
-    quantity: number
-    amount: number
-    currency: string
-    description?: string
-  }> = Array.from(ticketTypeGroups.values()).map(({ ticketType, quantity }) => ({
-    name: `${result.event.title} - ${ticketType.name}`,
-    quantity,
-    amount: toCentavos(parseFloat(ticketType.price)),
+  // Create new PayMongo Payment Intent (single amount, no line items)
+  const paymentIntent = await createPaymentIntent({
+    amount: toCentavos(totalAmount),
     currency: 'PHP',
-    description: ticketType.description || undefined,
-  }))
-
-  // Add fees as separate line items if present
-  const processingFee = parseFloat(result.order.processingFee || '0')
-  const adminFee = parseFloat(result.order.adminFee || '0')
-
-  if (processingFee > 0) {
-    lineItems.push({
-      name: 'Processing Fee',
-      quantity: 1,
-      amount: toCentavos(processingFee),
-      currency: 'PHP',
-      description: 'Payment processing fee',
-    })
-  }
-
-  if (adminFee > 0) {
-    lineItems.push({
-      name: 'Service Fee',
-      quantity: 1,
-      amount: toCentavos(adminFee),
-      currency: 'PHP',
-      description: 'Booking service fee',
-    })
-  }
-
-  // Create new PayMongo checkout session
-  // (setupTokenForUrl and appUrl already defined above for PayPal flow)
-  const successUrl = setupTokenForUrl
-    ? `${appUrl}/orders/${orderNumber}/success?token=${setupTokenForUrl}`
-    : `${appUrl}/orders/${orderNumber}/success`
-
-  // Generate unique reference number for retry to avoid PayMongo caching issues
-  const retryTimestamp = Date.now().toString(36).toUpperCase()
-  const retryReferenceNumber = `${orderNumber}-R${retryTimestamp}`
-
-  const checkoutSession = await createCheckoutSession({
-    lineItems,
-    successUrl,
-    cancelUrl: `${appUrl}/events/${result.event.slug}?checkout=cancelled`,
-    referenceNumber: retryReferenceNumber,
-    customerEmail: result.order.customerEmail,
-    customerName: result.order.customerName,
-    customerPhone: result.order.customerPhone || undefined,
+    description: `Tickets for ${result.event.title}`,
     metadata: {
       eventId: result.order.eventId,
       userId: result.order.userId,
-      orderNumber, // Keep original order number in metadata for webhook
+      orderNumber, // Keep original order number for webhook
       isRetry: 'true',
     },
   })
 
-  // Update order with new PayMongo session IDs
+  // Update order with new PayMongo Payment Intent ID
   await db
     .update(orders)
     .set({
-      paymongoCheckoutSessionId: checkoutSession.id,
-      paymongoPaymentIntentId: checkoutSession.attributes.payment_intent?.id,
+      paymongoPaymentIntentId: paymentIntent.id,
       paymentStatus: 'pending',
       updatedAt: new Date(),
     })
@@ -378,8 +295,13 @@ export default defineEventHandler(async (event) => {
       .where(eq(tickets.orderId, result.order.id))
   }
 
+  // Build checkout page URL
+  const checkoutUrl = setupTokenForUrl
+    ? `${appUrl}/checkout/${orderNumber}?token=${setupTokenForUrl}`
+    : `${appUrl}/checkout/${orderNumber}`
+
   return successResponse({
-    checkoutUrl: checkoutSession.attributes.checkout_url,
-    message: 'Redirecting to payment...',
+    checkoutUrl,
+    message: 'Redirecting to checkout...',
   })
 })

@@ -15,7 +15,6 @@ interface RegistrationField {
 interface UserProfile {
   name: string
   email: string
-  phone?: string | null
 }
 
 const props = defineProps<{
@@ -102,8 +101,6 @@ function prefillFromProfile() {
       responses.value[field.id] = props.userProfile?.name || ''
     } else if (field.fieldType === 'email' || labelLower.includes('email')) {
       responses.value[field.id] = props.userProfile?.email || ''
-    } else if (field.fieldType === 'phone' || labelLower.includes('phone') || labelLower.includes('mobile') || labelLower.includes('contact number')) {
-      responses.value[field.id] = props.userProfile?.phone || ''
     }
   })
 }
@@ -265,10 +262,9 @@ function handleSubmit() {
     </div>
 
     <!-- "This ticket is mine" checkbox (only for first ticket when user doesn't have existing ticket) -->
-    <UAlert
+    <div
       v-if="isFirstTicket && userProfile && !userHasExistingTicket"
-      color="blue"
-      class="mb-6"
+      class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
     >
       <div class="flex items-center gap-3">
         <UCheckbox
@@ -276,10 +272,10 @@ function handleSubmit() {
           :label="isSingleTicket ? 'Pre-fill with my information' : 'This ticket is for me'"
         />
       </div>
-      <p v-if="useMyInfo" class="text-sm text-blue-600 dark:text-blue-400 mt-2">
+      <p v-if="useMyInfo" class="text-sm text-blue-600 dark:text-blue-400 mt-2 ml-6">
         We'll use your account information ({{ userProfile.name }}, {{ userProfile.email }}) for matching fields.
       </p>
-    </UAlert>
+    </div>
 
     <!-- Built-in attendee fields (always required) -->
     <div class="space-y-4 mb-6">

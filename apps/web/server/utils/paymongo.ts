@@ -353,3 +353,245 @@ export function getPaymentMethod(paymentIntent: PaymentIntent): string | null {
   const payment = paymentIntent.attributes.payments?.[0]
   return payment?.attributes?.source?.type || null
 }
+
+// ============================================================================
+// Payment Intents API (for custom checkout)
+// ============================================================================
+
+export interface CreatePaymentIntentOptions {
+  amount: number // in centavos
+  currency?: string
+  paymentMethodAllowed?: string[]
+  description?: string
+  metadata?: Record<string, string>
+  captureType?: 'automatic' | 'manual'
+}
+
+export interface PaymentIntentResponse {
+  id: string
+  type: 'payment_intent'
+  attributes: {
+    amount: number
+    currency: string
+    status: 'awaiting_payment_method' | 'awaiting_next_action' | 'processing' | 'succeeded' | 'failed'
+    payment_method_allowed: string[]
+    client_key: string
+    description?: string
+    metadata?: Record<string, string>
+    payments: Array<{
+      id: string
+      type: string
+      attributes: {
+        status: string
+        amount: number
+        source: {
+          type: string
+        }
+      }
+    }>
+    next_action?: {
+      type: string
+      redirect?: {
+        url: string
+        return_url: string
+      }
+    }
+    created_at: number
+    updated_at: number
+  }
+}
+
+/**
+ * Create a Payment Intent for custom checkout flow
+ * This allows collecting payment without using PayMongo's hosted checkout
+ */
+export async function createPaymentIntent(
+  options: CreatePaymentIntentOptions
+): Promise<PaymentIntentResponse> {
+  const config = getConfig()
+
+  const {
+    amount,
+    currency = 'PHP',
+    paymentMethodAllowed = config.paymentMethods || DEFAULT_PAYMENT_METHODS,
+    description,
+    metadata,
+    captureType = 'automatic',
+  } = options
+
+  const response = await paymongoRequest<{ data: PaymentIntentResponse }>('/payment_intents', {
+    method: 'POST',
+    body: {
+      data: {
+        attributes: {
+          amount,
+          currency,
+          payment_method_allowed: paymentMethodAllowed,
+          capture_type: captureType,
+          ...(description && { description }),
+          ...(metadata && { metadata }),
+        },
+      },
+    },
+  })
+
+  return response.data
+}
+
+// ============================================================================
+// Payment Methods API
+// ============================================================================
+
+export type PaymentMethodType =
+  | 'card'
+  | 'gcash'
+  | 'paymaya'
+  | 'grab_pay'
+  | 'qrph'
+  | 'dob'
+  | 'dob_ubp'
+  | 'brankas_bdo'
+  | 'brankas_landbank'
+  | 'brankas_metrobank'
+
+export interface CreatePaymentMethodOptions {
+  type: PaymentMethodType
+  billing?: {
+    name?: string
+    email?: string
+    phone?: string
+    address?: {
+      line1?: string
+      line2?: string
+      city?: string
+      state?: string
+      postal_code?: string
+      country?: string
+    }
+  }
+  metadata?: Record<string, string>
+}
+
+export interface PaymentMethodResponse {
+  id: string
+  type: 'payment_method'
+  attributes: {
+    type: PaymentMethodType
+    billing?: {
+      name?: string
+      email?: string
+      phone?: string
+      address?: Record<string, string>
+    }
+    metadata?: Record<string, string>
+    created_at: number
+    updated_at: number
+  }
+}
+
+/**
+ * Create a Payment Method (server-side)
+ * For e-wallets, this only needs the type
+ * For cards, use PayMongo.js on the client to create the payment method
+ */
+export async function createPaymentMethod(
+  options: CreatePaymentMethodOptions
+): Promise<PaymentMethodResponse> {
+  const { type, billing, metadata } = options
+
+  const response = await paymongoRequest<{ data: PaymentMethodResponse }>('/payment_methods', {
+    method: 'POST',
+    body: {
+      data: {
+        attributes: {
+          type,
+          ...(billing && { billing }),
+          ...(metadata && { metadata }),
+        },
+      },
+    },
+  })
+
+  return response.data
+}
+
+// ============================================================================
+// Attach Payment Method to Payment Intent
+// ============================================================================
+
+export interface AttachPaymentMethodOptions {
+  paymentIntentId: string
+  paymentMethodId: string
+  returnUrl: string
+  clientKey?: string // Required for card payments created client-side
+}
+
+export interface AttachPaymentMethodResponse {
+  id: string
+  type: 'payment_intent'
+  attributes: {
+    amount: number
+    currency: string
+    status: 'awaiting_payment_method' | 'awaiting_next_action' | 'processing' | 'succeeded' | 'failed'
+    payment_method_allowed: string[]
+    client_key: string
+    payments: Array<{
+      id: string
+      type: string
+      attributes: {
+        status: string
+        amount: number
+        source: {
+          type: string
+        }
+      }
+    }>
+    next_action?: {
+      type: 'redirect'
+      redirect: {
+        url: string
+        return_url: string
+      }
+    }
+    metadata?: Record<string, string>
+    created_at: number
+    updated_at: number
+  }
+}
+
+/**
+ * Attach a Payment Method to a Payment Intent
+ * For e-wallets (GCash, Maya, Grab Pay), this will return a redirect URL
+ * For cards, this may return a 3DS redirect URL if 3DS is required
+ */
+export async function attachPaymentMethod(
+  options: AttachPaymentMethodOptions
+): Promise<AttachPaymentMethodResponse> {
+  const { paymentIntentId, paymentMethodId, returnUrl, clientKey } = options
+
+  const response = await paymongoRequest<{ data: AttachPaymentMethodResponse }>(
+    `/payment_intents/${paymentIntentId}/attach`,
+    {
+      method: 'POST',
+      body: {
+        data: {
+          attributes: {
+            payment_method: paymentMethodId,
+            return_url: returnUrl,
+            ...(clientKey && { client_key: clientKey }),
+          },
+        },
+      },
+    }
+  )
+
+  return response.data
+}
+
+/**
+ * Get the public key for PayMongo.js (used for card tokenization on client)
+ */
+export function getPublicKey(): string {
+  const config = getConfig()
+  return config.publicKey
+}

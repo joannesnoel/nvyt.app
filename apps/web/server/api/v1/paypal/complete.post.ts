@@ -232,6 +232,7 @@ export default defineEventHandler(async (event) => {
         ticketNumber: generateTicketNumber(),
         qrCode: generateQRCode(),
         status: 'pending',
+        sortOrder: ticketsToCreate.length, // Sequential order within the order
       })
     }
   }

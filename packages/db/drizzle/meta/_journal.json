@@ -239,6 +239,13 @@
       "when": 1769146216877,
       "tag": "0033_aromatic_colonel_america",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1769157016601,
+      "tag": "0034_opposite_silver_fox",
+      "breakpoints": true
     }
   ]
 }

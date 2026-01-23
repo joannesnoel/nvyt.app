@@ -698,24 +698,48 @@ async function checkout() {
         }))
       : undefined
 
-    const response = await $fetch('/api/v1/orders/checkout', {
-      method: 'POST',
-      body: {
-        eventId: event.value.id,
-        items,
-        customerName: user.value?.name || guestForm.value.name,
-        customerEmail: user.value?.email || guestForm.value.email,
-        isGuest: !user.value,
-        paymentProvider: selectedPaymentProvider.value,
-        requirementResponses: reqResponses,
-      },
-    }) as any
+    // Check if this is a paid order with PayMongo
+    const isPaidOrder = feeBreakdown.value.total > 0
+    const isPayMongo = selectedPaymentProvider.value === 'paymongo'
 
-    if (response.data.checkoutUrl) {
-      // Redirect to PayMongo checkout
-      window.location.href = response.data.checkoutUrl
+    if (isPaidOrder && isPayMongo) {
+      // Use new Payment Intent flow - custom checkout page
+      const response = await $fetch('/api/v1/paymongo/create-intent', {
+        method: 'POST',
+        body: {
+          eventId: event.value.id,
+          items,
+          customerName: user.value?.name || guestForm.value.name,
+          customerEmail: user.value?.email || guestForm.value.email,
+          isGuest: !user.value,
+          paymentProvider: selectedPaymentProvider.value,
+          requirementResponses: reqResponses,
+        },
+      }) as any
+
+      showTicketModal.value = false
+
+      // Redirect to custom checkout page
+      const checkoutUrl = response.data.setupToken
+        ? `/checkout/${response.data.orderNumber}?token=${response.data.setupToken}`
+        : `/checkout/${response.data.orderNumber}`
+      navigateTo(checkoutUrl)
     } else {
-      // Free tickets or completed
+      // Free tickets - use existing checkout flow
+      const response = await $fetch('/api/v1/orders/checkout', {
+        method: 'POST',
+        body: {
+          eventId: event.value.id,
+          items,
+          customerName: user.value?.name || guestForm.value.name,
+          customerEmail: user.value?.email || guestForm.value.email,
+          isGuest: !user.value,
+          paymentProvider: selectedPaymentProvider.value,
+          requirementResponses: reqResponses,
+        },
+      }) as any
+
+      // Free tickets flow
       if (response.data.accountSetupRequired) {
         toast.add({
           title: 'Tickets Confirmed!',

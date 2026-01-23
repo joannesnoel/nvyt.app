@@ -76,6 +76,9 @@ export const tickets = pgTable('tickets', {
   registrationCompleted: boolean('registration_completed').default(false).notNull(),
   registrationCompletedAt: timestamp('registration_completed_at', { withTimezone: true }),
 
+  // Sort order within an order (0-indexed, set during ticket creation)
+  sortOrder: integer('sort_order').default(0).notNull(),
+
   status: ticketStatusEnum('status').default('pending').notNull(),
   checkedInAt: timestamp('checked_in_at', { withTimezone: true }),
 

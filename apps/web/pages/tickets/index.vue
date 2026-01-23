@@ -160,6 +160,11 @@ const statusOptions = [
                   <p class="text-sm text-gray-500 mt-1">
                     {{ ticket.ticketType?.name }}
                   </p>
+                  <p v-if="ticket.attendeeName || ticket.attendeeEmail" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <span v-if="ticket.attendeeName">{{ ticket.attendeeName }}</span>
+                    <span v-if="ticket.attendeeName && ticket.attendeeEmail"> &middot; </span>
+                    <span v-if="ticket.attendeeEmail">{{ ticket.attendeeEmail }}</span>
+                  </p>
                 </div>
                 <div class="flex items-center gap-2">
                   <UBadge

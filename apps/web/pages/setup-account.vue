@@ -127,7 +127,7 @@ async function handleSubmit() {
               </p>
             </div>
 
-            <UFormGroup label="Password" name="password" hint="At least 8 characters with uppercase, lowercase, and number">
+            <UFormGroup label="Password" name="password" hint="Min 8 chars, uppercase, lowercase & number">
               <UInput
                 v-model="form.password"
                 type="password"

@@ -96,14 +96,26 @@ watch(() => order.value?.paymentStatus, async (paymentStatus) => {
       })
     }
 
-    // Trigger registration status fetch
-    await $fetch(`/api/v1/orders/${orderNumber.value}/registration`, {
-      query: { token: queryToken.value },
-    }).then((res: any) => {
-      registrationResponse.value = res
-    }).catch(() => {
-      // Ignore errors - registration might not be set up
-    })
+    // Trigger registration status fetch and redirect if needed
+    try {
+      const res = await $fetch(`/api/v1/orders/${orderNumber.value}/registration`, {
+        query: { token: queryToken.value },
+      }) as any
+
+      console.log('[Success] Registration status:', res.data?.registrationStatus)
+
+      const regStatus = res.data?.registrationStatus
+      if (regStatus?.requiresRegistration && !regStatus?.allCompleted) {
+        const registerUrl = token.value
+          ? `/orders/${orderNumber.value}/register?token=${token.value}`
+          : `/orders/${orderNumber.value}/register`
+        console.log('[Success] Redirecting to registration:', registerUrl)
+        router.push(registerUrl)
+      }
+    } catch (err: any) {
+      // Log errors for debugging but don't block the success page
+      console.error('[Success] Failed to fetch registration status:', err.data?.message || err.message)
+    }
   }
 }, { immediate: true })
 
@@ -390,22 +402,27 @@ async function retryPayment() {
               <div
                 v-for="ticket in order.tickets"
                 :key="ticket.id"
-                class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
               >
-                <div>
+                <div class="flex items-center justify-between mb-2">
                   <p class="font-medium text-gray-900 dark:text-white">
                     {{ ticket.ticketType?.name }}
                   </p>
-                  <p class="text-sm text-gray-500">
-                    {{ ticket.ticketNumber }}
-                  </p>
+                  <UBadge
+                    :color="ticket.status === 'confirmed' ? 'green' : ticket.status === 'pending' ? 'yellow' : 'gray'"
+                    variant="soft"
+                  >
+                    {{ ticket.status }}
+                  </UBadge>
                 </div>
-                <UBadge
-                  :color="ticket.status === 'confirmed' ? 'green' : ticket.status === 'pending' ? 'yellow' : 'gray'"
-                  variant="soft"
-                >
-                  {{ ticket.status }}
-                </UBadge>
+                <div v-if="ticket.attendeeName || ticket.attendeeEmail" class="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  <span v-if="ticket.attendeeName">{{ ticket.attendeeName }}</span>
+                  <span v-if="ticket.attendeeName && ticket.attendeeEmail"> &middot; </span>
+                  <span v-if="ticket.attendeeEmail">{{ ticket.attendeeEmail }}</span>
+                </div>
+                <p class="text-xs text-gray-400 font-mono">
+                  {{ ticket.ticketNumber }}
+                </p>
               </div>
             </div>
           </div>

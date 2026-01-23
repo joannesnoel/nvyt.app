@@ -1,5 +1,5 @@
 import { orders, events, tickets, ticketTypes, ticketRegistrationFields } from '@nvyt/db'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, asc } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get tickets with ticket type info
+  // Get tickets with ticket type info (ordered by sortOrder for consistency)
   const orderTickets = await db
     .select({
       ticket: tickets,
@@ -90,6 +90,7 @@ export default defineEventHandler(async (event) => {
     .from(tickets)
     .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
     .where(eq(tickets.orderId, result.order.id))
+    .orderBy(asc(tickets.sortOrder))
 
   // Check if event has active registration fields
   const [registrationFieldCount] = await db

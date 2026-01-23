@@ -95,6 +95,7 @@ export default defineEventHandler(async (event) => {
     .orderBy(asc(ticketRegistrationFields.sortOrder), asc(ticketRegistrationFields.createdAt))
 
   // Get tickets with ticket type info and registration status
+  // Order by sortOrder for consistent ordering (set during ticket creation)
   const orderTickets = await db
     .select({
       ticket: tickets,
@@ -108,6 +109,7 @@ export default defineEventHandler(async (event) => {
     .from(tickets)
     .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
     .where(eq(tickets.orderId, result.order.id))
+    .orderBy(asc(tickets.sortOrder))
 
   // Get user profile info for pre-filling
   const [userProfile] = await db

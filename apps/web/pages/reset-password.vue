@@ -154,7 +154,7 @@ async function handleSubmit() {
         <form v-else @submit.prevent="handleSubmit" class="space-y-4">
           <UAlert v-if="error" color="red" :title="error" />
 
-          <UFormGroup label="New Password" name="password" hint="At least 8 characters with uppercase, lowercase, and number">
+          <UFormGroup label="New Password" name="password" hint="Min 8 chars, uppercase, lowercase & number">
             <UInput
               v-model="form.password"
               type="password"

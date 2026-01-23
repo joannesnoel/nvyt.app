@@ -15,74 +15,92 @@ const token = computed(() => route.query.token as string | undefined)
 // Only use token if user is not logged in
 const queryToken = computed(() => user.value ? undefined : token.value)
 
-// Fetch registration data
-const { data: registrationResponse, pending, error, refresh } = await useFetch<{
-  data?: {
-    order: {
-      orderNumber: string
-      paymentStatus: string
-      customerName: string
-      customerEmail: string
-    }
-    event: {
+// Types for registration data
+interface RegistrationData {
+  order: {
+    orderNumber: string
+    paymentStatus: string
+    customerName: string
+    customerEmail: string
+  }
+  event: {
+    id: string
+    title: string
+    slug: string
+    coverImage: string | null
+    startDate: string
+    endDate: string | null
+    timezone: string | null
+    location: string | null
+  }
+  registrationFields: Array<{
+    id: string
+    label: string
+    fieldType: RegistrationFieldType
+    placeholder?: string | null
+    helpText?: string | null
+    isRequired: boolean
+    options?: FieldOption[] | null
+    validation?: FieldValidation | null
+  }>
+  tickets: Array<{
+    id: string
+    ticketNumber: string
+    attendeeName: string | null
+    attendeeEmail: string | null
+    registrationData: Record<string, unknown> | null
+    registrationCompleted: boolean
+    registrationCompletedAt: string | null
+    ticketType: {
       id: string
-      title: string
-      slug: string
-      coverImage: string | null
-      startDate: string
-      endDate: string | null
-      timezone: string | null
-      location: string | null
-    }
-    registrationFields: Array<{
-      id: string
-      label: string
-      fieldType: RegistrationFieldType
-      placeholder?: string | null
-      helpText?: string | null
-      isRequired: boolean
-      options?: FieldOption[] | null
-      validation?: FieldValidation | null
-    }>
-    tickets: Array<{
-      id: string
-      ticketNumber: string
-      attendeeName: string | null
-      attendeeEmail: string | null
-      registrationData: Record<string, unknown> | null
-      registrationCompleted: boolean
-      registrationCompletedAt: string | null
-      ticketType: {
-        id: string
-        name: string
-        description: string | null
-        price: string
-      }
-      index: number
-    }>
-    registrationStatus: {
-      totalTickets: number
-      completedTickets: number
-      allCompleted: boolean
-      nextTicketIndex: number | null
-      requiresRegistration: boolean
-    }
-    userProfile: {
       name: string
-      email: string
-      phone: string | null
-    } | null
-    userHasExistingTicket: boolean
+      description: string | null
+      price: string
+    }
+    index: number
+  }>
+  registrationStatus: {
+    totalTickets: number
+    completedTickets: number
+    allCompleted: boolean
+    nextTicketIndex: number | null
+    requiresRegistration: boolean
   }
-}>(
-  () => `/api/v1/orders/${orderNumber.value}/registration`,
-  {
-    query: { token: queryToken.value },
-    watch: [orderNumber, queryToken],
-  }
-)
+  userProfile: {
+    name: string
+    email: string
+  } | null
+  userHasExistingTicket: boolean
+}
 
-const data = computed(() => registrationResponse.value?.data)
+// Local reactive state for registration data
+const registrationData = ref<RegistrationData | null>(null)
+const pending = ref(true)
+const error = ref<Error | null>(null)
+
+// Fetch function
+async function fetchRegistrationData() {
+  try {
+    const response = await $fetch(`/api/v1/orders/${orderNumber.value}/registration`, {
+      query: { token: queryToken.value },
+    }) as { data?: RegistrationData }
+
+    if (response?.data) {
+      registrationData.value = response.data
+    }
+    error.value = null
+  } catch (e: any) {
+    error.value = e
+  } finally {
+    pending.value = false
+  }
+}
+
+// Initial fetch
+await fetchRegistrationData()
+
+// Computed properties from local state
+const data = computed(() => registrationData.value)
 const registrationFields = computed(() => data.value?.registrationFields || [])
 const tickets = computed(() => data.value?.tickets || [])
 const status = computed(() => data.value?.registrationStatus)
@@ -92,12 +110,15 @@ const userHasExistingTicket = computed(() => data.value?.userHasExistingTicket ?
 // Current ticket index (for wizard flow)
 const currentTicketIndex = ref(0)
 
+// Force update key to ensure form re-renders
+const formKey = ref(0)
+
 // Initialize current index to next incomplete ticket
-watch(status, (s) => {
-  if (s?.nextTicketIndex !== null && s?.nextTicketIndex !== undefined) {
-    currentTicketIndex.value = s.nextTicketIndex
+onMounted(() => {
+  if (status.value?.nextTicketIndex !== null && status.value?.nextTicketIndex !== undefined) {
+    currentTicketIndex.value = status.value.nextTicketIndex
   }
-}, { immediate: true })
+})
 
 // Current ticket
 const currentTicket = computed(() => tickets.value[currentTicketIndex.value])
@@ -123,6 +144,7 @@ async function submitRegistration(responses: Record<string, string | number | bo
   }
 
   const wasLastTicket = isLastTicket.value
+  const currentIdx = currentTicketIndex.value
 
   isSubmitting.value = true
   try {
@@ -142,22 +164,45 @@ async function submitRegistration(responses: Record<string, string | number | bo
       title: 'Registration Saved',
       description: wasLastTicket
         ? 'All registrations completed!'
-        : `Ticket ${currentTicketIndex.value + 1} registered. Moving to next ticket...`,
+        : `Ticket ${currentIdx + 1} registered. Moving to next ticket...`,
       color: 'green',
     })
 
-    // Refresh data - the watch on status.nextTicketIndex will update currentTicketIndex
-    await refresh()
-
-    // If this was the last ticket, redirect to success
-    // The watch on status.allCompleted will also handle this, but we do it explicitly for clarity
+    // If this was the last ticket, redirect to success immediately
     if (wasLastTicket) {
       const successUrl = token.value
         ? `/orders/${orderNumber.value}/success?token=${token.value}`
         : `/orders/${orderNumber.value}/success`
       router.push(successUrl)
+      return
     }
-    // Otherwise, the watch on status.nextTicketIndex handles moving to the next ticket
+
+    // Fetch fresh data and update local state
+    const freshResponse = await $fetch(`/api/v1/orders/${orderNumber.value}/registration`, {
+      query: { token: queryToken.value },
+    }) as { data?: RegistrationData }
+
+    if (freshResponse?.data) {
+      // Get the next ticket index from fresh data
+      const nextIdx = freshResponse.data.registrationStatus?.nextTicketIndex
+
+      // Update index FIRST (before updating data)
+      if (nextIdx !== null && nextIdx !== undefined) {
+        currentTicketIndex.value = nextIdx
+      } else {
+        // Fallback: move to next ticket index
+        currentTicketIndex.value = currentIdx + 1
+      }
+
+      // Then update the data
+      registrationData.value = freshResponse.data
+
+      // Increment form key to force re-render
+      formKey.value++
+
+      // Wait for Vue reactivity to process
+      await nextTick()
+    }
   } catch (e: any) {
     toast.add({
       title: 'Registration Failed',
@@ -300,6 +345,7 @@ watch(status, (s) => {
         <!-- Registration Form Card -->
         <UCard>
           <RegistrationForm
+            :key="formKey"
             :fields="registrationFields"
             :ticket-index="currentTicketIndex"
             :total-tickets="tickets.length"
@@ -364,7 +410,7 @@ watch(status, (s) => {
           Something unexpected happened. Please try refreshing the page.
         </p>
         <div class="flex flex-col gap-3 max-w-xs mx-auto">
-          <UButton color="primary" @click="refresh()">
+          <UButton color="primary" @click="fetchRegistrationData()">
             Refresh
           </UButton>
           <UButton
