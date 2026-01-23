@@ -221,7 +221,13 @@ else
   TASK_ID=$(echo "$TASK_ARN" | awk -F'/' '{print $NF}')
   echo "      Using ECS task: $TASK_ID"
 
-  # Run pg_dump via ECS Exec (filter out ANSI codes and SSM session noise)
+  # ECS Exec interactive mode can't reliably pipe output, so we use S3 as intermediary
+  S3_BUCKET="nvyt-production-assets"
+  S3_KEY="db-dumps/staging-sync-$(date +%Y%m%d-%H%M%S).sql"
+
+  echo "      Dumping to S3 via ECS Exec..."
+
+  # Run pg_dump inside container and upload directly to S3
   aws ecs execute-command \
     --profile "$AWS_PROFILE" \
     --region "$AWS_REGION" \
@@ -229,23 +235,49 @@ else
     --task "$TASK_ID" \
     --container "web" \
     --interactive \
-    --command "pg_dump \"\$DATABASE_URL\" $PG_DUMP_OPTS" 2>/dev/null | \
-    sed 's/\x1b\[[0-9;]*m//g' | \
-    grep -v "^Starting session" | \
-    grep -v "^Session" > "$DUMP_FILE"
+    --command "pg_dump \"\$DATABASE_URL\" $PG_DUMP_OPTS | aws s3 cp - s3://$S3_BUCKET/$S3_KEY" 2>&1 | \
+    grep -v "^Starting session" | grep -v "^SessionId" | grep -v "^Exiting" || true
 
-  if [[ $? -ne 0 ]]; then
-    echo -e "${RED}Error: Failed to dump database via ECS Exec${NC}"
+  # Wait a moment for S3 to be consistent
+  sleep 2
+
+  # Verify the dump exists in S3
+  S3_SIZE=$(aws s3api head-object \
+    --profile "$AWS_PROFILE" \
+    --region "$AWS_REGION" \
+    --bucket "$S3_BUCKET" \
+    --key "$S3_KEY" \
+    --query 'ContentLength' \
+    --output text 2>/dev/null || echo "0")
+
+  if [[ "$S3_SIZE" == "0" || -z "$S3_SIZE" ]]; then
+    echo -e "${RED}Error: Failed to dump database to S3${NC}"
     echo ""
-    echo "ECS Exec may not be enabled. To enable it:"
-    echo "  1. Update your ECS service with --enable-execute-command"
-    echo "  2. Ensure task role has ssmmessages permissions"
+    echo "Possible causes:"
+    echo "  1. ECS task role missing S3 write permissions"
+    echo "  2. pg_dump not available in container"
+    echo "  3. DATABASE_URL not set in container"
     echo ""
-    echo "Alternative: Run pg_dump manually and use --local-dump option"
+    echo "Alternative: Run pg_dump manually from a machine with database access"
     exit 1
   fi
 
-  echo -e "${GREEN}✓ Database dumped via ECS Exec${NC}"
+  echo "      S3 dump size: $(numfmt --to=iec $S3_SIZE 2>/dev/null || echo $S3_SIZE bytes)"
+
+  # Download from S3
+  echo "      Downloading from S3..."
+  aws s3 cp \
+    --profile "$AWS_PROFILE" \
+    --region "$AWS_REGION" \
+    "s3://$S3_BUCKET/$S3_KEY" "$DUMP_FILE"
+
+  # Clean up S3
+  aws s3 rm \
+    --profile "$AWS_PROFILE" \
+    --region "$AWS_REGION" \
+    "s3://$S3_BUCKET/$S3_KEY" 2>/dev/null || true
+
+  echo -e "${GREEN}✓ Database dumped via ECS/S3${NC}"
 fi
 
 DUMP_SIZE=$(du -h "$DUMP_FILE" | cut -f1)

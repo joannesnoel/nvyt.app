@@ -26,7 +26,8 @@ FROM node:22-alpine AS runner
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Install PostgreSQL client for database operations (pg_dump, psql)
-RUN apk add --no-cache postgresql-client
+# Install AWS CLI for S3 operations (used by db sync script)
+RUN apk add --no-cache postgresql-client aws-cli
 
 WORKDIR /app
 
