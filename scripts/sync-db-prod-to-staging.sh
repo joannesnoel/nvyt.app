@@ -228,6 +228,7 @@ else
   echo "      Dumping to S3 via ECS Exec..."
 
   # Run pg_dump inside container and upload directly to S3
+  # Wrap in sh -c to ensure pipe is interpreted by shell
   aws ecs execute-command \
     --profile "$AWS_PROFILE" \
     --region "$AWS_REGION" \
@@ -235,7 +236,7 @@ else
     --task "$TASK_ID" \
     --container "web" \
     --interactive \
-    --command "pg_dump \"\$DATABASE_URL\" $PG_DUMP_OPTS | aws s3 cp - s3://$S3_BUCKET/$S3_KEY" 2>&1 | \
+    --command "sh -c 'pg_dump \"\$DATABASE_URL\" $PG_DUMP_OPTS | aws s3 cp - s3://$S3_BUCKET/$S3_KEY'" 2>&1 | \
     grep -v "^Starting session" | grep -v "^SessionId" | grep -v "^Exiting" || true
 
   # Wait a moment for S3 to be consistent
