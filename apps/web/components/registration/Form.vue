@@ -28,13 +28,19 @@ const props = defineProps<{
   isFirstTicket: boolean
   isSingleTicket: boolean
   isLastTicket: boolean
+  userHasExistingTicket?: boolean
   loading?: boolean
 }>()
 
 const emit = defineEmits<{
-  submit: [responses: Record<string, string | number | boolean>, useUserProfile: boolean]
+  submit: [responses: Record<string, string | number | boolean>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string }]
   skip: []
 }>()
+
+// Built-in attendee info (always required)
+const attendeeName = ref('')
+const attendeeEmail = ref('')
+const attendeeBirthdate = ref('')
 
 // Form state
 const responses = ref<Record<string, string | number | boolean>>({})
@@ -54,7 +60,8 @@ onMounted(() => {
   })
 
   // Auto-check "this ticket is mine" for single ticket purchases
-  if (props.isSingleTicket && props.userProfile) {
+  // Only if user doesn't already have a ticket to this event
+  if (props.isSingleTicket && props.userProfile && !props.userHasExistingTicket) {
     useMyInfo.value = true
     prefillFromProfile()
   }
@@ -65,6 +72,10 @@ watch(useMyInfo, (checked) => {
   if (checked && props.userProfile) {
     prefillFromProfile()
   } else if (!checked) {
+    // Clear built-in attendee fields
+    attendeeName.value = ''
+    attendeeEmail.value = ''
+    attendeeBirthdate.value = ''
     // Clear prefilled data
     props.fields.forEach((field) => {
       if (field.fieldType === 'checkbox') {
@@ -78,6 +89,10 @@ watch(useMyInfo, (checked) => {
 
 function prefillFromProfile() {
   if (!props.userProfile) return
+
+  // Prefill built-in attendee fields
+  attendeeName.value = props.userProfile.name || ''
+  attendeeEmail.value = props.userProfile.email || ''
 
   props.fields.forEach((field) => {
     const labelLower = field.label.toLowerCase()
@@ -96,6 +111,28 @@ function prefillFromProfile() {
 function validate(): boolean {
   errors.value = {}
   let isValid = true
+
+  // Validate built-in attendee fields (always required)
+  if (!attendeeName.value.trim()) {
+    errors.value['_attendeeName'] = 'Attendee name is required'
+    isValid = false
+  }
+
+  if (!attendeeEmail.value.trim()) {
+    errors.value['_attendeeEmail'] = 'Attendee email is required'
+    isValid = false
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(attendeeEmail.value)) {
+      errors.value['_attendeeEmail'] = 'Please enter a valid email address'
+      isValid = false
+    }
+  }
+
+  if (!attendeeBirthdate.value) {
+    errors.value['_attendeeBirthdate'] = 'Birthdate is required'
+    isValid = false
+  }
 
   props.fields.forEach((field) => {
     const value = responses.value[field.id]
@@ -207,7 +244,11 @@ function handleSubmit() {
     }
   })
 
-  emit('submit', cleanResponses, useMyInfo.value)
+  emit('submit', cleanResponses, useMyInfo.value, {
+    name: attendeeName.value.trim(),
+    email: attendeeEmail.value.trim(),
+    birthdate: attendeeBirthdate.value,
+  })
 }
 </script>
 
@@ -223,9 +264,9 @@ function handleSubmit() {
       <p class="text-xs text-gray-400 font-mono">{{ ticketNumber }}</p>
     </div>
 
-    <!-- "This ticket is mine" checkbox (only for first ticket) -->
+    <!-- "This ticket is mine" checkbox (only for first ticket when user doesn't have existing ticket) -->
     <UAlert
-      v-if="isFirstTicket && userProfile"
+      v-if="isFirstTicket && userProfile && !userHasExistingTicket"
       color="blue"
       class="mb-6"
     >
@@ -240,8 +281,36 @@ function handleSubmit() {
       </p>
     </UAlert>
 
-    <!-- Registration fields -->
-    <div class="space-y-4">
+    <!-- Built-in attendee fields (always required) -->
+    <div class="space-y-4 mb-6">
+      <UFormGroup label="Attendee Name" required :error="errors['_attendeeName']">
+        <UInput
+          v-model="attendeeName"
+          placeholder="Full name of ticket holder"
+          :disabled="loading"
+        />
+      </UFormGroup>
+
+      <UFormGroup label="Attendee Email" required :error="errors['_attendeeEmail']">
+        <UInput
+          v-model="attendeeEmail"
+          type="email"
+          placeholder="Email address of ticket holder"
+          :disabled="loading"
+        />
+      </UFormGroup>
+
+      <UFormGroup label="Birthdate" required :error="errors['_attendeeBirthdate']" help="Used for identity verification at the venue">
+        <UInput
+          v-model="attendeeBirthdate"
+          type="date"
+          :disabled="loading"
+        />
+      </UFormGroup>
+    </div>
+
+    <!-- Additional registration fields -->
+    <div v-if="fields.length > 0" class="space-y-4">
       <RegistrationFieldRenderer
         v-for="field in fields"
         :key="field.id"

@@ -1,5 +1,5 @@
 import { orders, events, tickets, ticketTypes, ticketRegistrationFields, users } from '@nvyt/db'
-import { eq, and, asc } from 'drizzle-orm'
+import { eq, and, asc, not, or } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')
@@ -119,6 +119,26 @@ export default defineEventHandler(async (event) => {
     .where(eq(users.id, userId))
     .limit(1)
 
+  // Check if user already has a confirmed ticket to this event (excluding current order)
+  // Check both as purchaser (userId) and as attendee (attendeeUserId)
+  const existingTickets = await db
+    .select({ id: tickets.id })
+    .from(tickets)
+    .where(
+      and(
+        or(
+          eq(tickets.userId, userId),
+          eq(tickets.attendeeUserId, userId)
+        ),
+        eq(tickets.eventId, result.event.id),
+        eq(tickets.status, 'confirmed'),
+        not(eq(tickets.orderId, result.order.id))
+      )
+    )
+    .limit(1)
+
+  const userHasExistingTicket = existingTickets.length > 0
+
   // Calculate overall registration status
   const totalTickets = orderTickets.length
   const completedTickets = orderTickets.filter((t) => t.ticket.registrationCompleted).length
@@ -155,8 +175,10 @@ export default defineEventHandler(async (event) => {
       completedTickets,
       allCompleted,
       nextTicketIndex: nextTicketIndex === -1 ? null : nextTicketIndex,
-      requiresRegistration: registrationFields.length > 0,
+      // Always require registration since we need attendee name and email for each ticket
+      requiresRegistration: true,
     },
     userProfile: userProfile || null,
+    userHasExistingTicket,
   })
 })

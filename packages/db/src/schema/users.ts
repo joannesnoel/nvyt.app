@@ -6,6 +6,7 @@ export const users = pgTable('users', {
   emailVerified: boolean('email_verified').default(false).notNull(),
   passwordHash: text('password_hash'),
   name: text('name').notNull(),
+  birthdate: text('birthdate'), // YYYY-MM-DD format
   avatarUrl: text('avatar_url'),
 
   // OAuth fields

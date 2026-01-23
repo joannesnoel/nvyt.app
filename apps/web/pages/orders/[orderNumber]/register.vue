@@ -72,6 +72,7 @@ const { data: registrationResponse, pending, error, refresh } = await useFetch<{
       email: string
       phone: string | null
     } | null
+    userHasExistingTicket: boolean
   }
 }>(
   () => `/api/v1/orders/${orderNumber.value}/registration`,
@@ -86,6 +87,7 @@ const registrationFields = computed(() => data.value?.registrationFields || [])
 const tickets = computed(() => data.value?.tickets || [])
 const status = computed(() => data.value?.registrationStatus)
 const userProfile = computed(() => data.value?.userProfile)
+const userHasExistingTicket = computed(() => data.value?.userHasExistingTicket ?? false)
 
 // Current ticket index (for wizard flow)
 const currentTicketIndex = ref(0)
@@ -112,7 +114,7 @@ const isLastTicket = computed(() => currentTicketIndex.value === tickets.value.l
 // Submitting state
 const isSubmitting = ref(false)
 
-async function submitRegistration(responses: Record<string, string | number | boolean>, useUserProfile: boolean) {
+async function submitRegistration(responses: Record<string, string | number | boolean>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string }) {
   if (!currentTicket.value) return
 
   // Prevent double submission for already registered tickets
@@ -130,6 +132,9 @@ async function submitRegistration(responses: Record<string, string | number | bo
       body: {
         responses,
         useUserProfile,
+        attendeeName: attendeeInfo.name,
+        attendeeEmail: attendeeInfo.email,
+        attendeeBirthdate: attendeeInfo.birthdate,
       },
     })
 
@@ -304,21 +309,12 @@ watch(status, (s) => {
             :is-first-ticket="isFirstTicket"
             :is-single-ticket="isSingleTicket"
             :is-last-ticket="isLastTicket"
+            :user-has-existing-ticket="userHasExistingTicket"
             :loading="isSubmitting"
             @submit="submitRegistration"
           />
         </UCard>
 
-        <!-- Skip link (if all required fields are optional) -->
-        <div v-if="registrationFields.every((f: any) => !f.isRequired)" class="mt-4 text-center">
-          <UButton
-            variant="link"
-            color="gray"
-            @click="submitRegistration({}, false)"
-          >
-            Skip this ticket
-          </UButton>
-        </div>
       </div>
 
       <!-- No tickets found -->
@@ -334,22 +330,6 @@ watch(status, (s) => {
           size="lg"
         >
           View Order
-        </UButton>
-      </div>
-
-      <!-- No registration fields configured -->
-      <div v-else-if="data && registrationFields.length === 0" class="text-center py-20">
-        <UIcon name="i-heroicons-clipboard-document-list" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">No Registration Required</h1>
-        <p class="text-gray-600 dark:text-gray-400 mb-6">
-          This event doesn't require additional registration information.
-        </p>
-        <UButton
-          :to="token ? `/orders/${orderNumber}/success?token=${token}` : `/orders/${orderNumber}/success`"
-          color="primary"
-          size="lg"
-        >
-          View Your Tickets
         </UButton>
       </div>
 

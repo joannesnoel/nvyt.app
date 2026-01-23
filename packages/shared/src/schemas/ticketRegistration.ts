@@ -77,6 +77,10 @@ export const submitTicketRegistrationSchema = z.object({
   responses: z.record(z.string().uuid(), z.union([z.string(), z.number(), z.boolean(), addressDataSchema])),
   // Optional: pre-fill from user profile
   useUserProfile: z.boolean().optional(),
+  // Required attendee information for each ticket
+  attendeeName: z.string().min(1, 'Attendee name is required'),
+  attendeeEmail: z.string().email('Valid email is required'),
+  attendeeBirthdate: z.string().min(1, 'Birthdate is required'), // YYYY-MM-DD format
 })
 
 // Registration response value (can be string, number, boolean, or address data)

@@ -57,13 +57,19 @@ export const tickets = pgTable('tickets', {
     .notNull()
     .references(() => orders.id, { onDelete: 'cascade' }),
 
+  // Attendee (the actual ticket holder, may differ from purchaser)
+  attendeeUserId: uuid('attendee_user_id')
+    .references(() => users.id, { onDelete: 'set null' }),
+
   // Ticket details
   ticketNumber: text('ticket_number').notNull().unique(), // Human-readable ticket number
   qrCode: text('qr_code').notNull().unique(), // For scanning
 
-  // Attendee info (may differ from purchaser)
+  // Legacy attendee fields (deprecated - use attendeeUserId instead)
+  // Kept for backward compatibility during migration
   attendeeName: text('attendee_name'),
   attendeeEmail: text('attendee_email'),
+  attendeeBirthdate: text('attendee_birthdate'), // YYYY-MM-DD format for identity verification
 
   // Post-payment registration data (stores { fieldId: value } responses)
   registrationData: jsonb('registration_data').$type<TicketRegistrationData>(),

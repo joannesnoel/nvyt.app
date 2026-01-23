@@ -1,6 +1,8 @@
 import { tickets, ticketTypes, events, orders, ticketRegistrationFields, users } from '@nvyt/db'
 import { submitTicketRegistrationSchema, type AddressData } from '@nvyt/shared'
 import { eq, and, asc } from 'drizzle-orm'
+import { sendEmail, ticketRegisteredNotificationEmail, ticketRegisteredSetupEmail } from '~/server/utils/email'
+import { createAccountSetupToken } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const ticketId = getRouterParam(event, 'ticketId')
@@ -47,7 +49,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { responses, useUserProfile } = result.data
+  const { responses, useUserProfile, attendeeName: submittedAttendeeName, attendeeEmail: submittedAttendeeEmail, attendeeBirthdate: submittedAttendeeBirthdate } = result.data
 
   // Get ticket with order and event info
   const [ticketResult] = await db
@@ -106,21 +108,6 @@ export default defineEventHandler(async (event) => {
       )
     )
     .orderBy(asc(ticketRegistrationFields.sortOrder))
-
-  // Get user profile if useUserProfile is true
-  let userProfile: { name: string; email: string } | null = null
-  if (useUserProfile) {
-    const [profile] = await db
-      .select({
-        name: users.name,
-        email: users.email,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
-
-    userProfile = profile || null
-  }
 
   // Validate required fields
   const validatedResponses: Record<string, string | number | boolean | AddressData> = {}
@@ -301,42 +288,101 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Extract attendee name and email from responses for the ticket record
-  // Look for common field labels or use the first email/text fields
-  let attendeeName = ticketResult.ticket.attendeeName
-  let attendeeEmail = ticketResult.ticket.attendeeEmail
+  // Use attendee info from form submission (always required)
+  const attendeeName = submittedAttendeeName
+  const attendeeEmail = submittedAttendeeEmail
+  const attendeeBirthdate = submittedAttendeeBirthdate
 
-  // If using user profile, override with profile data
-  if (useUserProfile && userProfile) {
-    attendeeName = userProfile.name
-    attendeeEmail = userProfile.email
+  // Get purchaser info
+  const [purchaser] = await db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  if (!purchaser) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to retrieve user information',
+    })
   }
 
-  // Try to find name and email from responses
-  for (const field of registrationFieldsList) {
-    const value = validatedResponses[field.id]
-    if (!value) continue
+  // Find or create attendee user
+  let attendeeUserId: string
+  let attendeeUser: { id: string; name: string; email: string; passwordHash: string | null } | null = null
+  let isNewUser = false
 
-    const labelLower = field.label.toLowerCase()
+  // Check if attendee is the same as purchaser
+  const isSameAsPurchaser = useUserProfile ||
+    (attendeeEmail && purchaser.email.toLowerCase() === attendeeEmail.toLowerCase())
 
-    if (!attendeeName && field.fieldType === 'text' && (labelLower.includes('name') || labelLower.includes('full name'))) {
-      attendeeName = value as string
+  if (isSameAsPurchaser) {
+    // Attendee is the purchaser
+    attendeeUserId = purchaser.id
+
+    // Update purchaser's birthdate if provided and not already set
+    if (attendeeBirthdate) {
+      await db
+        .update(users)
+        .set({ birthdate: attendeeBirthdate, updatedAt: new Date() })
+        .where(eq(users.id, purchaser.id))
     }
+  } else {
+    // Attendee is different from purchaser - find or create user
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, attendeeEmail.toLowerCase()))
+      .limit(1)
 
-    if (!attendeeEmail && field.fieldType === 'email') {
-      attendeeEmail = value as string
+    if (existingUser) {
+      attendeeUserId = existingUser.id
+      attendeeUser = existingUser
+
+      // Update user's name and birthdate if not already set
+      const updates: { name?: string; birthdate?: string; updatedAt: Date } = { updatedAt: new Date() }
+      if (!existingUser.name && attendeeName) updates.name = attendeeName
+      if (!existingUser.birthdate && attendeeBirthdate) updates.birthdate = attendeeBirthdate
+
+      if (updates.name || updates.birthdate) {
+        await db.update(users).set(updates).where(eq(users.id, existingUser.id))
+      }
+    } else {
+      // Create new user for attendee
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email: attendeeEmail.toLowerCase(),
+          name: attendeeName || '',
+          birthdate: attendeeBirthdate || null,
+        })
+        .returning()
+
+      if (!newUser) {
+        throw createError({
+          statusCode: 500,
+          message: 'Failed to create attendee account',
+        })
+      }
+
+      attendeeUserId = newUser.id
+      attendeeUser = newUser
+      isNewUser = true
     }
   }
 
-  // Update ticket with registration data
+  // Update ticket with registration data and attendeeUserId
   const [updatedTicket] = await db
     .update(tickets)
     .set({
       registrationData: validatedResponses,
       registrationCompleted: true,
       registrationCompletedAt: new Date(),
-      attendeeName: attendeeName || ticketResult.ticket.attendeeName,
-      attendeeEmail: attendeeEmail || ticketResult.ticket.attendeeEmail,
+      attendeeUserId,
+      // Legacy fields (kept for backward compatibility)
+      attendeeName,
+      attendeeEmail,
+      attendeeBirthdate,
       updatedAt: new Date(),
     })
     .where(eq(tickets.id, ticketId))
@@ -347,6 +393,56 @@ export default defineEventHandler(async (event) => {
       statusCode: 500,
       message: 'Failed to save registration data',
     })
+  }
+
+  // Send notification email to attendee if they are different from the purchaser
+  if (!isSameAsPurchaser && attendeeUser) {
+    const config = useRuntimeConfig()
+    const baseUrl = config.public?.appUrl || 'https://nvyt.app'
+
+    // Format event date for email
+    const eventDate = new Date(ticketResult.event.startDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+
+    if (attendeeUser.passwordHash) {
+      // Existing user with password - send notification email
+      const ticketUrl = `${baseUrl}/my-tickets`
+      const emailContent = ticketRegisteredNotificationEmail({
+        attendeeName: attendeeName || attendeeUser.name,
+        eventTitle: ticketResult.event.title,
+        eventDate,
+        eventLocation: ticketResult.event.location || undefined,
+        ticketType: ticketResult.ticketType.name,
+        purchaserName: purchaser.name,
+        ticketUrl,
+      })
+
+      sendEmail({ to: attendeeEmail, ...emailContent })
+        .catch(err => console.error('[Registration] Failed to send notification email:', err))
+    } else {
+      // New user or user without password - send setup email
+      const setupToken = await createAccountSetupToken(attendeeUser.id)
+      const setupUrl = `${baseUrl}/auth/setup-account?token=${setupToken}`
+
+      const emailContent = ticketRegisteredSetupEmail({
+        attendeeName: attendeeName || attendeeUser.name || 'there',
+        eventTitle: ticketResult.event.title,
+        eventDate,
+        eventLocation: ticketResult.event.location || undefined,
+        ticketType: ticketResult.ticketType.name,
+        purchaserName: purchaser.name,
+        setupUrl,
+      })
+
+      sendEmail({ to: attendeeEmail, ...emailContent })
+        .catch(err => console.error('[Registration] Failed to send setup email:', err))
+    }
   }
 
   return successResponse({

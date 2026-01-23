@@ -1209,3 +1209,113 @@ export function emailVerificationEmail(data: {
     `,
   }
 }
+
+export function ticketRegisteredNotificationEmail(data: {
+  attendeeName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  ticketType: string
+  purchaserName: string
+  ticketUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `A ticket to ${data.eventTitle} has been registered in your name`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">You're Going to ${data.eventTitle}!</h2>
+
+        <p>Hi ${data.attendeeName},</p>
+
+        <p><strong>${data.purchaserName}</strong> has registered a ticket in your name for <strong>${data.eventTitle}</strong>.</p>
+
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+          <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+          ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+          <p style="margin: 0;"><strong>Ticket Type:</strong> ${data.ticketType}</p>
+        </div>
+
+        <p>Log in to your nvyt account to view your ticket and event details.</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.ticketUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">View Your Ticket</a>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          See you at the event!<br>
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function ticketRegisteredSetupEmail(data: {
+  attendeeName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  ticketType: string
+  purchaserName: string
+  setupUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `A ticket to ${data.eventTitle} has been registered in your name`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">You're Going to ${data.eventTitle}!</h2>
+
+        <p>Hi ${data.attendeeName},</p>
+
+        <p><strong>${data.purchaserName}</strong> has registered a ticket in your name for <strong>${data.eventTitle}</strong>.</p>
+
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+          <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+          ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+          <p style="margin: 0;"><strong>Ticket Type:</strong> ${data.ticketType}</p>
+        </div>
+
+        <p>We've created an nvyt account for you. Set up a password to access your ticket and manage future events:</p>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.setupUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Set Up Your Account</a>
+        </p>
+
+        <p style="color: #666; font-size: 14px;">This link will expire in 7 days. After that, you can use the "Forgot password" option on the login page.</p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          See you at the event!<br>
+          The nvyt Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}

@@ -225,6 +225,20 @@
       "when": 1769066897793,
       "tag": "0031_faulty_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1769143961451,
+      "tag": "0032_deep_changeling",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1769146216877,
+      "tag": "0033_aromatic_colonel_america",
+      "breakpoints": true
     }
   ]
 }
