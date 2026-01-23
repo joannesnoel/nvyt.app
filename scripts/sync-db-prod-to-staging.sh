@@ -221,7 +221,7 @@ else
   TASK_ID=$(echo "$TASK_ARN" | awk -F'/' '{print $NF}')
   echo "      Using ECS task: $TASK_ID"
 
-  # Run pg_dump via ECS Exec
+  # Run pg_dump via ECS Exec (filter out ANSI codes and SSM session noise)
   aws ecs execute-command \
     --profile "$AWS_PROFILE" \
     --region "$AWS_REGION" \
@@ -229,7 +229,10 @@ else
     --task "$TASK_ID" \
     --container "web" \
     --interactive \
-    --command "pg_dump \"\$DATABASE_URL\" $PG_DUMP_OPTS" > "$DUMP_FILE"
+    --command "pg_dump \"\$DATABASE_URL\" $PG_DUMP_OPTS" 2>/dev/null | \
+    sed 's/\x1b\[[0-9;]*m//g' | \
+    grep -v "^Starting session" | \
+    grep -v "^Session" > "$DUMP_FILE"
 
   if [[ $? -ne 0 ]]; then
     echo -e "${RED}Error: Failed to dump database via ECS Exec${NC}"
@@ -247,6 +250,15 @@ fi
 
 DUMP_SIZE=$(du -h "$DUMP_FILE" | cut -f1)
 echo "      Dump size: $DUMP_SIZE"
+
+# Validate dump file contains actual SQL
+if ! grep -q "CREATE TABLE" "$DUMP_FILE"; then
+  echo -e "${RED}Error: Dump file appears invalid (no CREATE TABLE statements found)${NC}"
+  echo "      The dump may have failed or been corrupted."
+  rm -f "$DUMP_FILE"
+  exit 1
+fi
+echo -e "${GREEN}✓ Dump file validated${NC}"
 echo ""
 
 # Step 2: Copy dump to staging pod
@@ -272,8 +284,8 @@ kubectl exec -n "$K8S_NAMESPACE" "$STAGING_POD" -- bash -c "
   dropdb -U $STAGING_DB_USER --if-exists $STAGING_DB_NAME
   createdb -U $STAGING_DB_USER $STAGING_DB_NAME
 
-  # Restore
-  psql -U $STAGING_DB_USER -d $STAGING_DB_NAME -f /tmp/prod_dump.sql
+  # Restore (with ON_ERROR_STOP to catch errors)
+  psql -U $STAGING_DB_USER -d $STAGING_DB_NAME --set ON_ERROR_STOP=on -f /tmp/prod_dump.sql
 "
 
 if [[ $? -ne 0 ]]; then
@@ -281,7 +293,18 @@ if [[ $? -ne 0 ]]; then
   exit 1
 fi
 
-echo -e "${GREEN}✓ Database restored successfully${NC}"
+# Verify tables were created
+TABLE_COUNT=$(kubectl exec -n "$K8S_NAMESPACE" "$STAGING_POD" -- bash -c "
+  export PGPASSWORD='$STAGING_DB_PASS'
+  psql -U $STAGING_DB_USER -d $STAGING_DB_NAME -t -c \"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';\"
+" | tr -d ' ')
+
+if [[ -z "$TABLE_COUNT" || "$TABLE_COUNT" -lt 1 ]]; then
+  echo -e "${RED}Error: No tables found after restore - restore may have failed${NC}"
+  exit 1
+fi
+
+echo -e "${GREEN}✓ Database restored successfully ($TABLE_COUNT tables)${NC}"
 echo ""
 
 # Step 4: Cleanup

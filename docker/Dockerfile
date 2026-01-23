@@ -25,6 +25,9 @@ FROM node:22-alpine AS runner
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
+# Install PostgreSQL client for database operations (pg_dump, psql)
+RUN apk add --no-cache postgresql-client
+
 WORKDIR /app
 
 # Create non-root user
