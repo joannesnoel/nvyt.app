@@ -292,6 +292,14 @@ if ! grep -q "CREATE TABLE" "$DUMP_FILE"; then
   exit 1
 fi
 echo -e "${GREEN}✓ Dump file validated${NC}"
+
+# Filter out PostgreSQL version-specific settings that may not exist in staging
+# (e.g., transaction_timeout is PostgreSQL 17+)
+echo "      Filtering incompatible settings..."
+sed -i \
+  -e '/^SET transaction_timeout/d' \
+  -e '/^SET idle_in_transaction_session_timeout/d' \
+  "$DUMP_FILE"
 echo ""
 
 # Step 2: Copy dump to staging pod
