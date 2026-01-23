@@ -62,7 +62,7 @@ const userMenuItems = computed(() => {
           <!-- Logo -->
           <NuxtLink to="/" class="flex items-center gap-2">
             <img src="/logo.png" alt="nvyt" width="36" height="36" class="h-9 w-9" />
-            <span class="text-2xl font-bold text-green-500 dark:text-green-400 ml-1 pb-2">nvyt</span>
+            <span class="text-2xl font-bold ml-1 pb-2 text-metallic-3d">nvyt</span>
           </NuxtLink>
 
           <!-- Actions -->
