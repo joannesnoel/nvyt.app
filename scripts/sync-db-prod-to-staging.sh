@@ -222,7 +222,7 @@ else
   echo "      Using ECS task: $TASK_ID"
 
   # ECS Exec interactive mode can't reliably pipe output, so we use S3 as intermediary
-  S3_BUCKET="nvyt-production-assets"
+  S3_BUCKET="nvyt-uploads-prod"
   S3_KEY="db-dumps/staging-sync-$(date +%Y%m%d-%H%M%S).sql"
 
   echo "      Dumping to S3 via ECS Exec..."
