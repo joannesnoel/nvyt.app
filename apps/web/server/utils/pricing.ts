@@ -311,6 +311,30 @@ export async function incrementTierQuantitySold(
 }
 
 /**
+ * Check if a ticket type has any active tier (for allowing sales outside ticket type sales period)
+ * Returns true if at least one tier is currently active based on its type constraints
+ */
+export async function hasActiveTier(
+  ticketTypeId: string,
+  now = new Date()
+): Promise<boolean> {
+  const db = useDatabase()
+
+  const allTiers = await db
+    .select()
+    .from(ticketPriceTiers)
+    .where(eq(ticketPriceTiers.ticketTypeId, ticketTypeId))
+
+  for (const tier of allTiers) {
+    if (isTierActive(tier, now)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
  * Validate that a tier has sufficient quantity available
  * Returns { available: true } or { available: false, remaining: number }
  */

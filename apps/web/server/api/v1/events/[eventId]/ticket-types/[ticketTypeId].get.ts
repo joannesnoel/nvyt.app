@@ -1,5 +1,6 @@
 import { ticketTypes, events } from '@nvyt/db'
 import { eq, and } from 'drizzle-orm'
+import { hasActiveTier } from '~/server/utils/pricing'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -46,9 +47,13 @@ export default defineEventHandler(async (event) => {
   const available = ticketType.quantity ? ticketType.quantity - ticketType.quantitySold : null
   const isSoldOut = ticketType.quantity ? ticketType.quantitySold >= ticketType.quantity : false
   const now = new Date()
-  const isOnSale =
+  const ticketTypeInSalesPeriod =
     (!ticketType.salesStart || new Date(ticketType.salesStart) <= now) &&
     (!ticketType.salesEnd || new Date(ticketType.salesEnd) >= now)
+
+  // Allow sales if ticket type is in sales period OR if an active tier exists
+  const hasActivePriceTier = ticketTypeInSalesPeriod ? false : await hasActiveTier(ticketType.id, now)
+  const isOnSale = ticketTypeInSalesPeriod || hasActivePriceTier
 
   return successResponse({
     ...ticketType,

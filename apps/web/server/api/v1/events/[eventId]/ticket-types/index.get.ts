@@ -1,5 +1,6 @@
 import { ticketTypes, events } from '@nvyt/db'
 import { eq, asc } from 'drizzle-orm'
+import { hasActiveTier } from '~/server/utils/pricing'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -41,21 +42,27 @@ export default defineEventHandler(async (event) => {
     .orderBy(asc(ticketTypes.sortOrder), asc(ticketTypes.createdAt))
 
   // Calculate availability for each ticket type
-  const ticketTypesWithAvailability = types.map((type) => {
-    const available = type.quantity ? type.quantity - type.quantitySold : null
-    const isSoldOut = type.quantity ? type.quantitySold >= type.quantity : false
-    const now = new Date()
-    const isOnSale =
-      (!type.salesStart || new Date(type.salesStart) <= now) &&
-      (!type.salesEnd || new Date(type.salesEnd) >= now)
+  const now = new Date()
+  const ticketTypesWithAvailability = await Promise.all(
+    types.map(async (type) => {
+      const available = type.quantity ? type.quantity - type.quantitySold : null
+      const isSoldOut = type.quantity ? type.quantitySold >= type.quantity : false
+      const ticketTypeInSalesPeriod =
+        (!type.salesStart || new Date(type.salesStart) <= now) &&
+        (!type.salesEnd || new Date(type.salesEnd) >= now)
 
-    return {
-      ...type,
-      available,
-      isSoldOut: isSoldOut || type.status === 'sold_out',
-      isOnSale: isOnSale && type.status === 'active',
-    }
-  })
+      // Allow sales if ticket type is in sales period OR if an active tier exists
+      const hasActivePriceTier = ticketTypeInSalesPeriod ? false : await hasActiveTier(type.id, now)
+      const isOnSale = ticketTypeInSalesPeriod || hasActivePriceTier
+
+      return {
+        ...type,
+        available,
+        isSoldOut: isSoldOut || type.status === 'sold_out',
+        isOnSale: isOnSale && type.status === 'active',
+      }
+    })
+  )
 
   return successResponse(ticketTypesWithAvailability)
 })
