@@ -115,7 +115,9 @@
       "Bash(AWS_PROFILE=nvyt-prod aws secretsmanager:*)",
       "Bash(AWS_PROFILE=nvyt-prod aws ecs:*)",
       "Bash(head:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)"
     ]
   },
   "hooks": {
