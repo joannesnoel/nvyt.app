@@ -9,7 +9,7 @@ const toast = useToast()
 
 // Fetch event to get registration mode
 const { data: eventResponse } = await useFetch<{ data?: { registrationMode?: string } }>(
-  () => `/api/v1/events/${eventId.value}`,
+  () => `/api/v1/events/by-id/${eventId.value}`,
 )
 const event = computed(() => eventResponse.value?.data)
 const isTicketMode = computed(() => event.value?.registrationMode === 'tickets')
@@ -144,14 +144,20 @@ function getStatusLabel(status: string) {
   return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
-const statusOptions = computed(() => [
-  { label: 'All', value: undefined },
-  { label: isTicketMode.value ? 'Paid' : 'Confirmed', value: 'confirmed' },
-  { label: 'Pending', value: 'pending' },
-  { label: 'Waitlisted', value: 'waitlisted' },
-  { label: 'Declined', value: 'declined' },
-  { label: 'Cancelled', value: 'cancelled' },
-])
+const statusOptions = computed(() => {
+  const options = [
+    { label: 'All', value: undefined },
+    { label: isTicketMode.value ? 'Paid' : 'Confirmed', value: 'confirmed' },
+    { label: 'Pending', value: 'pending' },
+  ]
+  // Waitlisted and Declined only apply to RSVP events
+  if (!isTicketMode.value) {
+    options.push({ label: 'Waitlisted', value: 'waitlisted' })
+    options.push({ label: 'Declined', value: 'declined' })
+  }
+  options.push({ label: 'Cancelled', value: 'cancelled' })
+  return options
+})
 
 // Column header labels based on mode
 const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP Date')
@@ -197,7 +203,7 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
       </div>
 
       <!-- Stats -->
-      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" :class="{ 'lg:grid-cols-7': !isTicketMode, 'lg:grid-cols-5': isTicketMode }">
         <UCard class="text-center">
           <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
           <p class="text-sm text-gray-500">Total</p>
@@ -210,11 +216,12 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
           <p class="text-2xl font-bold text-yellow-600">{{ stats.pending }}</p>
           <p class="text-sm text-gray-500">Pending</p>
         </UCard>
-        <UCard class="text-center">
+        <!-- Waitlisted and Declined only apply to RSVP events -->
+        <UCard v-if="!isTicketMode" class="text-center">
           <p class="text-2xl font-bold text-orange-600">{{ stats.waitlisted }}</p>
           <p class="text-sm text-gray-500">Waitlisted</p>
         </UCard>
-        <UCard class="text-center">
+        <UCard v-if="!isTicketMode" class="text-center">
           <p class="text-2xl font-bold text-red-600">{{ stats.declined }}</p>
           <p class="text-sm text-gray-500">Declined</p>
         </UCard>
@@ -263,6 +270,7 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
             {{ isTicketMode ? 'Mark Paid' : 'Confirm' }}
           </UButton>
           <UButton
+            v-if="!isTicketMode"
             color="red"
             variant="soft"
             size="sm"
@@ -354,8 +362,9 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
               >
                 {{ isTicketMode ? 'Mark Paid' : 'Confirm' }}
               </UButton>
+              <!-- Waitlist and Decline only apply to RSVP events -->
               <UButton
-                v-if="attendee.status !== 'waitlisted'"
+                v-if="!isTicketMode && attendee.status !== 'waitlisted'"
                 color="yellow"
                 variant="soft"
                 size="xs"
@@ -365,7 +374,7 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
                 Waitlist
               </UButton>
               <UButton
-                v-if="attendee.status !== 'declined'"
+                v-if="!isTicketMode && attendee.status !== 'declined'"
                 color="red"
                 variant="soft"
                 size="xs"
@@ -445,7 +454,8 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
                         disabled: attendee.status === 'confirmed',
                         click: () => updateStatus(attendee.id, 'confirmed')
                       },
-                      {
+                      // Waitlist and Decline only for RSVP events
+                      ...(!isTicketMode ? [{
                         label: 'Waitlist',
                         icon: 'i-heroicons-clock',
                         disabled: attendee.status === 'waitlisted',
@@ -456,7 +466,7 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
                         icon: 'i-heroicons-x-mark',
                         disabled: attendee.status === 'declined',
                         click: () => updateStatus(attendee.id, 'declined')
-                      },
+                      }] : []),
                     ]]"
                   >
                     <UButton
