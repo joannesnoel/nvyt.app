@@ -1,5 +1,5 @@
 import { orders, events, tickets, ticketTypes, ticketRegistrationFields, users } from '@nvyt/db'
-import { eq, and, asc, not, or } from 'drizzle-orm'
+import { eq, and, asc, not, or, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')
@@ -49,6 +49,9 @@ export default defineEventHandler(async (event) => {
         timezone: events.timezone,
         location: events.location,
         organizerId: events.organizerId,
+        collectAttendeeAddress: events.collectAttendeeAddress,
+        collectAttendeeSex: events.collectAttendeeSex,
+        attendeeSexOptions: events.attendeeSexOptions,
       },
     })
     .from(orders)
@@ -111,6 +114,28 @@ export default defineEventHandler(async (event) => {
     .where(eq(tickets.orderId, result.order.id))
     .orderBy(asc(tickets.sortOrder))
 
+  // Fetch attendee user info for tickets that have attendeeUserId assigned
+  const attendeeUserIds = orderTickets
+    .map(t => t.ticket.attendeeUserId)
+    .filter((id): id is string => id !== null)
+
+  const attendeeUsersMap = new Map<string, { name: string | null; email: string }>()
+
+  if (attendeeUserIds.length > 0) {
+    const attendeeUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      })
+      .from(users)
+      .where(inArray(users.id, attendeeUserIds))
+
+    for (const user of attendeeUsers) {
+      attendeeUsersMap.set(user.id, { name: user.name, email: user.email })
+    }
+  }
+
   // Get user profile info for pre-filling
   const [userProfile] = await db
     .select({
@@ -161,17 +186,29 @@ export default defineEventHandler(async (event) => {
     },
     event: eventData,
     registrationFields,
-    tickets: orderTickets.map(({ ticket, ticketType }, index) => ({
-      id: ticket.id,
-      ticketNumber: ticket.ticketNumber,
-      attendeeName: ticket.attendeeName,
-      attendeeEmail: ticket.attendeeEmail,
-      registrationData: ticket.registrationData,
-      registrationCompleted: ticket.registrationCompleted,
-      registrationCompletedAt: ticket.registrationCompletedAt,
-      ticketType,
-      index,
-    })),
+    tickets: orderTickets.map(({ ticket, ticketType }, index) => {
+      // Get attendee user info if attendeeUserId is set
+      const attendeeUser = ticket.attendeeUserId
+        ? attendeeUsersMap.get(ticket.attendeeUserId)
+        : null
+
+      return {
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        // Priority: attendeeUserId user > legacy fields
+        attendeeName: attendeeUser?.name || ticket.attendeeName,
+        attendeeEmail: attendeeUser?.email || ticket.attendeeEmail,
+        attendeeUserId: ticket.attendeeUserId,
+        attendeeBirthdate: ticket.attendeeBirthdate,
+        attendeeAddress: ticket.attendeeAddress,
+        attendeeSex: ticket.attendeeSex,
+        registrationData: ticket.registrationData,
+        registrationCompleted: ticket.registrationCompleted,
+        registrationCompletedAt: ticket.registrationCompletedAt,
+        ticketType,
+        index,
+      }
+    }),
     registrationStatus: {
       totalTickets,
       completedTickets,

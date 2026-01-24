@@ -1,12 +1,33 @@
 <script setup lang="ts">
 const colorMode = useColorMode()
 const { user, isAuthenticated, isLoading, logout } = useAuth()
+const route = useRoute()
 
 const toggleColorMode = () => {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
 
-// User dropdown menu items
+// Mobile menu state
+const mobileMenuOpen = ref(false)
+
+// Close mobile menu on route change
+watch(() => route.path, () => {
+  mobileMenuOpen.value = false
+})
+
+// Main navigation items (shown when authenticated)
+const mainNavItems = [
+  { label: 'Dashboard', icon: 'i-heroicons-squares-2x2', to: '/dashboard' },
+  { label: 'My Events', icon: 'i-heroicons-calendar-days', to: '/my-events' },
+  { label: 'My Tickets', icon: 'i-heroicons-ticket', to: '/tickets' },
+]
+
+// Check if a nav item is active
+function isNavActive(to: string) {
+  return route.path === to || route.path.startsWith(to + '/')
+}
+
+// User dropdown menu items (Settings, Admin, Sign out)
 const userMenuItems = computed(() => {
   const items: any[][] = [
     [{
@@ -15,14 +36,6 @@ const userMenuItems = computed(() => {
       disabled: true,
     }],
     [{
-      label: 'Dashboard',
-      icon: 'i-heroicons-squares-2x2',
-      to: '/dashboard',
-    }, {
-      label: 'My Events',
-      icon: 'i-heroicons-calendar-days',
-      to: '/dashboard',
-    }, {
       label: 'Settings',
       icon: 'i-heroicons-cog-6-tooth',
       to: '/settings',
@@ -59,11 +72,42 @@ const userMenuItems = computed(() => {
     <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
       <div class="max-w-7xl 2xl:max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-          <!-- Logo -->
-          <NuxtLink to="/" class="flex items-center gap-2">
+          <!-- Mobile: Hamburger menu (left) -->
+          <div class="flex md:hidden">
+            <UButton
+              v-if="isAuthenticated"
+              icon="i-heroicons-bars-3"
+              color="gray"
+              variant="ghost"
+              @click="mobileMenuOpen = !mobileMenuOpen"
+            />
+            <div v-else class="w-10" />
+          </div>
+
+          <!-- Logo (centered on mobile, left on desktop) -->
+          <NuxtLink to="/" class="flex items-center gap-2 md:flex-none absolute left-1/2 -translate-x-1/2 md:relative md:left-0 md:translate-x-0">
             <img src="/logo.png" alt="nvyt" width="36" height="36" class="h-9 w-9" />
-            <span class="text-2xl font-bold text-green-500 dark:text-green-400 ml-1 pb-2">nvyt</span>
+            <span class="text-2xl font-bold ml-1 pb-2 text-metallic-3d">nvyt</span>
           </NuxtLink>
+
+          <!-- Desktop: Main Navigation -->
+          <nav v-if="isAuthenticated" class="hidden md:flex items-center gap-1 ml-8">
+            <NuxtLink
+              v-for="item in mainNavItems"
+              :key="item.to"
+              :to="item.to"
+              class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              :class="isNavActive(item.to)
+                ? 'bg-primary-50 dark:bg-primary-900/30 text-primary'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'"
+            >
+              <UIcon :name="item.icon" class="w-4 h-4" />
+              {{ item.label }}
+            </NuxtLink>
+          </nav>
+
+          <!-- Spacer to push actions to right on desktop -->
+          <div class="flex-1 hidden md:block" />
 
           <!-- Actions -->
           <div class="flex items-center gap-3">
@@ -119,6 +163,36 @@ const userMenuItems = computed(() => {
           </div>
         </div>
       </div>
+
+      <!-- Mobile Navigation Menu -->
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 -translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-2"
+      >
+        <div
+          v-if="mobileMenuOpen && isAuthenticated"
+          class="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+        >
+          <nav class="px-4 py-3 space-y-1">
+            <NuxtLink
+              v-for="item in mainNavItems"
+              :key="item.to"
+              :to="item.to"
+              class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors"
+              :class="isNavActive(item.to)
+                ? 'bg-primary-50 dark:bg-primary-900/30 text-primary'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'"
+            >
+              <UIcon :name="item.icon" class="w-5 h-5" />
+              {{ item.label }}
+            </NuxtLink>
+          </nav>
+        </div>
+      </Transition>
     </header>
 
     <!-- Main Content -->
@@ -194,11 +268,11 @@ const userMenuItems = computed(() => {
       </div>
     </footer>
 
-    <!-- Registration Reminder Banner (fixed above email banner) -->
-    <RegistrationReminderBanner />
-
-    <!-- Email Verification Banner (fixed at bottom) -->
-    <EmailVerificationBanner />
+    <!-- Fixed Bottom Banners Container -->
+    <div class="fixed bottom-0 inset-x-0 z-40 flex flex-col-reverse">
+      <EmailVerificationBanner />
+      <RegistrationReminderBanner />
+    </div>
 
     <!-- Bottom padding when banners are shown -->
     <div v-if="isAuthenticated && user && !user.emailVerified" class="h-28 sm:h-24" />

@@ -41,7 +41,7 @@ function dismiss() {
 <template>
   <div
     v-if="showBanner"
-    class="fixed bottom-0 inset-x-0 z-50 bg-yellow-500 text-yellow-950 px-4 py-3 shadow-lg"
+    class="bg-yellow-500 text-yellow-950 px-4 py-3 shadow-lg"
   >
     <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-3">

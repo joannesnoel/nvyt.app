@@ -34,13 +34,13 @@ const features = [
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center max-w-3xl mx-auto">
           <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            Make plans. <span class="text-primary">Bring people.</span>
+            <span class="text-metallic-3d">Make plans.</span> <span class="text-emerald-3d">Bring people.</span>
           </h1>
           <p class="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-8">
             Create events, sell tickets, and manage everything — all in one place.
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <UButton to="/register" size="xl" color="primary">
+            <UButton to="/register" size="xl" color="primary" class="btn-3d">
               Create Your First Event
             </UButton>
             <UButton to="/events" size="xl" color="gray" variant="outline">

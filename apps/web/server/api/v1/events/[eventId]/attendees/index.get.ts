@@ -179,6 +179,7 @@ async function getTicketStats(
   }
 
   // Get tickets with user and ticket type info (as "attendees")
+  // Join both purchaser (userId) and attendee (attendeeUserId) user records
   const ticketsList = await db
     .select({
       id: tickets.id,
@@ -187,13 +188,15 @@ async function getTicketStats(
       ticketNumber: tickets.ticketNumber,
       attendeeName: tickets.attendeeName,
       attendeeEmail: tickets.attendeeEmail,
+      attendeeUserId: tickets.attendeeUserId,
       checkedInAt: tickets.checkedInAt,
       createdAt: tickets.createdAt,
       ticketType: {
         id: ticketTypes.id,
         name: ticketTypes.name,
       },
-      user: {
+      // Purchaser user record
+      purchaser: {
         id: users.id,
         name: users.name,
         email: users.email,
@@ -208,6 +211,29 @@ async function getTicketStats(
     .limit(limit)
     .offset(offset)
 
+  // Fetch attendee user records separately for tickets that have attendeeUserId
+  const attendeeUserIds = ticketsList
+    .map(t => t.attendeeUserId)
+    .filter((id): id is string => id !== null)
+
+  const attendeeUsersMap = new Map<string, { id: string; name: string | null; email: string; avatarUrl: string | null }>()
+
+  if (attendeeUserIds.length > 0) {
+    const attendeeUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        avatarUrl: users.avatarUrl,
+      })
+      .from(users)
+      .where(inArray(users.id, attendeeUserIds))
+
+    for (const user of attendeeUsers) {
+      attendeeUsersMap.set(user.id, user)
+    }
+  }
+
   // Get total count
   const countResult = await db
     .select({ count: sql<number>`count(*)` })
@@ -220,13 +246,18 @@ async function getTicketStats(
   let filteredList = ticketsList
   if (search) {
     const searchLower = search.toLowerCase()
-    filteredList = ticketsList.filter(t =>
-      t.user?.name?.toLowerCase().includes(searchLower) ||
-      t.user?.email?.toLowerCase().includes(searchLower) ||
-      t.attendeeName?.toLowerCase().includes(searchLower) ||
-      t.attendeeEmail?.toLowerCase().includes(searchLower) ||
-      t.ticketNumber?.toLowerCase().includes(searchLower)
-    )
+    filteredList = ticketsList.filter(t => {
+      const attendeeUser = t.attendeeUserId ? attendeeUsersMap.get(t.attendeeUserId) : null
+      return (
+        t.purchaser?.name?.toLowerCase().includes(searchLower) ||
+        t.purchaser?.email?.toLowerCase().includes(searchLower) ||
+        attendeeUser?.name?.toLowerCase().includes(searchLower) ||
+        attendeeUser?.email?.toLowerCase().includes(searchLower) ||
+        t.attendeeName?.toLowerCase().includes(searchLower) ||
+        t.attendeeEmail?.toLowerCase().includes(searchLower) ||
+        t.ticketNumber?.toLowerCase().includes(searchLower)
+      )
+    })
   }
 
   // Get stats for tickets
@@ -263,23 +294,28 @@ async function getTicketStats(
   }
 
   // Transform tickets to attendee-like format for frontend compatibility
-  const attendeesList = filteredList.map(t => ({
-    id: t.id,
-    status: t.status === 'checked_in' ? 'checked_in' : t.status,
-    qrCode: t.qrCode,
-    notes: null,
-    respondedAt: t.createdAt,
-    checkedInAt: t.checkedInAt,
-    createdAt: t.createdAt,
-    ticketNumber: t.ticketNumber,
-    ticketType: t.ticketType,
-    user: {
-      id: t.user?.id ?? null,
-      name: t.attendeeName || t.user?.name || null,
-      email: t.attendeeEmail || t.user?.email || null,
-      avatarUrl: t.user?.avatarUrl ?? null,
-    },
-  }))
+  // Priority: attendeeUserId user > legacy fields > purchaser user
+  const attendeesList = filteredList.map(t => {
+    const attendeeUser = t.attendeeUserId ? attendeeUsersMap.get(t.attendeeUserId) : null
+
+    return {
+      id: t.id,
+      status: t.status === 'checked_in' ? 'checked_in' : t.status,
+      qrCode: t.qrCode,
+      notes: null,
+      respondedAt: t.createdAt,
+      checkedInAt: t.checkedInAt,
+      createdAt: t.createdAt,
+      ticketNumber: t.ticketNumber,
+      ticketType: t.ticketType,
+      user: {
+        id: attendeeUser?.id ?? t.purchaser?.id ?? null,
+        name: attendeeUser?.name || t.attendeeName || t.purchaser?.name || null,
+        email: attendeeUser?.email || t.attendeeEmail || t.purchaser?.email || null,
+        avatarUrl: attendeeUser?.avatarUrl ?? t.purchaser?.avatarUrl ?? null,
+      },
+    }
+  })
 
   return successResponse({
     attendees: attendeesList,

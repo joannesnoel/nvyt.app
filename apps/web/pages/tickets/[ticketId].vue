@@ -165,8 +165,9 @@ function getStatusColor(status: string) {
 
           <!-- Actions -->
           <div class="px-6 pb-6 space-y-3">
+            <!-- Show View Order for purchaser, show Purchased By for attendee -->
             <UButton
-              v-if="ticket.order?.orderNumber"
+              v-if="ticket.isPurchaser && ticket.order?.orderNumber"
               :to="`/orders/${ticket.order.orderNumber}`"
               color="gray"
               variant="outline"
@@ -175,6 +176,13 @@ function getStatusColor(status: string) {
             >
               View Order
             </UButton>
+            <div
+              v-else-if="ticket.purchaser?.name"
+              class="flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-50 dark:bg-gray-800 rounded-md text-sm text-gray-600 dark:text-gray-400"
+            >
+              <UIcon name="i-heroicons-gift" class="w-4 h-4" />
+              <span>Purchased by <span class="font-medium text-gray-900 dark:text-white">{{ ticket.purchaser.name }}</span></span>
+            </div>
             <UButton
               :to="`/events/${ticket.event?.slug}`"
               color="gray"

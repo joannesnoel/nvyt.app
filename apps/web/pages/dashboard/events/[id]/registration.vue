@@ -10,7 +10,7 @@ const eventId = computed(() => route.params.id as string)
 const toast = useToast()
 
 // Fetch event by ID
-const { data: eventResponse, pending: eventPending } = await useFetch(
+const { data: eventResponse, pending: eventPending, refresh: refreshEvent } = await useFetch(
   () => `/api/v1/events/by-id/${eventId.value}`,
   { watch: [eventId] }
 )
@@ -23,12 +23,11 @@ const { data: fieldsResponse, pending: fieldsPending, refresh: refreshFields } =
 )
 const fields = computed(() => fieldsResponse.value?.data ?? [])
 
-// Field types configuration
+// Field types configuration (address removed - now a built-in toggle)
 const fieldTypes: { value: RegistrationFieldType; label: string; icon: string; description: string }[] = [
   { value: 'text', label: 'Text', icon: 'i-heroicons-document-text', description: 'Single line text input' },
   { value: 'email', label: 'Email', icon: 'i-heroicons-envelope', description: 'Email address input' },
   { value: 'phone', label: 'Phone', icon: 'i-heroicons-phone', description: 'Phone number input' },
-  { value: 'address', label: 'Address', icon: 'i-heroicons-map-pin', description: 'Address with Google Maps autocomplete' },
   { value: 'textarea', label: 'Long Text', icon: 'i-heroicons-bars-3-bottom-left', description: 'Multi-line text area' },
   { value: 'select', label: 'Dropdown', icon: 'i-heroicons-chevron-up-down', description: 'Single selection from options' },
   { value: 'radio', label: 'Radio Buttons', icon: 'i-heroicons-radio', description: 'Single choice from options' },
@@ -37,6 +36,65 @@ const fieldTypes: { value: RegistrationFieldType; label: string; icon: string; d
   { value: 'number', label: 'Number', icon: 'i-heroicons-hashtag', description: 'Numeric input' },
   { value: 'url', label: 'URL', icon: 'i-heroicons-link', description: 'Website URL input' },
 ]
+
+// Built-in fields state
+const collectAttendeeAddress = ref(false)
+const collectAttendeeSex = ref(false)
+const sexOptions = ref<{ value: string; label: string }[]>([
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+])
+
+// Initialize built-in fields from event data
+watch(event, (e) => {
+  if (e) {
+    collectAttendeeAddress.value = e.collectAttendeeAddress ?? false
+    collectAttendeeSex.value = e.collectAttendeeSex ?? false
+    if (e.attendeeSexOptions && e.attendeeSexOptions.length > 0) {
+      sexOptions.value = e.attendeeSexOptions
+    }
+  }
+}, { immediate: true })
+
+// Save built-in field settings
+const isSavingBuiltIn = ref(false)
+
+async function saveBuiltInSettings() {
+  isSavingBuiltIn.value = true
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}`, {
+      method: 'PATCH',
+      body: {
+        collectAttendeeAddress: collectAttendeeAddress.value,
+        collectAttendeeSex: collectAttendeeSex.value,
+        attendeeSexOptions: collectAttendeeSex.value ? sexOptions.value.filter(o => o.value && o.label) : undefined,
+      },
+    })
+    toast.add({
+      title: 'Settings Saved',
+      description: 'Built-in field settings have been updated',
+      color: 'green',
+    })
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to save settings',
+      color: 'red',
+    })
+  } finally {
+    isSavingBuiltIn.value = false
+  }
+}
+
+function addSexOption() {
+  sexOptions.value.push({ value: '', label: '' })
+}
+
+function removeSexOption(index: number) {
+  if (sexOptions.value.length > 2) {
+    sexOptions.value.splice(index, 1)
+  }
+}
 
 function getTypeInfo(type: string) {
   return fieldTypes.find(t => t.value === type) ?? fieldTypes[0]!
@@ -350,7 +408,7 @@ function needsOptions(type: string) {
 
 // Field type supports placeholder (not radio, checkbox, or date)
 function supportsPlaceholder(type: string) {
-  return ['text', 'email', 'phone', 'textarea', 'select', 'number', 'url', 'address'].includes(type)
+  return ['text', 'email', 'phone', 'textarea', 'select', 'number', 'url'].includes(type)
 }
 
 // Field type supports validation
@@ -433,6 +491,120 @@ function supportsValidation(type: string) {
             preferences, t-shirt sizes, emergency contacts, or any other attendee-specific information.
           </template>
         </UAlert>
+
+        <!-- Built-in Fields Section -->
+        <UCard v-if="isTicketsMode" class="mb-6">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-user-circle" class="w-5 h-5 text-primary" />
+              <h3 class="font-medium text-gray-900 dark:text-white">Built-in Attendee Fields</h3>
+            </div>
+            <p class="text-sm text-gray-500 mt-1">
+              Toggle additional attendee information fields. Name, Email, and Birthdate are always collected.
+            </p>
+          </template>
+
+          <div class="space-y-6">
+            <!-- Attendee's Address Toggle -->
+            <div class="flex items-start gap-4">
+              <div class="flex-1">
+                <div class="flex items-center gap-3">
+                  <UToggle v-model="collectAttendeeAddress" />
+                  <div>
+                    <p class="font-medium text-gray-900 dark:text-white">Attendee's Address</p>
+                    <p class="text-sm text-gray-500">
+                      Collect the attendee's physical address with city/province selection
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attendee's Sex Toggle -->
+            <div class="space-y-4">
+              <div class="flex items-start gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3">
+                    <UToggle v-model="collectAttendeeSex" />
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">Attendee's Sex</p>
+                      <p class="text-sm text-gray-500">
+                        Collect the attendee's sex. Default options: Male, Female
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sex Options -->
+              <div v-if="collectAttendeeSex" class="ml-12 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Options</p>
+                <div class="space-y-2">
+                  <div
+                    v-for="(option, index) in sexOptions"
+                    :key="index"
+                    class="flex items-center gap-2"
+                  >
+                    <UInput
+                      v-model="option.value"
+                      placeholder="Value (stored)"
+                      class="flex-1"
+                      size="sm"
+                      :disabled="index < 2"
+                    />
+                    <UInput
+                      v-model="option.label"
+                      placeholder="Label (displayed)"
+                      class="flex-1"
+                      size="sm"
+                      :disabled="index < 2"
+                    />
+                    <UButton
+                      v-if="index >= 2"
+                      color="red"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-heroicons-x-mark"
+                      @click="removeSexOption(index)"
+                    />
+                    <div v-else class="w-6" />
+                  </div>
+                </div>
+                <UButton
+                  color="gray"
+                  variant="outline"
+                  size="xs"
+                  icon="i-heroicons-plus"
+                  class="mt-3"
+                  @click="addSexOption()"
+                >
+                  Add Option
+                </UButton>
+                <p class="text-xs text-gray-500 mt-2">
+                  Male and Female are required. Add additional options for non-binary attendees if needed.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <template #footer>
+            <div class="flex justify-end">
+              <UButton
+                color="primary"
+                :loading="isSavingBuiltIn"
+                @click="saveBuiltInSettings"
+              >
+                Save Settings
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+
+        <!-- Custom Fields Section Header -->
+        <div v-if="isTicketsMode" class="flex items-center gap-2 mb-4">
+          <UIcon name="i-heroicons-clipboard-document-list" class="w-5 h-5 text-gray-500" />
+          <h3 class="font-medium text-gray-900 dark:text-white">Custom Fields</h3>
+        </div>
 
         <!-- Fields List -->
         <div v-if="fields.length > 0" class="space-y-4">

@@ -69,14 +69,28 @@ function initAutocomplete() {
   autocomplete.value.addListener('place_changed', handlePlaceSelect)
 }
 
+// Remove Plus Code from address (e.g., "XXXX+XX City" or "XXXX+XXX")
+function removePlusCode(address: string): string {
+  // Plus Codes are typically 4-8 characters, a plus sign, then 2-3 more characters
+  // They appear at the start of an address or after a comma
+  return address
+    .replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,3}\s*,?\s*/i, '') // At start
+    .replace(/,\s*[A-Z0-9]{4,8}\+[A-Z0-9]{2,3}\s*,/gi, ',') // In middle
+    .replace(/,\s*[A-Z0-9]{4,8}\+[A-Z0-9]{2,3}\s*$/i, '') // At end
+    .trim()
+}
+
 function handlePlaceSelect() {
   const place = autocomplete.value?.getPlace()
   if (!place) return
 
+  // Clean the formatted address by removing Plus Code
+  const cleanAddress = place.formatted_address ? removePlusCode(place.formatted_address) : ''
+
   // Build display value
-  const displayValue = place.name && place.formatted_address
-    ? `${place.name}, ${place.formatted_address}`
-    : place.formatted_address || place.name || ''
+  const displayValue = place.name && cleanAddress
+    ? `${place.name}, ${cleanAddress}`
+    : cleanAddress || place.name || ''
 
   localValue.value = displayValue
   emit('update:modelValue', displayValue)
@@ -84,7 +98,7 @@ function handlePlaceSelect() {
   // Extract location details
   const locationDetails: LocationDetails = {
     type: isOnline.value ? 'online' : 'physical',
-    address: place.formatted_address,
+    address: cleanAddress,
   }
 
   // Extract city and country from address components

@@ -1,5 +1,5 @@
-import { tickets, ticketTypes, events, orders } from '@nvyt/db'
-import { eq, and } from 'drizzle-orm'
+import { tickets, ticketTypes, events, orders, users } from '@nvyt/db'
+import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
@@ -44,11 +44,16 @@ export default defineEventHandler(async (event) => {
         customerName: orders.customerName,
         customerEmail: orders.customerEmail,
       },
+      purchaser: {
+        id: users.id,
+        name: users.name,
+      },
     })
     .from(tickets)
     .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
     .innerJoin(events, eq(tickets.eventId, events.id))
     .innerJoin(orders, eq(tickets.orderId, orders.id))
+    .innerJoin(users, eq(tickets.userId, users.id))
     .where(eq(tickets.id, ticketId))
     .limit(1)
 
@@ -59,8 +64,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify ownership
-  if (result.ticket.userId !== user.id) {
+  // Verify ownership - allow purchaser OR attendee to view
+  const isPurchaser = result.ticket.userId === user.id
+  const isAttendee = result.ticket.attendeeUserId === user.id
+
+  if (!isPurchaser && !isAttendee) {
     throw createError({
       statusCode: 403,
       message: 'You are not authorized to view this ticket',
@@ -72,5 +80,7 @@ export default defineEventHandler(async (event) => {
     ticketType: result.ticketType,
     event: result.event,
     order: result.order,
+    isPurchaser,
+    purchaser: result.purchaser,
   })
 })

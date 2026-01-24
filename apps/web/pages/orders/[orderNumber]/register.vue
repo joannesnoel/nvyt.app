@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RegistrationFieldType, FieldOption, FieldValidation } from '@nvyt/shared'
+import type { RegistrationFieldType, FieldOption, FieldValidation, AddressData } from '@nvyt/shared'
 
 definePageMeta({
   layout: 'default',
@@ -32,6 +32,9 @@ interface RegistrationData {
     endDate: string | null
     timezone: string | null
     location: string | null
+    collectAttendeeAddress?: boolean
+    collectAttendeeSex?: boolean
+    attendeeSexOptions?: { value: string; label: string }[]
   }
   registrationFields: Array<{
     id: string
@@ -48,6 +51,9 @@ interface RegistrationData {
     ticketNumber: string
     attendeeName: string | null
     attendeeEmail: string | null
+    attendeeBirthdate: string | null
+    attendeeAddress: { formattedAddress: string; lat?: number; lng?: number; placeId?: string } | null
+    attendeeSex: string | null
     registrationData: Record<string, unknown> | null
     registrationCompleted: boolean
     registrationCompletedAt: string | null
@@ -135,7 +141,7 @@ const isLastTicket = computed(() => currentTicketIndex.value === tickets.value.l
 // Submitting state
 const isSubmitting = ref(false)
 
-async function submitRegistration(responses: Record<string, string | number | boolean>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string }) {
+async function submitRegistration(responses: Record<string, string | number | boolean | AddressData>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string; address?: AddressData; sex?: string }) {
   if (!currentTicket.value) return
 
   // Prevent double submission for already registered tickets
@@ -157,6 +163,8 @@ async function submitRegistration(responses: Record<string, string | number | bo
         attendeeName: attendeeInfo.name,
         attendeeEmail: attendeeInfo.email,
         attendeeBirthdate: attendeeInfo.birthdate,
+        attendeeAddress: attendeeInfo.address,
+        attendeeSex: attendeeInfo.sex,
       },
     })
 
@@ -219,6 +227,20 @@ function goToTicket(index: number) {
   const ticket = tickets.value[index]
   if (ticket?.registrationCompleted || index === currentTicketIndex.value) {
     currentTicketIndex.value = index
+  }
+}
+
+// Navigate to next incomplete ticket
+function goToNextIncomplete() {
+  const nextIndex = tickets.value.findIndex((t, i) => i > currentTicketIndex.value && !t.registrationCompleted)
+  if (nextIndex !== -1) {
+    currentTicketIndex.value = nextIndex
+  } else {
+    // No more incomplete tickets after current, find first incomplete
+    const firstIncomplete = tickets.value.findIndex(t => !t.registrationCompleted)
+    if (firstIncomplete !== -1) {
+      currentTicketIndex.value = firstIncomplete
+    }
   }
 }
 
@@ -345,7 +367,7 @@ watch(status, (s) => {
         <!-- Registration Form Card -->
         <UCard>
           <RegistrationForm
-            :key="formKey"
+            :key="`${formKey}-${currentTicketIndex}`"
             :fields="registrationFields"
             :ticket-index="currentTicketIndex"
             :total-tickets="tickets.length"
@@ -357,7 +379,18 @@ watch(status, (s) => {
             :is-last-ticket="isLastTicket"
             :user-has-existing-ticket="userHasExistingTicket"
             :loading="isSubmitting"
+            :collect-attendee-address="data?.event?.collectAttendeeAddress"
+            :collect-attendee-sex="data?.event?.collectAttendeeSex"
+            :attendee-sex-options="data?.event?.attendeeSexOptions"
+            :initial-attendee-name="currentTicket.attendeeName"
+            :initial-attendee-email="currentTicket.attendeeEmail"
+            :initial-attendee-birthdate="currentTicket.attendeeBirthdate"
+            :initial-attendee-address="currentTicket.attendeeAddress"
+            :initial-attendee-sex="currentTicket.attendeeSex"
+            :initial-registration-data="currentTicket.registrationData"
+            :is-completed="currentTicket.registrationCompleted"
             @submit="submitRegistration"
+            @next="goToNextIncomplete"
           />
         </UCard>
 

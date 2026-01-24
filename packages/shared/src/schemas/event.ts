@@ -135,9 +135,21 @@ export const createEventSchema = z.object(baseEventFields).refine((data) => {
   path: ['coverImage'], // Show error on the media field
 })
 
+// Sex option schema for attendee sex field
+const sexOptionSchema = z.object({
+  value: z.string().min(1),
+  label: z.string().min(1),
+})
+
 // Update schema without the media refinement - validation is handled at API level
 // where we can check the current event state
-export const updateEventSchema = z.object(baseEventFields).partial()
+export const updateEventSchema = z.object({
+  ...baseEventFields,
+  // Registration form built-in fields
+  collectAttendeeAddress: z.boolean().optional(),
+  collectAttendeeSex: z.boolean().optional(),
+  attendeeSexOptions: z.array(sexOptionSchema).optional(),
+}).partial()
 
 export const eventFiltersSchema = z.object({
   visibility: eventVisibility.optional(),

@@ -106,6 +106,11 @@ export const events = pgTable('events', {
   ticketingEnabled: boolean('ticketing_enabled').default(false).notNull(), // Deprecated: use registrationMode='tickets'
   contributionsEnabled: boolean('contributions_enabled').default(false).notNull(),
 
+  // Registration form built-in fields
+  collectAttendeeAddress: boolean('collect_attendee_address').default(false).notNull(),
+  collectAttendeeSex: boolean('collect_attendee_sex').default(false).notNull(),
+  attendeeSexOptions: jsonb('attendee_sex_options').$type<{ value: string; label: string }[]>(), // Custom options, defaults to Male/Female
+
   // Appearance
   theme: eventThemeEnum('theme'), // null = follow visitor's system preference
   colorTemplate: eventColorTemplateEnum('color_template').default('green').notNull(), // Primary accent color

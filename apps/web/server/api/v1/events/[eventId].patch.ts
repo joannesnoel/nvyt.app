@@ -148,6 +148,10 @@ export default defineEventHandler(async (event) => {
     if ('titleFontFamily' in body) updateData.titleFontFamily = data.titleFontFamily
     if ('fontFamily' in body) updateData.fontFamily = data.fontFamily
     if ('bodyFontFamily' in body) updateData.bodyFontFamily = data.bodyFontFamily
+    // Registration form built-in fields
+    if ('collectAttendeeAddress' in body) updateData.collectAttendeeAddress = data.collectAttendeeAddress
+    if ('collectAttendeeSex' in body) updateData.collectAttendeeSex = data.collectAttendeeSex
+    if ('attendeeSexOptions' in body) updateData.attendeeSexOptions = data.attendeeSexOptions
   }
 
   // Update event

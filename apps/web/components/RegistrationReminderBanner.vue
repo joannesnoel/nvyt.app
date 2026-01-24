@@ -39,12 +39,13 @@ const totalPending = computed(() => {
     0
   )
 })
+
 </script>
 
 <template>
   <div
     v-if="showBanner && !pending && currentReminder"
-    class="fixed bottom-14 sm:bottom-12 inset-x-0 z-40 bg-primary-600 text-white px-4 py-3 shadow-lg"
+    class="bg-primary-600 text-white px-4 py-3 shadow-lg"
   >
     <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-3 flex-1 min-w-0">
