@@ -49,6 +49,9 @@ export default defineEventHandler(async (event) => {
         timezone: events.timezone,
         location: events.location,
         organizerId: events.organizerId,
+        collectAttendeeAddress: events.collectAttendeeAddress,
+        collectAttendeeSex: events.collectAttendeeSex,
+        attendeeSexOptions: events.attendeeSexOptions,
       },
     })
     .from(orders)

@@ -1,5 +1,5 @@
-import { tickets, ticketTypes, events, orders } from '@nvyt/db'
-import { eq, desc, and, count } from 'drizzle-orm'
+import { tickets, ticketTypes, events, orders, users } from '@nvyt/db'
+import { eq, desc, and, or, count } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
@@ -14,8 +14,13 @@ export default defineEventHandler(async (event) => {
 
   const db = useDatabase()
 
-  // Build where conditions
-  const conditions = [eq(tickets.userId, user.id)]
+  // Build where conditions - include tickets where user is purchaser OR attendee
+  const conditions = [
+    or(
+      eq(tickets.userId, user.id),
+      eq(tickets.attendeeUserId, user.id)
+    )
+  ]
   if (status && ['pending', 'confirmed', 'cancelled', 'checked_in', 'refunded'].includes(status)) {
     conditions.push(eq(tickets.status, status as 'pending' | 'confirmed' | 'cancelled' | 'checked_in' | 'refunded'))
   }
@@ -58,11 +63,16 @@ export default defineEventHandler(async (event) => {
         orderNumber: orders.orderNumber,
         paymentStatus: orders.paymentStatus,
       },
+      purchaser: {
+        id: users.id,
+        name: users.name,
+      },
     })
     .from(tickets)
     .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
     .innerJoin(events, eq(tickets.eventId, events.id))
     .innerJoin(orders, eq(tickets.orderId, orders.id))
+    .innerJoin(users, eq(tickets.userId, users.id))
     .where(and(...conditions))
     .orderBy(desc(events.startDate), desc(tickets.createdAt))
     .limit(limit)
@@ -80,11 +90,13 @@ export default defineEventHandler(async (event) => {
   }
 
   // Format response
-  const formattedTickets = filteredTickets.map(({ ticket, ticketType, event, order }) => ({
+  const formattedTickets = filteredTickets.map(({ ticket, ticketType, event, order, purchaser }) => ({
     ...ticket,
     ticketType,
     event,
     order,
+    isPurchaser: ticket.userId === user.id,
+    purchaser,
   }))
 
   return paginatedResponse(formattedTickets, page, limit, total)

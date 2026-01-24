@@ -25,7 +25,7 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 - [x] Session management (web)
 - [x] SSR-compatible auth (useRequestFetch for cookie forwarding)
 - [x] Password reset flow (forgot password with email token)
-- [ ] Email verification (schema exists, flow not implemented)
+- [x] Email verification (registration sends link, verify page, resend flow)
 - [ ] OAuth - Google (schema exists, not implemented)
 - [ ] OAuth - Facebook (schema exists, not implemented)
 
@@ -90,7 +90,7 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 
 ## Phase 3: Ticketing & Payments ✅
 
-**Status: COMPLETE (98%)**
+**Status: COMPLETE (99%)**
 
 ### Ticket Types
 - [x] Multiple ticket tiers (VIP, General, Early Bird)
@@ -99,17 +99,23 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 - [x] Per-order limits (min/max)
 - [x] Ticket status management (active/inactive)
 - [x] Ticket type reordering
+- [x] Price tier types (time-based, quantity-based, hybrid)
 
-### PayMongo Integration
-- [x] Checkout session creation
-- [x] Payment methods:
+### Payment Integrations
+- [x] PayMongo checkout session creation
+- [x] PayMongo payment methods:
   - [x] GCash
   - [x] Maya (PayMaya)
   - [x] Credit/Debit cards
   - [x] GrabPay
-- [x] Webhook handling (payment confirmation)
+- [x] PayMongo webhook handling (payment confirmation)
+- [x] PayPal Integration:
+  - [x] PayPal checkout flow
+  - [x] PayPal webhooks
+  - [x] PayPal retry payment
 - [x] Payment confirmation emails (paid & free orders)
 - [x] Refund processing via PayMongo API
+- [x] Transaction fee tracking (processing fees, admin fees)
 
 ### Order Management
 - [x] Order history
@@ -119,6 +125,11 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 - [x] Order success page with real-time ticket status
 - [x] Ticket PDF with QR code (downloadable)
 - [x] Orders management page for organizers
+- [x] Post-payment registration forms:
+  - [x] Custom registration fields (10 field types)
+  - [x] Organizer dashboard for field management
+  - [x] Attendee registration flow (per-ticket)
+  - [x] "This ticket is mine" pre-fill feature
 - [ ] Resend tickets functionality
 
 ### Organizer Payouts
@@ -181,13 +192,22 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 
 ## Phase 6: Advanced Features ⚡
 
-**Status: SIGNIFICANTLY COMPLETE (70%)**
+**Status: SIGNIFICANTLY COMPLETE (80%)**
 
 ### Event Content Management
 - [x] Event FAQs (full CRUD + public display with accordion)
 - [x] Event Announcements (news & updates with publish dates)
 - [x] Event Requirements (terms & agreements for ticket purchases)
 - [x] Requirements satisfaction tracking (checkbox acceptance)
+
+### Event Customization & Theming
+- [x] Theme mode (light/dark/system preference)
+- [x] Color templates (15+ color options)
+- [x] Font family customization:
+  - [x] Title font (h1)
+  - [x] Section heading font (h2-h6)
+  - [x] Body text font
+- [x] Event preview page for organizers
 
 ### Business Verification (for Paid Events)
 - [x] Verification submission flow
@@ -197,7 +217,8 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 - [x] Admin review interface (backend ready)
 
 ### Event Discovery
-- [ ] Location-based search
+- [x] PSGC geographic data (regions, provinces, cities, barangays)
+- [ ] Location-based search (infrastructure ready)
 - [ ] Category filtering
 - [ ] Featured events
 - [ ] Recommendations
@@ -212,6 +233,9 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 ### Analytics & Insights
 - [x] Basic attendee stats in API (total, checked-in, by status)
 - [x] Revenue stats in orders page
+- [x] Google Analytics 4 integration:
+  - [x] Checkout events
+  - [x] Purchase events
 - [ ] Analytics dashboard UI
 - [ ] Attendance trends
 - [ ] Revenue reports
@@ -267,21 +291,21 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 ## Priority Backlog (Recommended Next Steps)
 
 ### High Priority
-1. **Email Verification Flow** - Security & trust
-2. **Resend Tickets Functionality** - User convenience
-3. **Profile Settings Page** - User management
-4. **RSVP/Event Confirmation Emails** - Trigger existing templates
+1. **Resend Tickets Functionality** - User convenience
+2. **Profile Settings Page** - User management
+3. **RSVP/Event Confirmation Emails** - Trigger existing templates
 
 ### Medium Priority (User Experience)
 5. **OAuth Integration** - Reduce signup friction (Google/Facebook)
 6. **Admin Dashboard** - Review business verifications, manage users
 7. **Event Reminders** - Automated emails before event date
+8. **Location-based Event Search** - Use PSGC data for discovery
 
 ### Lower Priority (Feature Enhancement)
-8. **Analytics Dashboard UI** - Visualize organizer insights
-9. **Bulk CSV Invitations** - Large event management
-10. **Rich Text Event Descriptions** - Better formatting
-11. **Custom Contribution Items** - Let attendees suggest items
+9. **Analytics Dashboard UI** - Visualize organizer insights
+10. **Bulk CSV Invitations** - Large event management
+11. **Rich Text Event Descriptions** - Better formatting
+12. **Custom Contribution Items** - Let attendees suggest items
 
 ---
 
@@ -302,12 +326,12 @@ nvyt.app aims to be the go-to platform for event organizers in the Philippines -
 |-------|--------|--------|------------|
 | Phase 1 | Q1 2026 | ✅ Complete | 98% |
 | Phase 2 | Q1 2026 | ✅ Complete | 98% |
-| Phase 3 | Q2 2026 | ✅ Complete | 98% |
+| Phase 3 | Q2 2026 | ✅ Complete | 99% |
 | Phase 4 | Q2 2026 | ✅ Complete | 95% |
 | Phase 5 | Q3 2026 | ⏳ Planned | 0% |
-| Phase 6 | Q4 2026 | 🔄 Significant | 70% |
+| Phase 6 | Q4 2026 | 🔄 Significant | 80% |
 | Phase 7 | 2027 | 🔄 Started | 15% |
 
 ---
 
-*Last updated: January 16, 2026*
+*Last updated: January 24, 2026*

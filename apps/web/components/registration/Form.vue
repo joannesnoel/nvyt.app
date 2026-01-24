@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RegistrationFieldType, FieldOption, FieldValidation } from '@nvyt/shared'
+import type { RegistrationFieldType, FieldOption, FieldValidation, AddressData } from '@nvyt/shared'
 
 interface RegistrationField {
   id: string
@@ -17,6 +17,11 @@ interface UserProfile {
   email: string
 }
 
+interface SexOption {
+  value: string
+  label: string
+}
+
 const props = defineProps<{
   fields: RegistrationField[]
   ticketIndex: number
@@ -29,10 +34,14 @@ const props = defineProps<{
   isLastTicket: boolean
   userHasExistingTicket?: boolean
   loading?: boolean
+  // Built-in field settings
+  collectAttendeeAddress?: boolean
+  collectAttendeeSex?: boolean
+  attendeeSexOptions?: SexOption[]
 }>()
 
 const emit = defineEmits<{
-  submit: [responses: Record<string, string | number | boolean>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string }]
+  submit: [responses: Record<string, string | number | boolean | AddressData>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string; address?: AddressData; sex?: string }]
   skip: []
 }>()
 
@@ -40,6 +49,21 @@ const emit = defineEmits<{
 const attendeeName = ref('')
 const attendeeEmail = ref('')
 const attendeeBirthdate = ref('')
+
+// Optional built-in fields
+const attendeeAddress = ref<AddressData | null>(null)
+const attendeeSex = ref('')
+
+// Computed sex options with defaults
+const sexOptionsComputed = computed(() => {
+  if (props.attendeeSexOptions && props.attendeeSexOptions.length > 0) {
+    return props.attendeeSexOptions
+  }
+  return [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+  ]
+})
 
 // Form state
 const responses = ref<Record<string, string | number | boolean>>({})
@@ -75,6 +99,8 @@ watch(useMyInfo, (checked) => {
     attendeeName.value = ''
     attendeeEmail.value = ''
     attendeeBirthdate.value = ''
+    attendeeAddress.value = null
+    attendeeSex.value = ''
     // Clear prefilled data
     props.fields.forEach((field) => {
       if (field.fieldType === 'checkbox') {
@@ -128,6 +154,17 @@ function validate(): boolean {
 
   if (!attendeeBirthdate.value) {
     errors.value['_attendeeBirthdate'] = 'Birthdate is required'
+    isValid = false
+  }
+
+  // Validate optional built-in fields
+  if (props.collectAttendeeAddress && !attendeeAddress.value?.formattedAddress) {
+    errors.value['_attendeeAddress'] = 'Address is required'
+    isValid = false
+  }
+
+  if (props.collectAttendeeSex && !attendeeSex.value) {
+    errors.value['_attendeeSex'] = 'Sex is required'
     isValid = false
   }
 
@@ -234,18 +271,28 @@ function handleSubmit() {
   if (!validate()) return
 
   // Clean up responses - only send non-empty values
-  const cleanResponses: Record<string, string | number | boolean> = {}
+  const cleanResponses: Record<string, string | number | boolean | AddressData> = {}
   Object.entries(responses.value).forEach(([key, val]) => {
     if (val !== '' && val !== undefined && val !== null) {
       cleanResponses[key] = val
     }
   })
 
-  emit('submit', cleanResponses, useMyInfo.value, {
+  const attendeeInfo: { name: string; email: string; birthdate: string; address?: AddressData; sex?: string } = {
     name: attendeeName.value.trim(),
     email: attendeeEmail.value.trim(),
     birthdate: attendeeBirthdate.value,
-  })
+  }
+
+  if (props.collectAttendeeAddress && attendeeAddress.value) {
+    attendeeInfo.address = attendeeAddress.value
+  }
+
+  if (props.collectAttendeeSex && attendeeSex.value) {
+    attendeeInfo.sex = attendeeSex.value
+  }
+
+  emit('submit', cleanResponses, useMyInfo.value, attendeeInfo)
 }
 </script>
 
@@ -300,6 +347,34 @@ function handleSubmit() {
         <UInput
           v-model="attendeeBirthdate"
           type="date"
+          :disabled="loading"
+        />
+      </UFormGroup>
+
+      <!-- Sex Field (optional built-in) -->
+      <UFormGroup
+        v-if="collectAttendeeSex"
+        label="Sex"
+        required
+        :error="errors['_attendeeSex']"
+      >
+        <URadioGroup
+          v-model="attendeeSex"
+          :options="sexOptionsComputed"
+          :disabled="loading"
+        />
+      </UFormGroup>
+
+      <!-- Address Field (optional built-in) -->
+      <UFormGroup
+        v-if="collectAttendeeAddress"
+        label="Address"
+        required
+        :error="errors['_attendeeAddress']"
+      >
+        <RegistrationAddressAutocomplete
+          v-model="attendeeAddress"
+          placeholder="Search for your address..."
           :disabled="loading"
         />
       </UFormGroup>

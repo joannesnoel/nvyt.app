@@ -2,6 +2,7 @@ export interface User {
   id: string
   name: string
   email: string
+  birthdate?: string | null
   avatarUrl?: string | null
   emailVerified?: boolean
   isAdmin?: boolean

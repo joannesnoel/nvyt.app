@@ -210,6 +210,7 @@ const statusOptions = [
                   View QR Code
                 </UButton>
                 <UButton
+                  v-if="ticket.isPurchaser"
                   :to="`/orders/${ticket.order?.orderNumber}`"
                   color="gray"
                   variant="ghost"
@@ -217,6 +218,13 @@ const statusOptions = [
                 >
                   View Order
                 </UButton>
+                <div
+                  v-else-if="ticket.purchaser?.name"
+                  class="flex items-center gap-1.5 text-sm text-gray-500"
+                >
+                  <UIcon name="i-heroicons-gift" class="w-4 h-4" />
+                  <span>Purchased by <span class="font-medium text-gray-700 dark:text-gray-300">{{ ticket.purchaser.name }}</span></span>
+                </div>
               </div>
             </div>
           </div>

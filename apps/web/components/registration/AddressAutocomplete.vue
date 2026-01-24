@@ -81,9 +81,9 @@ function buildFormattedAddress(): string {
 async function fetchProvinces() {
   loadingProvinces.value = true
   try {
-    const { data } = await useFetch('/api/v1/psgc/provinces')
-    if (data.value?.data?.provinces) {
-      provinceList.value = data.value.data.provinces
+    const response = await $fetch<{ data: { provinces: Array<{ id: number; name: string; regionName: string }> } }>('/api/v1/psgc/provinces')
+    if (response?.data?.provinces) {
+      provinceList.value = response.data.provinces
     }
   } catch (e) {
     console.error('Failed to fetch provinces:', e)
@@ -101,11 +101,11 @@ async function fetchCities() {
 
   loadingCities.value = true
   try {
-    const { data } = await useFetch('/api/v1/psgc/cities', {
+    const response = await $fetch<{ data: { cities: Array<{ id: number; name: string; provinceName: string; isCity: boolean }> } }>('/api/v1/psgc/cities', {
       query: { provinceName: province.value },
     })
-    if (data.value?.data?.cities) {
-      cityList.value = data.value.data.cities
+    if (response?.data?.cities) {
+      cityList.value = response.data.cities
     }
   } catch (e) {
     console.error('Failed to fetch cities:', e)
@@ -123,14 +123,14 @@ async function fetchBarangays() {
 
   loadingBarangays.value = true
   try {
-    const { data } = await useFetch('/api/v1/psgc/barangays', {
+    const response = await $fetch<{ data: { barangays: Array<{ id: number; code: string; name: string; cityMunName: string }> } }>('/api/v1/psgc/barangays', {
       query: {
         cityMunName: city.value,
         provinceName: province.value,
       },
     })
-    if (data.value?.data?.barangays) {
-      barangayList.value = data.value.data.barangays
+    if (response?.data?.barangays) {
+      barangayList.value = response.data.barangays
     }
   } catch (e) {
     console.error('Failed to fetch barangays:', e)

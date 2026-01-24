@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RegistrationFieldType, FieldOption, FieldValidation } from '@nvyt/shared'
+import type { RegistrationFieldType, FieldOption, FieldValidation, AddressData } from '@nvyt/shared'
 
 definePageMeta({
   layout: 'default',
@@ -32,6 +32,9 @@ interface RegistrationData {
     endDate: string | null
     timezone: string | null
     location: string | null
+    collectAttendeeAddress?: boolean
+    collectAttendeeSex?: boolean
+    attendeeSexOptions?: { value: string; label: string }[]
   }
   registrationFields: Array<{
     id: string
@@ -135,7 +138,7 @@ const isLastTicket = computed(() => currentTicketIndex.value === tickets.value.l
 // Submitting state
 const isSubmitting = ref(false)
 
-async function submitRegistration(responses: Record<string, string | number | boolean>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string }) {
+async function submitRegistration(responses: Record<string, string | number | boolean | AddressData>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string; address?: AddressData; sex?: string }) {
   if (!currentTicket.value) return
 
   // Prevent double submission for already registered tickets
@@ -157,6 +160,8 @@ async function submitRegistration(responses: Record<string, string | number | bo
         attendeeName: attendeeInfo.name,
         attendeeEmail: attendeeInfo.email,
         attendeeBirthdate: attendeeInfo.birthdate,
+        attendeeAddress: attendeeInfo.address,
+        attendeeSex: attendeeInfo.sex,
       },
     })
 
@@ -357,6 +362,9 @@ watch(status, (s) => {
             :is-last-ticket="isLastTicket"
             :user-has-existing-ticket="userHasExistingTicket"
             :loading="isSubmitting"
+            :collect-attendee-address="data?.event?.collectAttendeeAddress"
+            :collect-attendee-sex="data?.event?.collectAttendeeSex"
+            :attendee-sex-options="data?.event?.attendeeSexOptions"
             @submit="submitRegistration"
           />
         </UCard>

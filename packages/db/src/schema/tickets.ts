@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, uuid, integer, decimal, boolean, pgEnum, jsonb } from 'drizzle-orm/pg-core'
 import { events } from './events'
 import { users } from './users'
-import type { TicketRegistrationData } from './ticketRegistrationFields'
+import type { TicketRegistrationData, AddressData } from './ticketRegistrationFields'
 
 // Enums
 export const ticketTypeStatusEnum = pgEnum('ticket_type_status', ['active', 'sold_out', 'disabled'])
@@ -70,6 +70,8 @@ export const tickets = pgTable('tickets', {
   attendeeName: text('attendee_name'),
   attendeeEmail: text('attendee_email'),
   attendeeBirthdate: text('attendee_birthdate'), // YYYY-MM-DD format for identity verification
+  attendeeAddress: jsonb('attendee_address').$type<AddressData>(), // Optional: collected if event enables it
+  attendeeSex: text('attendee_sex'), // Optional: collected if event enables it
 
   // Post-payment registration data (stores { fieldId: value } responses)
   registrationData: jsonb('registration_data').$type<TicketRegistrationData>(),

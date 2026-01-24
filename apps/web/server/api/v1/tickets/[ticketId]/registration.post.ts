@@ -49,7 +49,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { responses, useUserProfile, attendeeName: submittedAttendeeName, attendeeEmail: submittedAttendeeEmail, attendeeBirthdate: submittedAttendeeBirthdate } = result.data
+  const {
+    responses,
+    useUserProfile,
+    attendeeName: submittedAttendeeName,
+    attendeeEmail: submittedAttendeeEmail,
+    attendeeBirthdate: submittedAttendeeBirthdate,
+    attendeeAddress: submittedAttendeeAddress,
+    attendeeSex: submittedAttendeeSex,
+  } = result.data
 
   // Get ticket with order and event info
   const [ticketResult] = await db
@@ -383,6 +391,9 @@ export default defineEventHandler(async (event) => {
       attendeeName,
       attendeeEmail,
       attendeeBirthdate,
+      // Optional built-in fields
+      attendeeAddress: submittedAttendeeAddress,
+      attendeeSex: submittedAttendeeSex,
       updatedAt: new Date(),
     })
     .where(eq(tickets.id, ticketId))
@@ -428,7 +439,7 @@ export default defineEventHandler(async (event) => {
     } else {
       // New user or user without password - send setup email
       const setupToken = await createAccountSetupToken(attendeeUser.id)
-      const setupUrl = `${baseUrl}/auth/setup-account?token=${setupToken}`
+      const setupUrl = `${baseUrl}/setup-account?token=${setupToken}`
 
       const emailContent = ticketRegisteredSetupEmail({
         attendeeName: attendeeName || attendeeUser.name || 'there',
