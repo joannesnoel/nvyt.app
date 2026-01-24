@@ -7,6 +7,11 @@
   :root {
     --nvyt-primary: 99 102 241; /* Indigo */
   }
+
+  /* Slightly larger base font for better readability */
+  html {
+    font-size: 18px;
+  }
 }
 
 /* Dark mode: Convert outer container shadows to subtle glow */

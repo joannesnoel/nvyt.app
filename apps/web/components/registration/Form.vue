@@ -38,11 +38,21 @@ const props = defineProps<{
   collectAttendeeAddress?: boolean
   collectAttendeeSex?: boolean
   attendeeSexOptions?: SexOption[]
+  // Initial attendee data (for pre-filling already assigned tickets)
+  initialAttendeeName?: string | null
+  initialAttendeeEmail?: string | null
+  initialAttendeeBirthdate?: string | null
+  initialAttendeeAddress?: AddressData | null
+  initialAttendeeSex?: string | null
+  initialRegistrationData?: Record<string, unknown> | null
+  // Whether this ticket is already completed
+  isCompleted?: boolean
 }>()
 
 const emit = defineEmits<{
   submit: [responses: Record<string, string | number | boolean | AddressData>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string; address?: AddressData; sex?: string }]
   skip: []
+  next: []
 }>()
 
 // Built-in attendee info (always required)
@@ -70,13 +80,34 @@ const responses = ref<Record<string, string | number | boolean>>({})
 const errors = ref<Record<string, string>>({})
 const useMyInfo = ref(false)
 
-// Initialize empty responses
+// Initialize responses with initial data or empty
 onMounted(() => {
+  // Pre-fill built-in attendee fields from initial data
+  if (props.initialAttendeeName) {
+    attendeeName.value = props.initialAttendeeName
+  }
+  if (props.initialAttendeeEmail) {
+    attendeeEmail.value = props.initialAttendeeEmail
+  }
+  if (props.initialAttendeeBirthdate) {
+    attendeeBirthdate.value = props.initialAttendeeBirthdate
+  }
+  if (props.initialAttendeeAddress) {
+    attendeeAddress.value = props.initialAttendeeAddress
+  }
+  if (props.initialAttendeeSex) {
+    attendeeSex.value = props.initialAttendeeSex
+  }
+
+  // Initialize custom field responses
   props.fields.forEach((field) => {
-    if (field.fieldType === 'checkbox') {
+    // Check if we have initial data for this field
+    const initialValue = props.initialRegistrationData?.[field.id]
+
+    if (initialValue !== undefined && initialValue !== null) {
+      responses.value[field.id] = initialValue as string | number | boolean
+    } else if (field.fieldType === 'checkbox') {
       responses.value[field.id] = false
-    } else if (field.fieldType === 'number') {
-      responses.value[field.id] = ''
     } else {
       responses.value[field.id] = ''
     }
@@ -84,7 +115,9 @@ onMounted(() => {
 
   // Auto-check "this ticket is mine" for single ticket purchases
   // Only if user doesn't already have a ticket to this event
-  if (props.isSingleTicket && props.userProfile && !props.userHasExistingTicket) {
+  // AND no initial data is present (fresh registration)
+  const hasInitialData = props.initialAttendeeName || props.initialAttendeeEmail
+  if (props.isSingleTicket && props.userProfile && !props.userHasExistingTicket && !hasInitialData) {
     useMyInfo.value = true
     prefillFromProfile()
   }
@@ -393,7 +426,28 @@ function handleSubmit() {
 
     <!-- Submit button -->
     <div class="mt-8 flex gap-3">
+      <!-- Already completed - show "Next" button -->
+      <template v-if="isCompleted">
+        <div class="flex items-center gap-3 text-green-600 dark:text-green-400">
+          <UIcon name="i-heroicons-check-circle" class="w-5 h-5" />
+          <span class="text-sm font-medium">This ticket is already registered</span>
+        </div>
+        <UButton
+          v-if="!isLastTicket"
+          color="primary"
+          size="lg"
+          @click="emit('next')"
+        >
+          Next Ticket
+          <template #trailing>
+            <UIcon name="i-heroicons-arrow-right" class="w-5 h-5" />
+          </template>
+        </UButton>
+      </template>
+
+      <!-- Not completed - show submit button -->
       <UButton
+        v-else
         color="primary"
         size="lg"
         :loading="loading"

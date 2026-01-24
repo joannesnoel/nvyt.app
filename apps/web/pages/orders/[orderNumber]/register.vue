@@ -51,6 +51,9 @@ interface RegistrationData {
     ticketNumber: string
     attendeeName: string | null
     attendeeEmail: string | null
+    attendeeBirthdate: string | null
+    attendeeAddress: { formattedAddress: string; lat?: number; lng?: number; placeId?: string } | null
+    attendeeSex: string | null
     registrationData: Record<string, unknown> | null
     registrationCompleted: boolean
     registrationCompletedAt: string | null
@@ -227,6 +230,20 @@ function goToTicket(index: number) {
   }
 }
 
+// Navigate to next incomplete ticket
+function goToNextIncomplete() {
+  const nextIndex = tickets.value.findIndex((t, i) => i > currentTicketIndex.value && !t.registrationCompleted)
+  if (nextIndex !== -1) {
+    currentTicketIndex.value = nextIndex
+  } else {
+    // No more incomplete tickets after current, find first incomplete
+    const firstIncomplete = tickets.value.findIndex(t => !t.registrationCompleted)
+    if (firstIncomplete !== -1) {
+      currentTicketIndex.value = firstIncomplete
+    }
+  }
+}
+
 // Format date
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', {
@@ -350,7 +367,7 @@ watch(status, (s) => {
         <!-- Registration Form Card -->
         <UCard>
           <RegistrationForm
-            :key="formKey"
+            :key="`${formKey}-${currentTicketIndex}`"
             :fields="registrationFields"
             :ticket-index="currentTicketIndex"
             :total-tickets="tickets.length"
@@ -365,7 +382,15 @@ watch(status, (s) => {
             :collect-attendee-address="data?.event?.collectAttendeeAddress"
             :collect-attendee-sex="data?.event?.collectAttendeeSex"
             :attendee-sex-options="data?.event?.attendeeSexOptions"
+            :initial-attendee-name="currentTicket.attendeeName"
+            :initial-attendee-email="currentTicket.attendeeEmail"
+            :initial-attendee-birthdate="currentTicket.attendeeBirthdate"
+            :initial-attendee-address="currentTicket.attendeeAddress"
+            :initial-attendee-sex="currentTicket.attendeeSex"
+            :initial-registration-data="currentTicket.registrationData"
+            :is-completed="currentTicket.registrationCompleted"
             @submit="submitRegistration"
+            @next="goToNextIncomplete"
           />
         </UCard>
 

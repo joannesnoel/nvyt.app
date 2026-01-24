@@ -16,6 +16,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: AddressData | null]
 }>()
 
+// Flag to skip watchers during initialization/restoration
+const isRestoring = ref(false)
+
 // Field values
 const country = ref(props.modelValue?.country || 'Philippines')
 const province = ref(props.modelValue?.province || '')
@@ -48,13 +51,20 @@ const cityOptions = computed(() => cityList.value.map((c) => ({
 const barangayOptions = computed(() => barangayList.value.map((b) => b.name))
 
 // Sync with parent model
-watch(() => props.modelValue, (newVal) => {
+watch(() => props.modelValue, async (newVal) => {
   if (newVal) {
+    // Set flag to prevent watchers from clearing dependent fields
+    isRestoring.value = true
+
     country.value = newVal.country || 'Philippines'
     province.value = newVal.province || ''
     city.value = newVal.city || ''
     barangay.value = newVal.barangay || ''
     street.value = newVal.street || ''
+
+    // Wait for next tick then re-enable watchers
+    await nextTick()
+    isRestoring.value = false
   }
 }, { deep: true })
 
@@ -141,42 +151,57 @@ async function fetchBarangays() {
 
 // Watch for country changes
 watch(country, async (newCountry) => {
-  province.value = ''
-  city.value = ''
-  barangay.value = ''
-  provinceList.value = []
-  cityList.value = []
-  barangayList.value = []
+  // Skip clearing if we're restoring saved data
+  if (!isRestoring.value) {
+    province.value = ''
+    city.value = ''
+    barangay.value = ''
+    provinceList.value = []
+    cityList.value = []
+    barangayList.value = []
+  }
 
   if (newCountry === 'Philippines') {
     await fetchProvinces()
   }
-  emitUpdate()
+  if (!isRestoring.value) {
+    emitUpdate()
+  }
 })
 
 // Watch for cascading changes
 watch(province, async (newProvince) => {
-  city.value = ''
-  barangay.value = ''
-  barangayList.value = []
+  // Skip clearing if we're restoring saved data
+  if (!isRestoring.value) {
+    city.value = ''
+    barangay.value = ''
+    barangayList.value = []
+  }
 
   if (newProvince && isPhilippines.value) {
     await fetchCities()
-  } else {
+  } else if (!isRestoring.value) {
     cityList.value = []
   }
-  emitUpdate()
+  if (!isRestoring.value) {
+    emitUpdate()
+  }
 })
 
 watch(city, async (newCity) => {
-  barangay.value = ''
+  // Skip clearing if we're restoring saved data
+  if (!isRestoring.value) {
+    barangay.value = ''
+  }
 
   if (newCity && province.value && isPhilippines.value) {
     await fetchBarangays()
-  } else {
+  } else if (!isRestoring.value) {
     barangayList.value = []
   }
-  emitUpdate()
+  if (!isRestoring.value) {
+    emitUpdate()
+  }
 })
 
 watch(barangay, () => {
@@ -188,6 +213,12 @@ watch(street, () => {
 })
 
 onMounted(async () => {
+  // Set restoring flag if we have initial data
+  const hasInitialData = props.modelValue?.province || props.modelValue?.city || props.modelValue?.barangay
+  if (hasInitialData) {
+    isRestoring.value = true
+  }
+
   if (isPhilippines.value) {
     await fetchProvinces()
 
@@ -199,6 +230,12 @@ onMounted(async () => {
         await fetchBarangays()
       }
     }
+  }
+
+  // Re-enable watchers after initialization
+  if (hasInitialData) {
+    await nextTick()
+    isRestoring.value = false
   }
 })
 </script>
