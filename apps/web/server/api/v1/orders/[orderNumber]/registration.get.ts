@@ -192,16 +192,21 @@ export default defineEventHandler(async (event) => {
         ? attendeeUsersMap.get(ticket.attendeeUserId)
         : null
 
+      // Extract address and sex from registrationData (stored with reserved keys)
+      const registrationData = ticket.registrationData as Record<string, unknown> | null
+      const attendeeAddress = registrationData?._address as Record<string, unknown> | undefined
+      const attendeeSex = registrationData?._sex as string | undefined
+
       return {
         id: ticket.id,
         ticketNumber: ticket.ticketNumber,
-        // Priority: attendeeUserId user > legacy fields
+        // Priority: attendeeUserId user > ticket field
         attendeeName: attendeeUser?.name || ticket.attendeeName,
-        attendeeEmail: attendeeUser?.email || ticket.attendeeEmail,
+        attendeeEmail: attendeeUser?.email || null, // Email comes from user record only
         attendeeUserId: ticket.attendeeUserId,
         attendeeBirthdate: ticket.attendeeBirthdate,
-        attendeeAddress: ticket.attendeeAddress,
-        attendeeSex: ticket.attendeeSex,
+        attendeeAddress, // From registrationData._address
+        attendeeSex, // From registrationData._sex
         registrationData: ticket.registrationData,
         registrationCompleted: ticket.registrationCompleted,
         registrationCompletedAt: ticket.registrationCompletedAt,

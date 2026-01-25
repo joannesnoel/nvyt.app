@@ -3,7 +3,7 @@ import { purchaseTicketsSchema } from '@nvyt/shared'
 import { eq, and, inArray, asc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
-import { sendEmail, accountSetupEmail, ticketPurchaseConfirmationEmail } from '~/server/utils/email'
+import { sendEmail, accountSetupEmail, paymentSuccessfulEmail } from '~/server/utils/email'
 import { calculateProcessingFees, type PaymentProvider } from '~/server/utils/wallet'
 import { getActivePrice, validateTierAvailability, incrementTierQuantitySold, hasActiveTier } from '~/server/utils/pricing'
 
@@ -261,7 +261,6 @@ export default defineEventHandler(async (event) => {
     ticketNumber: string
     qrCode: string
     attendeeName?: string
-    attendeeEmail?: string
     status: 'pending' | 'confirmed'
   }> = []
 
@@ -367,7 +366,6 @@ export default defineEventHandler(async (event) => {
         ticketNumber: generateTicketNumber(),
         qrCode: generateQRCode(),
         attendeeName: attendee?.name,
-        attendeeEmail: attendee?.email,
         status: 'pending',
         sortOrder: ticketsToCreate.length, // Sequential order within the order
       })
@@ -539,26 +537,31 @@ export default defineEventHandler(async (event) => {
 
       const orderUrl = `${config.public.appUrl}/orders/${order.orderNumber}`
 
-      // Get tickets with ticket type info for email
-      const orderTickets = ticketsWithOrderId.map((t) => {
+      // Build ticket summary (group by ticket type)
+      const ticketSummaryMap = new Map<string, { ticketType: string; quantity: number }>()
+      for (const t of ticketsWithOrderId) {
         const ticketType = ticketTypeMap.get(t.ticketTypeId)!
-        return {
-          ticketType: ticketType.name,
-          attendeeName: t.attendeeName || user.name,
-          qrCode: t.qrCode,
+        const existing = ticketSummaryMap.get(t.ticketTypeId)
+        if (existing) {
+          existing.quantity++
+        } else {
+          ticketSummaryMap.set(t.ticketTypeId, { ticketType: ticketType.name, quantity: 1 })
         }
-      })
+      }
+      const ticketSummary = Array.from(ticketSummaryMap.values())
 
-      const emailContent = ticketPurchaseConfirmationEmail({
+      const emailContent = paymentSuccessfulEmail({
         userName: user.name || 'there',
         eventTitle: eventRecord.title,
         eventDate,
         eventLocation: eventRecord.location || undefined,
         orderNumber: order.orderNumber,
-        tickets: orderTickets,
+        ticketCount: ticketsWithOrderId.length,
+        ticketSummary,
         totalAmount: 'Free',
         orderUrl,
         setupToken: needsAccountSetup ? setupToken ?? undefined : undefined,
+        requiresRegistration: hasRegistrationFields,
       })
 
       await sendEmail({ to: user.email, ...emailContent })

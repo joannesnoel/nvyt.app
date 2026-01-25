@@ -1,7 +1,7 @@
 import { tickets, ticketTypes, events, orders, ticketRegistrationFields, users } from '@nvyt/db'
 import { submitTicketRegistrationSchema, type AddressData } from '@nvyt/shared'
 import { eq, and, asc } from 'drizzle-orm'
-import { sendEmail, ticketRegisteredNotificationEmail, ticketRegisteredSetupEmail } from '~/server/utils/email'
+import { sendEmail, ticketRegisteredNotificationEmail, ticketRegisteredSetupEmail, attendeeTicketEmail } from '~/server/utils/email'
 import { createAccountSetupToken } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
@@ -296,9 +296,9 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Use attendee info from form submission (always required)
+  // Use attendee info from form submission
   const attendeeName = submittedAttendeeName
-  const attendeeEmail = submittedAttendeeEmail
+  const attendeeEmail = submittedAttendeeEmail // Optional - may be undefined
   const attendeeBirthdate = submittedAttendeeBirthdate
 
   // Get purchaser info
@@ -315,14 +315,16 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Find or create attendee user
+  // Determine attendee user handling based on whether email is provided
   let attendeeUserId: string
   let attendeeUser: { id: string; name: string; email: string; passwordHash: string | null } | null = null
-  let isNewUser = false
 
-  // Check if attendee is the same as purchaser
+  // Check if attendee is the same as purchaser (using their profile or matching email)
   const isSameAsPurchaser = useUserProfile ||
     (attendeeEmail && purchaser.email.toLowerCase() === attendeeEmail.toLowerCase())
+
+  // If no email provided, ticket stays under purchaser's account (guest attendee)
+  const isGuestAttendee = !attendeeEmail
 
   if (isSameAsPurchaser) {
     // Attendee is the purchaser
@@ -335,8 +337,12 @@ export default defineEventHandler(async (event) => {
         .set({ birthdate: attendeeBirthdate, updatedAt: new Date() })
         .where(eq(users.id, purchaser.id))
     }
+  } else if (isGuestAttendee) {
+    // No email provided - ticket stays under purchaser's account
+    // Attendee data (name, birthdate, etc.) is still saved on the ticket
+    attendeeUserId = purchaser.id
   } else {
-    // Attendee is different from purchaser - find or create user
+    // Attendee has email and is different from purchaser - find or create user
     const [existingUser] = await db
       .select()
       .from(users)
@@ -375,25 +381,33 @@ export default defineEventHandler(async (event) => {
 
       attendeeUserId = newUser.id
       attendeeUser = newUser
-      isNewUser = true
     }
   }
 
+  // Merge optional built-in fields into registration data with reserved keys
+  const finalRegistrationData: Record<string, string | number | boolean | AddressData> = {
+    ...validatedResponses,
+  }
+  if (submittedAttendeeAddress) {
+    finalRegistrationData._address = submittedAttendeeAddress
+  }
+  if (submittedAttendeeSex) {
+    finalRegistrationData._sex = submittedAttendeeSex
+  }
+
   // Update ticket with registration data and attendeeUserId
+  // Note: attendeeEmail, attendeeAddress, attendeeSex columns removed
+  // - Email is looked up via attendeeUserId -> users table
+  // - Address and sex are stored in registrationData
   const [updatedTicket] = await db
     .update(tickets)
     .set({
-      registrationData: validatedResponses,
+      registrationData: finalRegistrationData,
       registrationCompleted: true,
       registrationCompletedAt: new Date(),
       attendeeUserId,
-      // Legacy fields (kept for backward compatibility)
       attendeeName,
-      attendeeEmail,
       attendeeBirthdate,
-      // Optional built-in fields
-      attendeeAddress: submittedAttendeeAddress,
-      attendeeSex: submittedAttendeeSex,
       updatedAt: new Date(),
     })
     .where(eq(tickets.id, ticketId))
@@ -406,8 +420,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Send notification email to attendee if they are different from the purchaser
-  if (!isSameAsPurchaser && attendeeUser) {
+  // Get attendee email for sending ticket
+  // - If attendee has their own user account, use their email
+  // - If guest attendee (no separate account), no email to send
+  const attendeeEmailForNotification = attendeeUser?.email || (isSameAsPurchaser ? purchaser.email : null)
+
+  if (attendeeEmailForNotification) {
     const config = useRuntimeConfig()
     const baseUrl = config.public?.appUrl || 'https://nvyt.app'
 
@@ -421,27 +439,28 @@ export default defineEventHandler(async (event) => {
       minute: '2-digit',
     })
 
-    if (attendeeUser.passwordHash) {
-      // Existing user with password - send notification email
-      const ticketUrl = `${baseUrl}/my-tickets`
-      const emailContent = ticketRegisteredNotificationEmail({
-        attendeeName: attendeeName || attendeeUser.name,
-        eventTitle: ticketResult.event.title,
-        eventDate,
-        eventLocation: ticketResult.event.location || undefined,
-        ticketType: ticketResult.ticketType.name,
-        purchaserName: purchaser.name,
-        ticketUrl,
-      })
+    // Send the ticket with QR code to the attendee
+    const ticketUrl = `${baseUrl}/tickets/${updatedTicket.id}`
+    const ticketEmailContent = attendeeTicketEmail({
+      attendeeName: attendeeName || 'there',
+      eventTitle: ticketResult.event.title,
+      eventDate,
+      eventLocation: ticketResult.event.location || undefined,
+      ticketType: ticketResult.ticketType.name,
+      ticketNumber: updatedTicket.ticketNumber,
+      qrCode: updatedTicket.qrCode,
+      ticketUrl,
+    })
 
-      sendEmail({ to: attendeeEmail, ...emailContent })
-        .catch(err => console.error('[Registration] Failed to send notification email:', err))
-    } else {
-      // New user or user without password - send setup email
+    sendEmail({ to: attendeeEmailForNotification, ...ticketEmailContent })
+      .catch(err => console.error('[Registration] Failed to send ticket email:', err))
+
+    // If attendee is different from purchaser and needs account setup, also send setup email
+    if (!isSameAsPurchaser && attendeeUser && !attendeeUser.passwordHash) {
       const setupToken = await createAccountSetupToken(attendeeUser.id)
       const setupUrl = `${baseUrl}/setup-account?token=${setupToken}`
 
-      const emailContent = ticketRegisteredSetupEmail({
+      const setupEmailContent = ticketRegisteredSetupEmail({
         attendeeName: attendeeName || attendeeUser.name || 'there',
         eventTitle: ticketResult.event.title,
         eventDate,
@@ -451,7 +470,7 @@ export default defineEventHandler(async (event) => {
         setupUrl,
       })
 
-      sendEmail({ to: attendeeEmail, ...emailContent })
+      sendEmail({ to: attendeeEmailForNotification, ...setupEmailContent })
         .catch(err => console.error('[Registration] Failed to send setup email:', err))
     }
   }
@@ -461,7 +480,6 @@ export default defineEventHandler(async (event) => {
       id: updatedTicket.id,
       ticketNumber: updatedTicket.ticketNumber,
       attendeeName: updatedTicket.attendeeName,
-      attendeeEmail: updatedTicket.attendeeEmail,
       registrationCompleted: updatedTicket.registrationCompleted,
       registrationCompletedAt: updatedTicket.registrationCompletedAt,
     },

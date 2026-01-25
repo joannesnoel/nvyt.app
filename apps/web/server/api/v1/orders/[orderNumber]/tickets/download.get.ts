@@ -1,5 +1,5 @@
-import { eq, and } from 'drizzle-orm'
-import { tickets, ticketTypes, events, orders } from '@nvyt/db'
+import { eq, and, inArray } from 'drizzle-orm'
+import { tickets, ticketTypes, events, orders, users } from '@nvyt/db'
 import { generateAllTicketsPdf } from '~/server/utils/ticketPdf'
 
 export default defineEventHandler(async (event) => {
@@ -89,22 +89,46 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Fetch attendee user emails for tickets with attendeeUserId
+  const attendeeUserIds = confirmedTickets
+    .map(t => t.ticket.attendeeUserId)
+    .filter((id): id is string => id !== null)
+
+  const attendeeUsersMap = new Map<string, string>()
+  if (attendeeUserIds.length > 0) {
+    const attendeeUsers = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(inArray(users.id, attendeeUserIds))
+
+    for (const u of attendeeUsers) {
+      attendeeUsersMap.set(u.id, u.email)
+    }
+  }
+
   // Prepare ticket data for PDF generation
-  const ticketData = confirmedTickets.map(({ ticket, ticketType }) => ({
-    ticketNumber: ticket.ticketNumber,
-    qrCode: ticket.qrCode,
-    attendeeName: ticket.attendeeName,
-    attendeeEmail: ticket.attendeeEmail,
-    ticketTypeName: ticketType.name,
-    ticketTypePrice: ticketType.price,
-    eventTitle: eventData.title,
-    eventDate: eventData.startDate,
-    eventEndDate: eventData.endDate,
-    eventLocation: eventData.location,
-    eventTimezone: eventData.timezone,
-    orderNumber: order.orderNumber,
-    organizationName: eventData.organizationName,
-  }))
+  const ticketData = confirmedTickets.map(({ ticket, ticketType }) => {
+    // Get attendee email from user record if available
+    const attendeeEmail = ticket.attendeeUserId
+      ? attendeeUsersMap.get(ticket.attendeeUserId) || null
+      : null
+
+    return {
+      ticketNumber: ticket.ticketNumber,
+      qrCode: ticket.qrCode,
+      attendeeName: ticket.attendeeName,
+      attendeeEmail,
+      ticketTypeName: ticketType.name,
+      ticketTypePrice: ticketType.price,
+      eventTitle: eventData.title,
+      eventDate: eventData.startDate,
+      eventEndDate: eventData.endDate,
+      eventLocation: eventData.location,
+      eventTimezone: eventData.timezone,
+      orderNumber: order.orderNumber,
+      organizationName: eventData.organizationName,
+    }
+  })
 
   // Generate PDF with all tickets
   const pdfBuffer = await generateAllTicketsPdf(ticketData)

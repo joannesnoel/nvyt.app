@@ -65,13 +65,11 @@ export const tickets = pgTable('tickets', {
   ticketNumber: text('ticket_number').notNull().unique(), // Human-readable ticket number
   qrCode: text('qr_code').notNull().unique(), // For scanning
 
-  // Legacy attendee fields (deprecated - use attendeeUserId instead)
-  // Kept for backward compatibility during migration
-  attendeeName: text('attendee_name'),
-  attendeeEmail: text('attendee_email'),
+  // Attendee info (the actual ticket holder)
+  attendeeName: text('attendee_name'), // Display name for ticket
   attendeeBirthdate: text('attendee_birthdate'), // YYYY-MM-DD format for identity verification
-  attendeeAddress: jsonb('attendee_address').$type<AddressData>(), // Optional: collected if event enables it
-  attendeeSex: text('attendee_sex'), // Optional: collected if event enables it
+  // Note: attendeeEmail removed - look up via attendeeUserId -> users table
+  // Note: attendeeAddress and attendeeSex moved to registrationData
 
   // Post-payment registration data (stores { fieldId: value } responses)
   registrationData: jsonb('registration_data').$type<TicketRegistrationData>(),

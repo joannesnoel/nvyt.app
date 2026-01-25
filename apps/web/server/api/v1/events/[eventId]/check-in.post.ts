@@ -82,6 +82,19 @@ export default defineEventHandler(async (event) => {
       // Found a paid ticket
       const { ticket, ticketType, order, purchaser } = ticketResult
 
+      // Get attendee user email if different from purchaser
+      let attendeeEmail = purchaser.email
+      if (ticket.attendeeUserId && ticket.attendeeUserId !== purchaser.id) {
+        const [attendeeUser] = await db
+          .select({ email: users.email })
+          .from(users)
+          .where(eq(users.id, ticket.attendeeUserId))
+          .limit(1)
+        if (attendeeUser) {
+          attendeeEmail = attendeeUser.email
+        }
+      }
+
       // Check payment status
       if (order.paymentStatus !== 'paid') {
         throw createError({
@@ -160,7 +173,7 @@ export default defineEventHandler(async (event) => {
         order,
         purchaser,
         attendeeName: ticket.attendeeName || order.customerName || purchaser.name,
-        attendeeEmail: ticket.attendeeEmail || order.customerEmail || purchaser.email,
+        attendeeEmail, // From attendee user or purchaser
       })
     }
   }

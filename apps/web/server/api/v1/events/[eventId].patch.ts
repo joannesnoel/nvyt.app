@@ -193,10 +193,10 @@ export default defineEventHandler(async (event) => {
         )
       )
 
-    // Get all ticket holders
+    // Get all ticket holders - need to get email from user record via attendeeUserId
     const ticketHolders = await db
       .select({
-        email: tickets.attendeeEmail,
+        attendeeUserId: tickets.attendeeUserId,
         name: tickets.attendeeName,
       })
       .from(tickets)
@@ -208,6 +208,23 @@ export default defineEventHandler(async (event) => {
         )
       )
 
+    // Fetch emails for ticket holders with attendeeUserId
+    const attendeeUserIds = ticketHolders
+      .map(t => t.attendeeUserId)
+      .filter((id): id is string => id !== null)
+
+    const attendeeEmailsMap = new Map<string, string>()
+    if (attendeeUserIds.length > 0) {
+      const attendeeUsers = await db
+        .select({ id: users.id, email: users.email })
+        .from(users)
+        .where(inArray(users.id, attendeeUserIds))
+
+      for (const u of attendeeUsers) {
+        attendeeEmailsMap.set(u.id, u.email)
+      }
+    }
+
     // Combine and deduplicate by email
     const allAttendees = new Map<string, string>()
     for (const a of rsvpAttendees) {
@@ -216,8 +233,9 @@ export default defineEventHandler(async (event) => {
       }
     }
     for (const t of ticketHolders) {
-      if (t.email && !allAttendees.has(t.email)) {
-        allAttendees.set(t.email, t.name || 'there')
+      const email = t.attendeeUserId ? attendeeEmailsMap.get(t.attendeeUserId) : null
+      if (email && !allAttendees.has(email)) {
+        allAttendees.set(email, t.name || 'there')
       }
     }
 

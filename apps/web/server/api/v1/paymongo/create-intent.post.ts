@@ -3,7 +3,7 @@ import { purchaseTicketsSchema } from '@nvyt/shared'
 import { eq, and, inArray, asc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { createPaymentIntent, toCentavos, getPublicKey } from '~/server/utils/paymongo'
-import { sendEmail, accountSetupEmail, ticketPurchaseConfirmationEmail } from '~/server/utils/email'
+import { sendEmail, accountSetupEmail } from '~/server/utils/email'
 import { calculateProcessingFees, type PaymentProvider } from '~/server/utils/wallet'
 import { getActivePrice, validateTierAvailability, incrementTierQuantitySold } from '~/server/utils/pricing'
 
@@ -265,7 +265,6 @@ export default defineEventHandler(async (event) => {
     ticketNumber: string
     qrCode: string
     attendeeName?: string
-    attendeeEmail?: string
     status: 'pending' | 'confirmed'
   }> = []
 
@@ -360,7 +359,6 @@ export default defineEventHandler(async (event) => {
         ticketNumber: generateTicketNumber(),
         qrCode: generateQRCode(),
         attendeeName: attendee?.name,
-        attendeeEmail: attendee?.email,
         status: 'pending',
         sortOrder: ticketsToCreate.length, // Sequential order within the order
       })

@@ -120,7 +120,8 @@
       "Bash(pip3 install:*)",
       "WebFetch(domain:developers.paymongo.com)",
       "Bash(gh pr create:*)",
-      "Bash(pnpm --filter web build:*)"
+      "Bash(pnpm --filter web build:*)",
+      "Bash(aws s3 ls:*)"
     ]
   },
   "hooks": {

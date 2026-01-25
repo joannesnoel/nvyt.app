@@ -141,7 +141,7 @@ const isLastTicket = computed(() => currentTicketIndex.value === tickets.value.l
 // Submitting state
 const isSubmitting = ref(false)
 
-async function submitRegistration(responses: Record<string, string | number | boolean | AddressData>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string; address?: AddressData; sex?: string }) {
+async function submitRegistration(responses: Record<string, string | number | boolean | AddressData>, useUserProfile: boolean, attendeeInfo: { name: string; email?: string; birthdate: string; address?: AddressData; sex?: string }) {
   if (!currentTicket.value) return
 
   // Prevent double submission for already registered tickets
