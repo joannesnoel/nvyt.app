@@ -1,5 +1,5 @@
-import { orders, events, tickets, ticketTypes, ticketRegistrationFields } from '@nvyt/db'
-import { eq, and, sql, asc } from 'drizzle-orm'
+import { orders, events, tickets, ticketTypes, ticketRegistrationFields, users } from '@nvyt/db'
+import { eq, and, sql, asc, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')
@@ -104,11 +104,36 @@ export default defineEventHandler(async (event) => {
     )
   const hasRegistrationFields = (registrationFieldCount?.count ?? 0) > 0
 
+  // Fetch attendee user emails for tickets with attendeeUserId
+  const attendeeUserIds = orderTickets
+    .map(t => t.ticket.attendeeUserId)
+    .filter((id): id is string => id !== null)
+
+  const attendeeEmailsMap = new Map<string, string>()
+  if (attendeeUserIds.length > 0) {
+    const attendeeUsers = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(inArray(users.id, attendeeUserIds))
+
+    for (const u of attendeeUsers) {
+      attendeeEmailsMap.set(u.id, u.email)
+    }
+  }
+
   // Calculate registration completion stats
-  const ticketList = orderTickets.map(({ ticket, ticketType }) => ({
-    ...ticket,
-    ticketType,
-  }))
+  const ticketList = orderTickets.map(({ ticket, ticketType }) => {
+    // Get attendee email from user record if attendeeUserId is set
+    const attendeeEmail = ticket.attendeeUserId
+      ? attendeeEmailsMap.get(ticket.attendeeUserId) || null
+      : null
+
+    return {
+      ...ticket,
+      attendeeEmail, // Add email from user record
+      ticketType,
+    }
+  })
   const registrationCompleted = ticketList.filter(t => t.registrationCompleted).length
   const registrationPending = ticketList.length - registrationCompleted
 

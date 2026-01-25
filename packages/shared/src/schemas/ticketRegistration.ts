@@ -79,7 +79,7 @@ export const submitTicketRegistrationSchema = z.object({
   useUserProfile: z.boolean().optional(),
   // Required attendee information for each ticket
   attendeeName: z.string().min(1, 'Attendee name is required'),
-  attendeeEmail: z.string().email('Valid email is required'),
+  attendeeEmail: z.string().email('Valid email address').optional(), // Optional - if not provided, ticket stays under purchaser's account
   attendeeBirthdate: z.string().min(1, 'Birthdate is required'), // YYYY-MM-DD format
   // Optional built-in fields (collected if event enables them)
   attendeeAddress: addressDataSchema.optional(),

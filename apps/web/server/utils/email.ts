@@ -615,6 +615,164 @@ export function ticketPurchaseConfirmationEmail(data: {
   }
 }
 
+export function paymentSuccessfulEmail(data: {
+  userName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  orderNumber: string
+  ticketCount: number
+  ticketSummary: Array<{ ticketType: string; quantity: number }>
+  totalAmount: string
+  orderUrl: string
+  setupToken?: string
+  requiresRegistration: boolean
+}): { subject: string; html: string } {
+  const ticketViewUrl = data.setupToken
+    ? `${data.orderUrl}/success?token=${data.setupToken}`
+    : data.orderUrl
+
+  const ticketSummaryHtml = data.ticketSummary
+    .map(t => `<li style="margin-bottom: 4px;">${t.quantity}x ${t.ticketType}</li>`)
+    .join('')
+
+  const registrationNote = data.requiresRegistration
+    ? `<div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <p style="margin: 0; color: #92400e; font-weight: 600;">Next Step: Register Your Attendees</p>
+        <p style="margin: 8px 0 0 0; color: #a16207; font-size: 14px;">Please register the attendees for each ticket. Once registered, each attendee will receive their ticket with QR code via email.</p>
+      </div>`
+    : `<p style="color: #666; font-size: 14px; text-align: center;">Your tickets and QR codes are available in your order page.</p>`
+
+  return {
+    subject: `Payment Successful - ${data.eventTitle} (Order ${data.orderNumber})`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
+        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          </div>
+
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: #dcfce7; border-radius: 50%; padding: 16px;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Payment Successful!</h2>
+
+          <p style="text-align: center;">Hi ${data.userName},</p>
+
+          <p style="text-align: center;">Thank you for your purchase! Your payment for <strong>${data.eventTitle}</strong> has been confirmed.</p>
+
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Order Number:</strong> ${data.orderNumber}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+            ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+            <p style="margin: 0 0 10px 0;"><strong>Tickets:</strong></p>
+            <ul style="margin: 0; padding-left: 20px;">${ticketSummaryHtml}</ul>
+            <p style="margin: 16px 0 0 0; font-size: 18px;"><strong>Total Paid:</strong> ${data.totalAmount}</p>
+          </div>
+
+          ${registrationNote}
+
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${ticketViewUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">${data.requiresRegistration ? 'Register Attendees' : 'View Your Order'}</a>
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+          <p style="color: #666; font-size: 14px; text-align: center;">
+            See you at the event!<br>
+            The nvyt Team
+          </p>
+        </div>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function attendeeTicketEmail(data: {
+  attendeeName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  ticketType: string
+  ticketNumber: string
+  qrCode: string
+  ticketUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `Your ticket for ${data.eventTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
+        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          </div>
+
+          <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Your Ticket is Ready!</h2>
+
+          <p style="text-align: center;">Hi ${data.attendeeName},</p>
+
+          <p style="text-align: center;">Here's your ticket for <strong>${data.eventTitle}</strong>. Show the QR code below at the event for check-in.</p>
+
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+            ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+            <p style="margin: 0;"><strong>Ticket Type:</strong> ${data.ticketType}</p>
+          </div>
+
+          <div style="background: #ffffff; border: 2px solid #6366f1; border-radius: 12px; padding: 24px; margin: 20px 0;">
+            <div style="text-align: center;">
+              <span style="background: #6366f1; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">Your Ticket</span>
+            </div>
+            <div style="text-align: center; margin: 20px 0;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qrCode)}" alt="QR Code" style="width: 200px; height: 200px; border-radius: 8px;">
+            </div>
+            <div style="text-align: center;">
+              <p style="margin: 0; font-weight: 600; color: #111827; font-size: 18px;">${data.attendeeName}</p>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #6b7280;">${data.ticketType}</p>
+              <p style="margin: 8px 0 0 0; font-size: 11px; color: #9ca3af; font-family: monospace;">${data.ticketNumber}</p>
+            </div>
+          </div>
+
+          <p style="color: #666; font-size: 14px; text-align: center;">Save this email or take a screenshot of the QR code. You can also view your ticket online anytime.</p>
+
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${data.ticketUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">View Ticket Online</a>
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+          <p style="color: #666; font-size: 14px; text-align: center;">
+            See you at the event!<br>
+            The nvyt Team
+          </p>
+        </div>
+      </body>
+      </html>
+    `,
+  }
+}
+
 export function accountSetupEmail(data: {
   userName: string
   setupUrl: string

@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { tickets, ticketTypes, events, orders } from '@nvyt/db'
+import { tickets, ticketTypes, events, orders, users } from '@nvyt/db'
 import { generateTicketPdf } from '~/server/utils/ticketPdf'
 
 export default defineEventHandler(async (event) => {
@@ -59,12 +59,25 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Fetch attendee email from user record if attendeeUserId is set
+  let attendeeEmail: string | null = null
+  if (ticket.attendeeUserId) {
+    const [attendeeUser] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, ticket.attendeeUserId))
+      .limit(1)
+    if (attendeeUser) {
+      attendeeEmail = attendeeUser.email
+    }
+  }
+
   // Generate PDF
   const pdfBuffer = await generateTicketPdf({
     ticketNumber: ticket.ticketNumber,
     qrCode: ticket.qrCode,
     attendeeName: ticket.attendeeName,
-    attendeeEmail: ticket.attendeeEmail,
+    attendeeEmail,
     ticketTypeName: ticketType.name,
     ticketTypePrice: ticketType.price,
     eventTitle: eventData.title,

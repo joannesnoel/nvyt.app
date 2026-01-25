@@ -50,7 +50,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  submit: [responses: Record<string, string | number | boolean | AddressData>, useUserProfile: boolean, attendeeInfo: { name: string; email: string; birthdate: string; address?: AddressData; sex?: string }]
+  submit: [responses: Record<string, string | number | boolean | AddressData>, useUserProfile: boolean, attendeeInfo: { name: string; email?: string; birthdate: string; address?: AddressData; sex?: string }]
   skip: []
   next: []
 }>()
@@ -174,10 +174,8 @@ function validate(): boolean {
     isValid = false
   }
 
-  if (!attendeeEmail.value.trim()) {
-    errors.value['_attendeeEmail'] = 'Attendee email is required'
-    isValid = false
-  } else {
+  // Email is optional - but if provided, must be valid
+  if (attendeeEmail.value.trim()) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(attendeeEmail.value)) {
       errors.value['_attendeeEmail'] = 'Please enter a valid email address'
@@ -311,10 +309,15 @@ function handleSubmit() {
     }
   })
 
-  const attendeeInfo: { name: string; email: string; birthdate: string; address?: AddressData; sex?: string } = {
+  const attendeeInfo: { name: string; email?: string; birthdate: string; address?: AddressData; sex?: string } = {
     name: attendeeName.value.trim(),
-    email: attendeeEmail.value.trim(),
     birthdate: attendeeBirthdate.value,
+  }
+
+  // Only include email if provided
+  const trimmedEmail = attendeeEmail.value.trim()
+  if (trimmedEmail) {
+    attendeeInfo.email = trimmedEmail
   }
 
   if (props.collectAttendeeAddress && attendeeAddress.value) {
@@ -367,11 +370,11 @@ function handleSubmit() {
         />
       </UFormGroup>
 
-      <UFormGroup label="Attendee Email" required :error="errors['_attendeeEmail']">
+      <UFormGroup label="Attendee Email" :error="errors['_attendeeEmail']" help="Optional - if provided, attendee will receive their ticket via email">
         <UInput
           v-model="attendeeEmail"
           type="email"
-          placeholder="Email address of ticket holder"
+          placeholder="Email address of ticket holder (optional)"
           :disabled="loading"
         />
       </UFormGroup>

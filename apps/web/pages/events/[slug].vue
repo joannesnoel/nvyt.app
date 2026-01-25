@@ -496,6 +496,12 @@ const requirementsSatisfied = computed(() => {
 
 // Check if a specific ticket type is currently on sale
 function isTicketOnSale(ticket: any): boolean {
+  // Use server-computed isOnSale if available (most accurate)
+  if (typeof ticket.isOnSale === 'boolean') {
+    return ticket.isOnSale
+  }
+
+  // Fallback to client-side computation for backwards compatibility
   if (ticket.status !== 'active') return false
   if (ticket.isSoldOut) return false
 
@@ -536,6 +542,23 @@ function getTicketSalesStatus(ticket: any): { status: 'on_sale' | 'not_started' 
   }
   if (ticket.isSoldOut) {
     return { status: 'sold_out', message: 'Sold out' }
+  }
+
+  // Use server-computed isOnSale if available
+  if (typeof ticket.isOnSale === 'boolean' && ticket.isOnSale) {
+    // Ticket is on sale, but check if there's an upcoming tier to display
+    if (ticket.isBaseTier && ticket.nextTier?.startsAt) {
+      const now = new Date()
+      const tierStart = new Date(ticket.nextTier.startsAt)
+      if (tierStart > now) {
+        return {
+          status: 'on_sale',
+          message: '',
+          upcomingTier: `${ticket.nextTier.name} starts ${tierStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+        }
+      }
+    }
+    return { status: 'on_sale', message: '' }
   }
 
   // If a tier is currently active, ticket is on sale

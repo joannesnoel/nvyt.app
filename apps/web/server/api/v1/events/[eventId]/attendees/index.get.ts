@@ -187,7 +187,6 @@ async function getTicketStats(
       qrCode: tickets.qrCode,
       ticketNumber: tickets.ticketNumber,
       attendeeName: tickets.attendeeName,
-      attendeeEmail: tickets.attendeeEmail,
       attendeeUserId: tickets.attendeeUserId,
       checkedInAt: tickets.checkedInAt,
       createdAt: tickets.createdAt,
@@ -254,7 +253,6 @@ async function getTicketStats(
         attendeeUser?.name?.toLowerCase().includes(searchLower) ||
         attendeeUser?.email?.toLowerCase().includes(searchLower) ||
         t.attendeeName?.toLowerCase().includes(searchLower) ||
-        t.attendeeEmail?.toLowerCase().includes(searchLower) ||
         t.ticketNumber?.toLowerCase().includes(searchLower)
       )
     })
@@ -311,7 +309,7 @@ async function getTicketStats(
       user: {
         id: attendeeUser?.id ?? t.purchaser?.id ?? null,
         name: attendeeUser?.name || t.attendeeName || t.purchaser?.name || null,
-        email: attendeeUser?.email || t.attendeeEmail || t.purchaser?.email || null,
+        email: attendeeUser?.email || t.purchaser?.email || null, // Email from user records only
         avatarUrl: attendeeUser?.avatarUrl ?? t.purchaser?.avatarUrl ?? null,
       },
     }

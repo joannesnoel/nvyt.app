@@ -253,6 +253,13 @@
       "when": 1769260791432,
       "tag": "0035_rich_zodiak",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1769353681488,
+      "tag": "0036_stale_tony_stark",
+      "breakpoints": true
     }
   ]
 }

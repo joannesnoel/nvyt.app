@@ -3,7 +3,7 @@ import { eq, and, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { createPayPalOrder, toCents } from '~/server/utils/paypal'
 import { calculateProcessingFees } from '~/server/utils/wallet'
-import { getActivePrice } from '~/server/utils/pricing'
+import { getActivePrice, hasActiveTier } from '~/server/utils/pricing'
 
 // Schema for initiating PayPal checkout (no customer info required)
 const initiatePayPalSchema = z.object({
@@ -108,6 +108,31 @@ export default defineEventHandler(async (event) => {
         statusCode: 400,
         message: `Ticket type "${ticketType.name}" is not available`,
       })
+    }
+
+    // Check sale period - allow sales if ticket type is in sales period OR if an active tier exists
+    const now = new Date()
+    const ticketTypeInSalesPeriod =
+      (!ticketType.salesStart || new Date(ticketType.salesStart) <= now) &&
+      (!ticketType.salesEnd || new Date(ticketType.salesEnd) >= now)
+
+    if (!ticketTypeInSalesPeriod) {
+      // Check if there's an active tier that allows sales
+      const hasActivePriceTier = await hasActiveTier(ticketType.id, now)
+      if (!hasActivePriceTier) {
+        if (ticketType.salesStart && new Date(ticketType.salesStart) > now) {
+          throw createError({
+            statusCode: 400,
+            message: `Sales for "${ticketType.name}" have not started yet`,
+          })
+        }
+        if (ticketType.salesEnd && new Date(ticketType.salesEnd) < now) {
+          throw createError({
+            statusCode: 400,
+            message: `Sales for "${ticketType.name}" have ended`,
+          })
+        }
+      }
     }
 
     // Check quantity

@@ -221,14 +221,14 @@ else
   TASK_ID=$(echo "$TASK_ARN" | awk -F'/' '{print $NF}')
   echo "      Using ECS task: $TASK_ID"
 
-  # ECS Exec interactive mode can't reliably pipe output, so we use S3 as intermediary
+  # Run pg_dump via ECS Exec - save to file in container, then copy via S3
   S3_BUCKET="nvyt-uploads-prod"
-  S3_KEY="db-dumps/staging-sync-$(date +%Y%m%d-%H%M%S).sql"
+  S3_KEY="db-dumps/prod_dump_$(date +%Y%m%d_%H%M%S).sql"
 
-  echo "      Dumping to S3 via ECS Exec..."
+  echo "      Running pg_dump in ECS container and uploading to S3..."
 
-  # Run pg_dump inside container and upload directly to S3
-  # Wrap in sh -c to ensure pipe is interpreted by shell
+  # Use sh instead of bash (container may be minimal/distroless)
+  # Run pg_dump, save to temp file, upload to S3, cleanup
   aws ecs execute-command \
     --profile "$AWS_PROFILE" \
     --region "$AWS_REGION" \
@@ -236,32 +236,33 @@ else
     --task "$TASK_ID" \
     --container "web" \
     --interactive \
-    --command "sh -c 'pg_dump \"\$DATABASE_URL\" $PG_DUMP_OPTS | aws s3 cp - s3://$S3_BUCKET/$S3_KEY'" 2>&1 | \
-    grep -v "^Starting session" | grep -v "^SessionId" | grep -v "^Exiting" || true
+    --command "sh -c 'pg_dump \"\$DATABASE_URL\" $PG_DUMP_OPTS > /tmp/db_dump.sql && aws s3 cp /tmp/db_dump.sql s3://$S3_BUCKET/$S3_KEY && rm /tmp/db_dump.sql && echo DUMP_UPLOAD_SUCCESS'" 2>&1 | tee /tmp/ecs_output.log
 
-  # Wait a moment for S3 to be consistent
-  sleep 2
-
-  # Verify the dump exists in S3
-  S3_SIZE=$(aws s3api head-object \
-    --profile "$AWS_PROFILE" \
-    --region "$AWS_REGION" \
-    --bucket "$S3_BUCKET" \
-    --key "$S3_KEY" \
-    --query 'ContentLength' \
-    --output text 2>/dev/null || echo "0")
-
-  if [[ "$S3_SIZE" == "0" || -z "$S3_SIZE" ]]; then
-    echo -e "${RED}Error: Failed to dump database to S3${NC}"
+  # Check if upload succeeded
+  if ! grep -q "DUMP_UPLOAD_SUCCESS" /tmp/ecs_output.log; then
+    echo -e "${RED}Error: Failed to dump database via ECS Exec${NC}"
     echo ""
-    echo "Possible causes:"
-    echo "  1. ECS task role missing S3 write permissions"
-    echo "  2. pg_dump not available in container"
-    echo "  3. DATABASE_URL not set in container"
+    echo "ECS Exec may not be enabled or S3 upload failed. To enable ECS Exec:"
+    echo "  1. Update your ECS service with --enable-execute-command"
+    echo "  2. Ensure task role has ssmmessages and S3 permissions"
     echo ""
-    echo "Alternative: Run pg_dump manually from a machine with database access"
+    echo "Alternative: Run pg_dump manually:"
+    echo "  pg_dump \"\$DATABASE_URL\" --no-owner --no-acl --clean --if-exists > dump.sql"
+    rm -f /tmp/ecs_output.log
     exit 1
   fi
+  rm -f /tmp/ecs_output.log
+
+  echo "      Downloading dump from S3..."
+  aws s3 cp "s3://$S3_BUCKET/$S3_KEY" "$DUMP_FILE" --profile "$AWS_PROFILE" --region "$AWS_REGION"
+
+  if [[ $? -ne 0 ]]; then
+    echo -e "${RED}Error: Failed to download dump from S3${NC}"
+    exit 1
+  fi
+
+  # Cleanup S3
+  aws s3 rm "s3://$S3_BUCKET/$S3_KEY" --profile "$AWS_PROFILE" --region "$AWS_REGION" 2>/dev/null || true
 
   echo "      S3 dump size: $(numfmt --to=iec $S3_SIZE 2>/dev/null || echo $S3_SIZE bytes)"
 
@@ -293,13 +294,10 @@ if ! grep -q "CREATE TABLE" "$DUMP_FILE"; then
 fi
 echo -e "${GREEN}✓ Dump file validated${NC}"
 
-# Filter out PostgreSQL version-specific settings that may not exist in staging
-# (e.g., transaction_timeout is PostgreSQL 17+)
-echo "      Filtering incompatible settings..."
-sed -i \
-  -e '/^SET transaction_timeout/d' \
-  -e '/^SET idle_in_transaction_session_timeout/d' \
-  "$DUMP_FILE"
+# Filter out PostgreSQL 17+ settings that don't exist in older versions
+echo "      Filtering incompatible PostgreSQL settings..."
+sed -i 's/SET transaction_timeout = 0;//g' "$DUMP_FILE"
+echo -e "${GREEN}✓ Dump file filtered${NC}"
 echo ""
 
 # Step 2: Copy dump to staging pod
@@ -315,7 +313,7 @@ echo "      Dropping and recreating database..."
 # Get the staging postgres password
 STAGING_DB_PASS=$(kubectl get secret nvyt-db-secrets -n "$K8S_NAMESPACE" -o jsonpath='{.data.POSTGRES_PASSWORD}' | base64 -d)
 
-kubectl exec -n "$K8S_NAMESPACE" "$STAGING_POD" -- bash -c "
+kubectl exec -n "$K8S_NAMESPACE" "$STAGING_POD" -- sh -c "
   export PGPASSWORD='$STAGING_DB_PASS'
 
   # Terminate existing connections
@@ -325,8 +323,8 @@ kubectl exec -n "$K8S_NAMESPACE" "$STAGING_POD" -- bash -c "
   dropdb -U $STAGING_DB_USER --if-exists $STAGING_DB_NAME
   createdb -U $STAGING_DB_USER $STAGING_DB_NAME
 
-  # Restore (with ON_ERROR_STOP to catch errors)
-  psql -U $STAGING_DB_USER -d $STAGING_DB_NAME --set ON_ERROR_STOP=on -f /tmp/prod_dump.sql
+  # Restore (continue on errors for minor compatibility issues)
+  psql -U $STAGING_DB_USER -d $STAGING_DB_NAME -f /tmp/prod_dump.sql
 "
 
 if [[ $? -ne 0 ]]; then

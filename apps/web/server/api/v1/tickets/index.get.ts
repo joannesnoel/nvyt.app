@@ -1,5 +1,5 @@
 import { tickets, ticketTypes, events, orders, users } from '@nvyt/db'
-import { eq, desc, and, or, count } from 'drizzle-orm'
+import { eq, desc, and, or, count, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
@@ -89,15 +89,40 @@ export default defineEventHandler(async (event) => {
     )
   }
 
+  // Fetch attendee user emails for tickets that have attendeeUserId
+  const attendeeUserIds = filteredTickets
+    .map(t => t.ticket.attendeeUserId)
+    .filter((id): id is string => id !== null)
+
+  const attendeeEmailsMap = new Map<string, string>()
+  if (attendeeUserIds.length > 0) {
+    const attendeeUsers = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(inArray(users.id, attendeeUserIds))
+
+    for (const u of attendeeUsers) {
+      attendeeEmailsMap.set(u.id, u.email)
+    }
+  }
+
   // Format response
-  const formattedTickets = filteredTickets.map(({ ticket, ticketType, event, order, purchaser }) => ({
-    ...ticket,
-    ticketType,
-    event,
-    order,
-    isPurchaser: ticket.userId === user.id,
-    purchaser,
-  }))
+  const formattedTickets = filteredTickets.map(({ ticket, ticketType, event, order, purchaser }) => {
+    // Get attendee email from user record if attendeeUserId is set
+    const attendeeEmail = ticket.attendeeUserId
+      ? attendeeEmailsMap.get(ticket.attendeeUserId) || null
+      : null
+
+    return {
+      ...ticket,
+      attendeeEmail, // Add email from user record
+      ticketType,
+      event,
+      order,
+      isPurchaser: ticket.userId === user.id,
+      purchaser,
+    }
+  })
 
   return paginatedResponse(formattedTickets, page, limit, total)
 })

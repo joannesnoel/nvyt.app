@@ -1,5 +1,5 @@
-import { orders, tickets, ticketTypes, events, users } from '@nvyt/db'
-import { eq, and, inArray } from 'drizzle-orm'
+import { orders, tickets, ticketTypes, events, users, ticketRegistrationFields } from '@nvyt/db'
+import { eq, and, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
 import {
@@ -9,7 +9,7 @@ import {
   getCaptureId,
   getPayerEmail,
 } from '~/server/utils/paypal'
-import { sendEmail, ticketPurchaseConfirmationEmail, accountSetupEmail } from '~/server/utils/email'
+import { sendEmail, paymentSuccessfulEmail, accountSetupEmail } from '~/server/utils/email'
 import { processPaymentReceived } from '~/server/utils/wallet'
 import { incrementTierQuantitySold, getActivePrice, validateTierAvailability } from '~/server/utils/pricing'
 
@@ -349,6 +349,18 @@ export default defineEventHandler(async (event) => {
     console.error('[PayPal Complete] Failed to record wallet transaction:', walletErr)
   }
 
+  // Check if event has active registration fields
+  const [registrationFieldCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(ticketRegistrationFields)
+    .where(
+      and(
+        eq(ticketRegistrationFields.eventId, eventRecord.id),
+        eq(ticketRegistrationFields.isActive, true)
+      )
+    )
+  const requiresRegistration = (registrationFieldCount?.count ?? 0) > 0
+
   // Send emails
   try {
     const appUrl = config.public.appUrl as string
@@ -366,7 +378,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Send ticket confirmation email
+    // Send payment confirmation email
     const eventDate = new Date(eventRecord.startDate).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -381,27 +393,35 @@ export default defineEventHandler(async (event) => {
       currency: 'PHP',
     }).format(sessionData.total)
 
-    const emailContent = ticketPurchaseConfirmationEmail({
+    // Build ticket summary (group by ticket type)
+    const ticketSummaryMap = new Map<string, { ticketType: string; quantity: number }>()
+    for (const t of ticketsWithOrderId) {
+      const ticketType = ticketTypeMap.get(t.ticketTypeId)!
+      const existing = ticketSummaryMap.get(t.ticketTypeId)
+      if (existing) {
+        existing.quantity++
+      } else {
+        ticketSummaryMap.set(t.ticketTypeId, { ticketType: ticketType.name, quantity: 1 })
+      }
+    }
+    const ticketSummary = Array.from(ticketSummaryMap.values())
+
+    const emailContent = paymentSuccessfulEmail({
       userName: user.name || 'there',
       eventTitle: eventRecord.title,
       eventDate,
       eventLocation: eventRecord.location || undefined,
       orderNumber: order.orderNumber,
-      tickets: ticketsWithOrderId.map((t) => {
-        const ticketType = ticketTypeMap.get(t.ticketTypeId)!
-        return {
-          ticketType: ticketType.name,
-          attendeeName: user.name || 'Guest',
-          qrCode: t.qrCode,
-        }
-      }),
+      ticketCount: ticketsWithOrderId.length,
+      ticketSummary,
       totalAmount,
       orderUrl: `${appUrl}/orders/${order.orderNumber}`,
       setupToken: needsAccountSetup ? setupToken ?? undefined : undefined,
+      requiresRegistration,
     })
 
     await sendEmail({ to: user.email, ...emailContent })
-    console.log(`[PayPal Complete] Sent confirmation email for order ${order.orderNumber}`)
+    console.log(`[PayPal Complete] Sent payment confirmation email for order ${order.orderNumber}`)
   } catch (emailErr) {
     console.error('[PayPal Complete] Failed to send email:', emailErr)
   }
