@@ -1,6 +1,6 @@
-import { ticketTypes, events } from '@nvyt/db'
-import { eq, asc } from 'drizzle-orm'
-import { hasActiveTier } from '~/server/utils/pricing'
+import { ticketTypes, events, ticketPriceTiers } from '@nvyt/db'
+import { eq, asc, sql } from 'drizzle-orm'
+import { hasActiveTier, getNextSaleInfo } from '~/server/utils/pricing'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -41,6 +41,21 @@ export default defineEventHandler(async (event) => {
     .where(eq(ticketTypes.eventId, eventId))
     .orderBy(asc(ticketTypes.sortOrder), asc(ticketTypes.createdAt))
 
+  // Get tier counts for all ticket types in one query
+  let tierCountMap = new Map<string, number>()
+  if (types.length > 0) {
+    const tierCounts = await db
+      .select({
+        ticketTypeId: ticketPriceTiers.ticketTypeId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(ticketPriceTiers)
+      .where(sql`${ticketPriceTiers.ticketTypeId} IN (${sql.join(types.map(t => sql`${t.id}`), sql`, `)})`)
+      .groupBy(ticketPriceTiers.ticketTypeId)
+
+    tierCountMap = new Map(tierCounts.map(tc => [tc.ticketTypeId, tc.count]))
+  }
+
   // Calculate availability for each ticket type
   const now = new Date()
   const ticketTypesWithAvailability = await Promise.all(
@@ -53,13 +68,27 @@ export default defineEventHandler(async (event) => {
 
       // Allow sales if ticket type is in sales period OR if an active tier exists
       const hasActivePriceTier = ticketTypeInSalesPeriod ? false : await hasActiveTier(type.id, now)
-      const isOnSale = ticketTypeInSalesPeriod || hasActivePriceTier
+      const isOnSale = (ticketTypeInSalesPeriod || hasActivePriceTier) && type.status === 'active'
+
+      // Get next sale info if not currently on sale
+      let nextSaleStart: string | null = null
+      let nextSaleTierName: string | null = null
+      if (!isOnSale && type.status === 'active' && !isSoldOut) {
+        const nextSale = await getNextSaleInfo(type.id, type.salesStart, now)
+        if (nextSale) {
+          nextSaleStart = nextSale.startsAt.toISOString()
+          nextSaleTierName = nextSale.tierName
+        }
+      }
 
       return {
         ...type,
         available,
         isSoldOut: isSoldOut || type.status === 'sold_out',
-        isOnSale: isOnSale && type.status === 'active',
+        isOnSale,
+        nextSaleStart,
+        nextSaleTierName,
+        tierCount: tierCountMap.get(type.id) ?? 0,
       }
     })
   )

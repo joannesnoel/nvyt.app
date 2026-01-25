@@ -90,21 +90,8 @@ function isTierActive(tier: typeof ticketPriceTiers.$inferSelect, now: Date): bo
 
   if (tierType === 'time') {
     // Time-based: check date range
-    if (!tier.startDate || !tier.endDate) {
-      console.log('[isTierActive] Time tier missing dates:', { startDate: tier.startDate, endDate: tier.endDate })
-      return false
-    }
-    const startCheck = tier.startDate <= now
-    const endCheck = tier.endDate >= now
-    console.log('[isTierActive] Time tier check:', {
-      startDate: tier.startDate,
-      endDate: tier.endDate,
-      now,
-      'startDate <= now': startCheck,
-      'endDate >= now': endCheck,
-      result: startCheck && endCheck,
-    })
-    return startCheck && endCheck
+    if (!tier.startDate || !tier.endDate) return false
+    return tier.startDate <= now && tier.endDate >= now
   }
 
   if (tierType === 'quantity') {
@@ -338,28 +325,64 @@ export async function hasActiveTier(
     .from(ticketPriceTiers)
     .where(eq(ticketPriceTiers.ticketTypeId, ticketTypeId))
 
-  console.log('[hasActiveTier] Checking tiers for ticketTypeId:', ticketTypeId)
-  console.log('[hasActiveTier] Current time (now):', now.toISOString())
-  console.log('[hasActiveTier] Found tiers:', allTiers.length)
-
   for (const tier of allTiers) {
-    const isActive = isTierActive(tier, now)
-    console.log('[hasActiveTier] Tier:', {
-      id: tier.id,
-      name: tier.name,
-      tierType: tier.tierType,
-      startDate: tier.startDate?.toISOString?.() ?? tier.startDate,
-      endDate: tier.endDate?.toISOString?.() ?? tier.endDate,
-      quantityLimit: tier.quantityLimit,
-      quantitySold: tier.quantitySold,
-      isActive,
-    })
-    if (isActive) {
+    if (isTierActive(tier, now)) {
       return true
     }
   }
 
   return false
+}
+
+/**
+ * Get the next upcoming sale info for a ticket type
+ * Compares tier start dates with ticket's own sales start to find the earliest
+ */
+export async function getNextSaleInfo(
+  ticketTypeId: string,
+  ticketSalesStart: Date | null,
+  now = new Date()
+): Promise<{ startsAt: Date; tierName: string | null } | null> {
+  const db = useDatabase()
+
+  const allTiers = await db
+    .select()
+    .from(ticketPriceTiers)
+    .where(eq(ticketPriceTiers.ticketTypeId, ticketTypeId))
+    .orderBy(asc(ticketPriceTiers.startDate))
+
+  // Find upcoming time-based tiers (with future start dates)
+  const upcomingTiers = allTiers
+    .filter(tier => {
+      // Only consider time-based or hybrid tiers with start dates
+      if (tier.tierType === 'quantity') return false
+      if (!tier.startDate) return false
+      // Must be in the future
+      return tier.startDate > now
+    })
+    .sort((a, b) => {
+      if (!a.startDate || !b.startDate) return 0
+      return a.startDate.getTime() - b.startDate.getTime()
+    })
+
+  const earliestTier = upcomingTiers[0]
+  const earliestTierDate = earliestTier?.startDate || null
+
+  // Compare tier start with ticket sales start
+  if (earliestTierDate && ticketSalesStart) {
+    // Return whichever is earlier
+    if (earliestTierDate < ticketSalesStart) {
+      return { startsAt: earliestTierDate, tierName: earliestTier.name }
+    } else {
+      return { startsAt: ticketSalesStart, tierName: null }
+    }
+  } else if (earliestTierDate) {
+    return { startsAt: earliestTierDate, tierName: earliestTier.name }
+  } else if (ticketSalesStart && ticketSalesStart > now) {
+    return { startsAt: ticketSalesStart, tierName: null }
+  }
+
+  return null
 }
 
 /**
