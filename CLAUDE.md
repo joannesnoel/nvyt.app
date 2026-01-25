@@ -1,7 +1,6 @@
 # Claude Code Project Notes
 
 ## Dev (local) database
-
 When troubleshooting a problem, you have access to psql with creds below
 - hostname: 192.168.0.250
 - username: nvyt

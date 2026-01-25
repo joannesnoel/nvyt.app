@@ -202,6 +202,52 @@ function getStatusColor(status: string) {
   }
 }
 
+// Check if ticket is enabled but not currently on sale
+function getTicketSaleWarning(tt: any): { show: boolean; message: string } | null {
+  // Only check active tickets that aren't sold out
+  if (tt.status !== 'active') return null
+  if (tt.isSoldOut) return null
+
+  // Use server-computed isOnSale if available
+  if (tt.isOnSale === true) return null
+
+  const now = new Date()
+
+  // Check if sales period has ended
+  if (tt.salesEnd && new Date(tt.salesEnd) < now) {
+    return { show: true, message: 'Sales period has ended.' }
+  }
+
+  // Use server-computed next sale info (considers both tiers and ticket sales dates)
+  if (tt.nextSaleStart) {
+    const startDate = new Date(tt.nextSaleStart)
+    const formattedDate = startDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+
+    if (tt.nextSaleTierName) {
+      return {
+        show: true,
+        message: `Tier "${tt.nextSaleTierName}" starts ${formattedDate}.`,
+      }
+    } else {
+      return {
+        show: true,
+        message: `Sales start ${formattedDate}.`,
+      }
+    }
+  }
+
+  // Generic message if we can't determine the exact reason
+  return {
+    show: true,
+    message: 'No active price tier. Check price tier settings.',
+  }
+}
+
 // Price tier management
 const expandedTiers = ref<Set<string>>(new Set())
 const priceTiersCache = ref<Record<string, any[]>>({})
@@ -531,6 +577,22 @@ function getTierTypeColor(tierType: string) {
                     Sales end: {{ new Date(tt.salesEnd).toLocaleDateString() }}
                   </span>
                 </div>
+
+                <!-- Warning: Ticket is active but not on sale -->
+                <UAlert
+                  v-if="getTicketSaleWarning(tt)"
+                  color="amber"
+                  variant="soft"
+                  icon="i-heroicons-exclamation-triangle"
+                  class="mt-3"
+                >
+                  <template #title>
+                    <span class="text-sm font-medium">Not Currently On Sale</span>
+                  </template>
+                  <template #description>
+                    <span class="text-sm">{{ getTicketSaleWarning(tt)?.message }}</span>
+                  </template>
+                </UAlert>
               </div>
 
               <div class="flex items-center gap-2">
@@ -580,12 +642,12 @@ function getTierTypeColor(tierType: string) {
                 <UIcon name="i-heroicons-tag" class="w-4 h-4" />
                 <span>Price Tiers</span>
                 <UBadge
-                  v-if="priceTiersCache[tt.id]?.length"
+                  v-if="priceTiersCache[tt.id]?.length || tt.tierCount"
                   color="primary"
                   variant="soft"
                   size="xs"
                 >
-                  {{ priceTiersCache[tt.id]?.length }}
+                  {{ priceTiersCache[tt.id]?.length ?? tt.tierCount }}
                 </UBadge>
               </button>
 
