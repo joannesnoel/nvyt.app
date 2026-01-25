@@ -1,6 +1,6 @@
 import { eq, and, sql, asc, desc } from 'drizzle-orm'
 import { events, users, ticketTypes, tickets, attendees, contributionItems, eventRequirements, eventFaqs, eventAnnouncements, eventVerifications, ticketPriceTiers } from '@nvyt/db'
-import { getActivePrice, getPriceTiers } from '~/server/utils/pricing'
+import { getActivePrice, getPriceTiers, hasActiveTier } from '~/server/utils/pricing'
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug')
@@ -232,6 +232,19 @@ export default defineEventHandler(async (event) => {
       // Get active price info
       const activePriceInfo = await getActivePrice(t.id, t.price, now)
 
+      // Compute availability (same logic as dashboard API)
+      const available = t.quantity ? t.quantity - t.quantitySold : null
+      const isSoldOut = (t.quantity ? t.quantitySold >= t.quantity : false) || t.status === 'sold_out'
+
+      // Check if ticket type is within its sales period
+      const ticketTypeInSalesPeriod =
+        (!t.salesStart || new Date(t.salesStart) <= now) &&
+        (!t.salesEnd || new Date(t.salesEnd) >= now)
+
+      // Allow sales if ticket type is in sales period OR if an active tier exists
+      const hasActivePriceTier = ticketTypeInSalesPeriod ? false : await hasActiveTier(t.id, now)
+      const isOnSale = (ticketTypeInSalesPeriod || hasActivePriceTier) && t.status === 'active' && !isSoldOut
+
       return {
         ...t,
         priceTiers: priceTiers.map(tier => ({ ...tier })),
@@ -249,6 +262,10 @@ export default defineEventHandler(async (event) => {
               afterQuantity: activePriceInfo.nextTier.afterQuantity,
             }
           : null,
+        // Computed availability fields (same as dashboard API)
+        available,
+        isSoldOut,
+        isOnSale,
       }
     })
   )

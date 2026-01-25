@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid'
 import { createPaymentIntent, toCentavos, getPublicKey } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail } from '~/server/utils/email'
 import { calculateProcessingFees, type PaymentProvider } from '~/server/utils/wallet'
-import { getActivePrice, validateTierAvailability, incrementTierQuantitySold } from '~/server/utils/pricing'
+import { getActivePrice, validateTierAvailability, incrementTierQuantitySold, hasActiveTier } from '~/server/utils/pricing'
 
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -280,19 +280,29 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check sale period
+    // Check sale period - allow sales if ticket type is in sales period OR if an active tier exists
     const now = new Date()
-    if (ticketType.salesStart && new Date(ticketType.salesStart) > now) {
-      throw createError({
-        statusCode: 400,
-        message: `Sales for "${ticketType.name}" have not started yet`,
-      })
-    }
-    if (ticketType.salesEnd && new Date(ticketType.salesEnd) < now) {
-      throw createError({
-        statusCode: 400,
-        message: `Sales for "${ticketType.name}" have ended`,
-      })
+    const ticketTypeInSalesPeriod =
+      (!ticketType.salesStart || new Date(ticketType.salesStart) <= now) &&
+      (!ticketType.salesEnd || new Date(ticketType.salesEnd) >= now)
+
+    if (!ticketTypeInSalesPeriod) {
+      // Check if there's an active tier that allows sales
+      const hasActivePriceTier = await hasActiveTier(ticketType.id, now)
+      if (!hasActivePriceTier) {
+        if (ticketType.salesStart && new Date(ticketType.salesStart) > now) {
+          throw createError({
+            statusCode: 400,
+            message: `Sales for "${ticketType.name}" have not started yet`,
+          })
+        }
+        if (ticketType.salesEnd && new Date(ticketType.salesEnd) < now) {
+          throw createError({
+            statusCode: 400,
+            message: `Sales for "${ticketType.name}" have ended`,
+          })
+        }
+      }
     }
 
     // Check quantity limits
