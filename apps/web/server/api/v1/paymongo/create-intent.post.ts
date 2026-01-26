@@ -505,6 +505,7 @@ export default defineEventHandler(async (event) => {
     paymentIntentId: paymentIntent.id,
     clientKey: paymentIntent.attributes.client_key,
     publicKey: getPublicKey(),
+    paymentMethodAllowed: paymentIntent.attributes.payment_method_allowed,
     eventTitle: eventRecord.title,
     eventSlug: eventRecord.slug,
     items: itemDetails,

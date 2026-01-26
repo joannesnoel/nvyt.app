@@ -20,6 +20,7 @@ const orderData = ref<{
   paymentIntentId: string
   clientKey: string
   publicKey: string
+  paymentMethodAllowed?: string[]
   eventTitle: string
   eventSlug: string
   items: OrderItem[]
@@ -125,6 +126,7 @@ async function fetchOrderData() {
       paymentIntentId: order.paymongoPaymentIntentId,
       clientKey: '', // Not needed for attach flow
       publicKey: '',
+      paymentMethodAllowed: order.paymentMethodAllowed,
       eventTitle: order.event?.title || 'Event',
       eventSlug: order.event?.slug || '',
       items,
@@ -363,6 +365,7 @@ function goBack() {
           <CheckoutPaymentMethodSelector
             v-model="selectedPaymentMethod"
             :disabled="isProcessing"
+            :allowed-methods="orderData?.paymentMethodAllowed"
           />
 
           <!-- Card form (shown when card is selected) -->

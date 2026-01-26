@@ -133,9 +133,11 @@ function getConfig(): PayMongoConfig {
   
   // Parse payment methods from config (comma-separated string)
   const paymentMethodsStr = config.paymongoPaymentMethods as string | undefined
-  const paymentMethods = paymentMethodsStr
+  const parsedMethods = paymentMethodsStr
     ? paymentMethodsStr.split(',').map((m: string) => m.trim()).filter((m: string) => m.length > 0)
-    : undefined
+    : []
+  // Return undefined if empty so DEFAULT_PAYMENT_METHODS is used
+  const paymentMethods = parsedMethods.length > 0 ? parsedMethods : undefined
 
   return {
     secretKey,

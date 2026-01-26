@@ -1,6 +1,9 @@
 import { orders, events, tickets, ticketTypes, ticketRegistrationFields, users } from '@nvyt/db'
 import { eq, and, sql, asc, inArray } from 'drizzle-orm'
 
+// Default payment methods if not configured
+const DEFAULT_PAYMENT_METHODS = ['gcash', 'paymaya', 'card', 'grab_pay', 'qrph']
+
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')
   const setupToken = getQuery(event).token as string | undefined
@@ -140,10 +143,20 @@ export default defineEventHandler(async (event) => {
   // Exclude organizerId from response (only needed for permission check)
   const { organizerId: _, ...eventData } = result.event
 
+  // Get allowed payment methods from config
+  const config = useRuntimeConfig()
+  const paymentMethodsStr = config.paymongoPaymentMethods as string | undefined
+  const parsedMethods = paymentMethodsStr
+    ? paymentMethodsStr.split(',').map((m: string) => m.trim()).filter((m: string) => m.length > 0)
+    : []
+  const paymentMethodAllowed = parsedMethods.length > 0 ? parsedMethods : DEFAULT_PAYMENT_METHODS
+
   return successResponse({
     ...result.order,
     event: eventData,
     tickets: ticketList,
+    // Payment methods allowed
+    paymentMethodAllowed,
     // Registration info
     hasRegistrationFields,
     registrationStats: hasRegistrationFields ? {

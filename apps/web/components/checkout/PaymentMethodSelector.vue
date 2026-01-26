@@ -4,6 +4,7 @@ import { PAYMENT_METHODS, type PaymentMethodType } from '~/composables/usePayMon
 const props = defineProps<{
   modelValue: PaymentMethodType | null
   disabled?: boolean
+  allowedMethods?: string[] // Payment methods allowed by the payment intent
 }>()
 
 const emit = defineEmits<{
@@ -16,6 +17,14 @@ const selectedMethod = computed({
     if (value) emit('update:modelValue', value)
   },
 })
+
+// Filter payment methods based on what's allowed
+const availablePaymentMethods = computed(() => {
+  if (!props.allowedMethods || props.allowedMethods.length === 0) {
+    return PAYMENT_METHODS
+  }
+  return PAYMENT_METHODS.filter(method => props.allowedMethods!.includes(method.type))
+})
 </script>
 
 <template>
@@ -26,7 +35,7 @@ const selectedMethod = computed({
 
     <div class="grid gap-3">
       <button
-        v-for="method in PAYMENT_METHODS"
+        v-for="method in availablePaymentMethods"
         :key="method.type"
         type="button"
         class="relative flex items-center p-4 border-2 rounded-lg transition-all text-left"
