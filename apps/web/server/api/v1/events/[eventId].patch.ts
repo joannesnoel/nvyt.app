@@ -100,23 +100,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Validate media requirement for public events
-  if (result.success) {
-    const data = result.data
-    // Determine the final visibility (new value or existing)
-    const finalVisibility = data.visibility ?? existingEvent.visibility
-    // Determine the final media values (new values or existing)
-    const finalCoverImage = 'coverImage' in body ? data.coverImage : existingEvent.coverImage
-    const finalPromoVideoUrl = 'promoVideoUrl' in body ? data.promoVideoUrl : existingEvent.promoVideoUrl
-
-    if (finalVisibility === 'public' && !finalCoverImage && !finalPromoVideoUrl) {
-      throw createError({
-        statusCode: 400,
-        message: 'Public events require a cover image or promo video',
-      })
-    }
-  }
-
   const updateData: Record<string, unknown> = {
     ...statusUpdate,
     updatedAt: new Date(),
@@ -128,6 +111,7 @@ export default defineEventHandler(async (event) => {
     const data = result.data
     if ('title' in body) updateData.title = data.title
     if ('description' in body) updateData.description = data.description
+    if ('thumbnailImage' in body) updateData.thumbnailImage = data.thumbnailImage
     if ('coverImage' in body) updateData.coverImage = data.coverImage
     if ('promoVideoUrl' in body) updateData.promoVideoUrl = data.promoVideoUrl ?? null
     if ('mediaType' in body) updateData.mediaType = data.mediaType

@@ -9,11 +9,78 @@ const toast = useToast()
 const { getThumbnailUrl } = useYoutubeThumbnail()
 
 // Fetch event data
-const { data: eventResponse, pending } = await useFetch(
+const { data: eventResponse, pending, refresh } = await useFetch(
   () => `/api/v1/events/by-id/${eventId.value}`,
   { watch: [eventId] }
 )
 const event = computed(() => eventResponse.value?.data)
+
+// Event Media state
+const coverImage = ref('')
+const promoVideoUrl = ref('')
+const mediaType = ref<'image' | 'video'>('image')
+const savedCoverImage = ref('')
+const savedPromoVideoUrl = ref('')
+const savedMediaType = ref<'image' | 'video'>('image')
+const mediaInitialized = ref(false)
+
+// Publish/Unpublish state
+const isUpdating = ref(false)
+const showPublishModal = ref(false)
+const showUnpublishModal = ref(false)
+
+// Fetch verification status for ticket-mode events
+const { data: verificationResponse, refresh: refreshVerification } = await useFetch(
+  () => `/api/v1/events/${eventId.value}/verification`,
+  {
+    watch: [eventId],
+    immediate: true,
+  }
+)
+const verification = computed(() => verificationResponse.value?.data)
+
+// Verification modal
+const showVerificationModal = ref(false)
+
+// Update event status
+async function updateEventStatus(status: 'draft' | 'published' | 'cancelled') {
+  isUpdating.value = true
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}`, {
+      method: 'PATCH',
+      body: { status },
+    })
+    toast.add({
+      title: 'Event Updated',
+      description: `Event is now ${status}`,
+      color: 'green',
+    })
+    await refresh()
+  } catch (e: any) {
+    // Check if this is a verification error
+    if (e.data?.data?.code === 'VERIFICATION_REQUIRED' || e.data?.data?.code === 'VERIFICATION_NOT_APPROVED') {
+      showVerificationModal.value = true
+      await refreshVerification()
+    }
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to update event',
+      color: 'red',
+    })
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+function confirmPublish() {
+  showPublishModal.value = false
+  updateEventStatus('published')
+}
+
+function confirmUnpublish() {
+  showUnpublishModal.value = false
+  updateEventStatus('draft')
+}
 
 // Panel state for mobile
 const panelExpanded = ref(false)
@@ -296,7 +363,87 @@ watch(event, (newEvent) => {
     savedBodyFont.value = bodyFont
     isInitialized.value = true
   }
+  // Initialize media state
+  if (newEvent && !mediaInitialized.value) {
+    coverImage.value = newEvent.coverImage || ''
+    savedCoverImage.value = newEvent.coverImage || ''
+    promoVideoUrl.value = newEvent.promoVideoUrl || ''
+    savedPromoVideoUrl.value = newEvent.promoVideoUrl || ''
+    mediaType.value = newEvent.mediaType || 'image'
+    savedMediaType.value = newEvent.mediaType || 'image'
+    mediaInitialized.value = true
+  }
 }, { immediate: true })
+
+// Auto-save media when cover image changes
+watch(coverImage, async (newValue) => {
+  if (!mediaInitialized.value || !event.value) return
+  if (newValue === savedCoverImage.value) return
+
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}`, {
+      method: 'PATCH',
+      body: { coverImage: newValue || '' },
+    })
+    savedCoverImage.value = newValue
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to save cover image',
+      color: 'red',
+    })
+    coverImage.value = savedCoverImage.value
+  }
+})
+
+// Auto-save media when promo video URL changes (debounced for typing)
+let promoVideoTimeout: ReturnType<typeof setTimeout> | null = null
+watch(promoVideoUrl, async (newValue) => {
+  if (!mediaInitialized.value || !event.value) return
+  if (newValue === savedPromoVideoUrl.value) return
+
+  // Clear previous timeout
+  if (promoVideoTimeout) clearTimeout(promoVideoTimeout)
+
+  // Debounce save for 500ms
+  promoVideoTimeout = setTimeout(async () => {
+    try {
+      await $fetch(`/api/v1/events/${eventId.value}`, {
+        method: 'PATCH',
+        body: { promoVideoUrl: newValue || '' },
+      })
+      savedPromoVideoUrl.value = newValue
+    } catch (e: any) {
+      toast.add({
+        title: 'Error',
+        description: e.data?.message || 'Failed to save promo video',
+        color: 'red',
+      })
+      promoVideoUrl.value = savedPromoVideoUrl.value
+    }
+  }, 500)
+})
+
+// Auto-save media type when it changes
+watch(mediaType, async (newValue) => {
+  if (!mediaInitialized.value || !event.value) return
+  if (newValue === savedMediaType.value) return
+
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}`, {
+      method: 'PATCH',
+      body: { mediaType: newValue },
+    })
+    savedMediaType.value = newValue
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to save media type',
+      color: 'red',
+    })
+    mediaType.value = savedMediaType.value
+  }
+})
 
 // Preview theme - computed based on selection
 const previewTheme = computed(() => {
@@ -431,9 +578,9 @@ watch(selectedBodyFont, async (newFont) => {
   }
 })
 
-// YouTube embed URL helper
+// YouTube embed URL helper (uses reactive promoVideoUrl)
 const youtubeEmbedUrl = computed(() => {
-  const url = event.value?.promoVideoUrl
+  const url = promoVideoUrl.value
   if (!url) return null
 
   let videoId: string | null = null
@@ -528,7 +675,7 @@ function getCategoryColor(category: string) {
       </div>
 
       <!-- Expanded panel -->
-      <UCard v-show="panelExpanded || !isMobile" class="w-56 sm:w-64 shadow-xl">
+      <UCard v-show="panelExpanded || !isMobile" class="w-56 sm:w-64 shadow-xl max-h-[80vh] overflow-y-auto">
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Customize</h3>
@@ -544,6 +691,53 @@ function getCategoryColor(category: string) {
         </template>
 
         <div class="space-y-3">
+          <!-- Event Media Section -->
+          <div>
+            <p class="text-xs text-gray-500 mb-2">Event Media</p>
+            <!-- Media Type Toggle -->
+            <div class="flex gap-1 mb-2">
+              <UButton
+                :color="mediaType === 'image' ? 'primary' : 'gray'"
+                :variant="mediaType === 'image' ? 'solid' : 'ghost'"
+                size="xs"
+                @click="mediaType = 'image'"
+              >
+                <UIcon name="i-heroicons-photo" class="w-3 h-3" />
+                <span class="ml-1">Image</span>
+              </UButton>
+              <UButton
+                :color="mediaType === 'video' ? 'primary' : 'gray'"
+                :variant="mediaType === 'video' ? 'solid' : 'ghost'"
+                size="xs"
+                @click="mediaType = 'video'"
+              >
+                <UIcon name="i-heroicons-play-circle" class="w-3 h-3" />
+                <span class="ml-1">Video</span>
+              </UButton>
+            </div>
+            <!-- Cover Image Upload -->
+            <div v-if="mediaType === 'image'">
+              <ImageUpload
+                v-model="coverImage"
+                folder="events"
+                placeholder="Upload cover image"
+                :compact="true"
+                cropper-title="Adjust Cover Image"
+                :aspect-ratio="16 / 9"
+              />
+            </div>
+            <!-- YouTube Video URL -->
+            <div v-else>
+              <UInput
+                v-model="promoVideoUrl"
+                placeholder="YouTube URL..."
+                size="xs"
+                icon="i-heroicons-play-circle"
+              />
+              <p class="text-xs text-gray-400 mt-1">Paste YouTube URL</p>
+            </div>
+          </div>
+
           <!-- Theme Selector -->
           <div>
             <p class="text-xs text-gray-500 mb-2">Theme</p>
@@ -672,15 +866,44 @@ function getCategoryColor(category: string) {
         </div>
       </UCard>
 
-      <!-- Done button (below panel when expanded or on desktop) -->
-      <UButton
-        v-show="panelExpanded || !isMobile"
-        :to="`/dashboard/events/${eventId}`"
-        color="green"
-        size="xl"
-        icon="i-heroicons-check"
-        class="shadow-xl rounded-full !p-4"
-      />
+      <!-- Action buttons (below panel when expanded or on desktop) -->
+      <div v-show="panelExpanded || !isMobile" class="flex flex-col gap-2">
+        <!-- Publish/Unpublish -->
+        <UButton
+          v-if="event?.status === 'draft'"
+          color="green"
+          size="lg"
+          icon="i-heroicons-rocket-launch"
+          class="shadow-xl"
+          :loading="isUpdating"
+          @click="showPublishModal = true"
+        >
+          Publish
+        </UButton>
+        <UButton
+          v-else-if="event?.status === 'published'"
+          color="yellow"
+          variant="outline"
+          size="lg"
+          icon="i-heroicons-pause"
+          class="shadow-xl"
+          :loading="isUpdating"
+          @click="showUnpublishModal = true"
+        >
+          Unpublish
+        </UButton>
+        <!-- Done button -->
+        <UButton
+          :to="`/dashboard/events/${eventId}`"
+          color="primary"
+          variant="outline"
+          size="lg"
+          icon="i-heroicons-check"
+          class="shadow-xl"
+        >
+          Done
+        </UButton>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -693,7 +916,7 @@ function getCategoryColor(category: string) {
     <!-- Preview Content -->
     <template v-else-if="event">
       <!-- Full-width YouTube Video -->
-      <div v-if="event.mediaType === 'video' && youtubeEmbedUrl" class="relative w-full -mt-16 z-10 bg-gray-100 dark:bg-black">
+      <div v-if="mediaType === 'video' && youtubeEmbedUrl" class="relative w-full -mt-16 z-10 bg-gray-100 dark:bg-black">
         <div class="max-w-[1920px] mx-auto relative" style="padding-bottom: clamp(400px, 56.25%, 1080px);">
           <iframe
             :src="youtubeEmbedUrl"
@@ -711,10 +934,10 @@ function getCategoryColor(category: string) {
       </div>
 
       <!-- Full-width Cover Image -->
-      <div v-else-if="event.coverImage" class="relative w-full -mt-16 z-10 bg-gray-100 dark:bg-gray-900">
+      <div v-else-if="coverImage" class="relative w-full -mt-16 z-10 bg-gray-100 dark:bg-gray-900">
         <div class="max-w-[1920px] mx-auto relative" style="padding-bottom: clamp(400px, 56.25%, 1080px);">
           <img
-            :src="event.coverImage"
+            :src="coverImage"
             :alt="event.title"
             class="absolute top-0 left-0 w-full h-full object-cover"
           >
@@ -726,10 +949,34 @@ function getCategoryColor(category: string) {
         </div>
       </div>
 
+      <!-- Placeholder when no media -->
+      <div v-else class="relative w-full -mt-16 z-10">
+        <div class="max-w-[1920px] mx-auto relative" style="padding-bottom: clamp(400px, 56.25%, 1080px);">
+          <!-- Abstract pattern placeholder based on color -->
+          <div
+            class="absolute top-0 left-0 w-full h-full"
+            :style="{
+              background: `linear-gradient(135deg, rgb(var(--color-primary-100)) 0%, rgb(var(--color-primary-200)) 50%, rgb(var(--color-primary-300)) 100%)`
+            }"
+          >
+            <!-- Pattern overlay -->
+            <div class="absolute inset-0 opacity-20 dark:opacity-10" style="background-image: url(&quot;data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E&quot;); background-size: 30px 30px;"></div>
+            <!-- Center text -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <UIcon name="i-heroicons-photo" class="w-16 h-16 mx-auto mb-4" :style="{ color: 'rgb(var(--color-primary-600))' }" />
+                <p class="text-lg font-medium" :style="{ color: 'rgb(var(--color-primary-700))' }">Add a cover image or video</p>
+                <p class="text-sm" :style="{ color: 'rgb(var(--color-primary-600))' }">Use the panel on the right to upload</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Content Area -->
-      <div class="relative z-20 bg-gray-50 dark:bg-gray-950 py-12" :class="{ '-mt-24': event.coverImage || (event.mediaType === 'video' && youtubeEmbedUrl) }">
+      <div class="relative z-20 bg-gray-50 dark:bg-gray-950 py-12 -mt-24">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 sm:p-8" :class="{ '-mt-28 lg:-mt-40': event.coverImage || (event.mediaType === 'video' && youtubeEmbedUrl) }">
+          <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 sm:p-8 -mt-28 lg:-mt-40">
 
             <!-- Event Header -->
             <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
@@ -848,7 +1095,7 @@ function getCategoryColor(category: string) {
                 </UCard>
 
                 <!-- Announcements Section -->
-                <UCard v-if="event.announcements?.length">
+                <UCard>
                   <template #header>
                     <div class="flex items-center gap-3">
                       <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
@@ -860,7 +1107,8 @@ function getCategoryColor(category: string) {
                       </div>
                     </div>
                   </template>
-                  <div class="space-y-4">
+                  <!-- Real announcements -->
+                  <div v-if="event.announcements?.length" class="space-y-4">
                     <div
                       v-for="announcement in event.announcements"
                       :key="announcement.id"
@@ -888,10 +1136,33 @@ function getCategoryColor(category: string) {
                       </div>
                     </div>
                   </div>
+                  <!-- Sample placeholder when no announcements -->
+                  <div v-else class="space-y-4 opacity-60">
+                    <div class="relative">
+                      <div class="absolute -top-2 -right-2 z-10">
+                        <UBadge color="gray" variant="soft" size="xs">Sample</UBadge>
+                      </div>
+                      <div class="p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50">
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2 mb-1">
+                            <UIcon name="i-heroicons-bookmark-solid" class="w-4 h-4 text-primary flex-shrink-0" />
+                            <h3 class="font-semibold text-gray-900 dark:text-white">Welcome to our event!</h3>
+                          </div>
+                          <p class="text-xs text-gray-500 mb-2">Jan 1, 2025</p>
+                          <p class="text-gray-600 dark:text-gray-400">We're excited to have you join us. Stay tuned for more updates as the event approaches!</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p class="text-xs text-center text-gray-400">
+                      <NuxtLink :to="`/dashboard/events/${eventId}/announcements`" class="hover:text-primary">
+                        Add announcements to keep attendees informed
+                      </NuxtLink>
+                    </p>
+                  </div>
                 </UCard>
 
                 <!-- FAQs Section -->
-                <UCard v-if="event.faqs?.length">
+                <UCard>
                   <template #header>
                     <div class="flex items-center gap-3">
                       <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
@@ -899,11 +1170,12 @@ function getCategoryColor(category: string) {
                       </div>
                       <div>
                         <h2 class="font-semibold text-gray-900 dark:text-white">Frequently Asked Questions</h2>
-                        <p class="text-sm text-gray-500">{{ event.faqs.length }} question{{ event.faqs.length !== 1 ? 's' : '' }}</p>
+                        <p class="text-sm text-gray-500">{{ event.faqs?.length || 0 }} question{{ event.faqs?.length !== 1 ? 's' : '' }}</p>
                       </div>
                     </div>
                   </template>
-                  <div class="space-y-3">
+                  <!-- Real FAQs -->
+                  <div v-if="event.faqs?.length" class="space-y-3">
                     <div
                       v-for="(faq, index) in event.faqs"
                       :key="faq.id"
@@ -944,6 +1216,39 @@ function getCategoryColor(category: string) {
                         </template>
                       </UAccordion>
                     </div>
+                  </div>
+                  <!-- Sample placeholder when no FAQs -->
+                  <div v-else class="space-y-3 opacity-60">
+                    <div class="relative rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 overflow-hidden">
+                      <div class="absolute -top-2 -right-2 z-10">
+                        <UBadge color="gray" variant="soft" size="xs">Sample</UBadge>
+                      </div>
+                      <div class="w-full flex items-start gap-3 p-4 text-left">
+                        <div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                          1
+                        </div>
+                        <span class="flex-1 font-medium text-gray-900 dark:text-white">
+                          What should I bring to the event?
+                        </span>
+                        <UIcon name="i-heroicons-chevron-down" class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                      </div>
+                    </div>
+                    <div class="relative rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 overflow-hidden">
+                      <div class="w-full flex items-start gap-3 p-4 text-left">
+                        <div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                          2
+                        </div>
+                        <span class="flex-1 font-medium text-gray-900 dark:text-white">
+                          Is parking available?
+                        </span>
+                        <UIcon name="i-heroicons-chevron-down" class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                      </div>
+                    </div>
+                    <p class="text-xs text-center text-gray-400">
+                      <NuxtLink :to="`/dashboard/events/${eventId}/faqs`" class="hover:text-primary">
+                        Add FAQs to answer common questions
+                      </NuxtLink>
+                    </p>
                   </div>
                 </UCard>
               </div>
@@ -1070,5 +1375,168 @@ function getCategoryColor(category: string) {
       </p>
       <UButton to="/dashboard" color="primary">Back to Dashboard</UButton>
     </div>
+
+    <!-- Publish Confirmation Modal -->
+    <UModal v-model="showPublishModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 text-green-600" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Publish Event
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Are you ready to publish <span class="font-semibold text-gray-900 dark:text-white">{{ event?.title }}</span>?
+          </p>
+
+          <div class="space-y-2">
+            <h4 class="font-medium text-gray-900 dark:text-white">Once published:</h4>
+            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li v-if="event?.visibility === 'public'">Your event will be visible to the public</li>
+              <li v-else>Your event will be accessible via invite link</li>
+              <li v-if="event?.registrationMode === 'tickets'">Attendees will be able to purchase tickets</li>
+              <li v-else>Attendees will be able to RSVP</li>
+              <li>You can still edit event details after publishing</li>
+            </ul>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showPublishModal = false"
+            >
+              Cancel
+            </UButton>
+            <UButton
+              color="green"
+              :loading="isUpdating"
+              @click="confirmPublish"
+            >
+              Publish Event
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Unpublish Confirmation Modal -->
+    <UModal v-model="showUnpublishModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <UIcon name="i-heroicons-pause" class="w-5 h-5 text-yellow-600" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Unpublish Event
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Are you sure you want to unpublish <span class="font-semibold text-gray-900 dark:text-white">{{ event?.title }}</span>?
+          </p>
+
+          <div class="space-y-2">
+            <h4 class="font-medium text-gray-900 dark:text-white">What happens when you unpublish:</h4>
+            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li>The public event page will no longer be accessible</li>
+              <li>New RSVPs and ticket purchases will be disabled</li>
+              <li>Existing attendees will keep their tickets/RSVPs</li>
+              <li>You can republish the event at any time</li>
+            </ul>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showUnpublishModal = false"
+            >
+              Keep Published
+            </UButton>
+            <UButton
+              color="yellow"
+              :loading="isUpdating"
+              @click="confirmUnpublish"
+            >
+              Unpublish Event
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Verification Required Modal -->
+    <UModal v-model="showVerificationModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-yellow-600" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Verification Required
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Events selling paid tickets require business verification before they can be published.
+            This helps ensure a safe and trustworthy experience for ticket buyers.
+          </p>
+
+          <div v-if="verification?.status === 'rejected'" class="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <p class="text-sm font-medium text-red-800 dark:text-red-200">
+              Your verification was rejected:
+            </p>
+            <p class="text-sm text-red-600 dark:text-red-300 mt-1">
+              {{ verification?.verification?.rejectionReason || 'Please resubmit with valid documents.' }}
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <h4 class="font-medium text-gray-900 dark:text-white">What you'll need:</h4>
+            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li>Business registration documents (DTI/SEC for Philippines)</li>
+              <li>Valid government-issued business license</li>
+              <li>Business registration number</li>
+            </ul>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showVerificationModal = false"
+            >
+              Close
+            </UButton>
+            <UButton
+              :to="`/dashboard/events/${eventId}/verification`"
+              color="primary"
+              @click="showVerificationModal = false"
+            >
+              {{ verification?.status === 'not_submitted' ? 'Start Verification' : 'View Verification' }}
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
   </div>
 </template>

@@ -8,8 +8,7 @@ definePageMeta({
 const form = reactive<Partial<CreateEventInput>>({
   title: '',
   description: '',
-  coverImage: '',
-  promoVideoUrl: '',
+  thumbnailImage: '',
   organizationName: '',
   startDate: '',
   endDate: '',
@@ -21,9 +20,6 @@ const form = reactive<Partial<CreateEventInput>>({
   requiresApproval: false,
   contributionsEnabled: false,
 })
-
-// Media type toggle: 'image' or 'video'
-const mediaType = ref<'image' | 'video'>('image')
 
 const registrationModeOptions = [
   {
@@ -84,7 +80,6 @@ async function handleSubmit() {
     // Convert dates to ISO strings to preserve timezone
     const payload = {
       ...form,
-      mediaType: mediaType.value,
       startDate: toISOString(form.startDate || ''),
       endDate: form.endDate ? toISOString(form.endDate) : undefined,
     }
@@ -173,50 +168,14 @@ async function handleSubmit() {
               />
             </UFormGroup>
 
-            <UFormGroup label="Event Media" name="media" :required="form.visibility === 'public'">
-              <div class="space-y-4">
-                <!-- Media Type Toggle -->
-                <div class="flex gap-2">
-                  <UButton
-                    :color="mediaType === 'image' ? 'primary' : 'gray'"
-                    :variant="mediaType === 'image' ? 'solid' : 'ghost'"
-                    size="sm"
-                    icon="i-heroicons-photo"
-                    @click="mediaType = 'image'"
-                  >
-                    Cover Image
-                  </UButton>
-                  <UButton
-                    :color="mediaType === 'video' ? 'primary' : 'gray'"
-                    :variant="mediaType === 'video' ? 'solid' : 'ghost'"
-                    size="sm"
-                    icon="i-heroicons-play-circle"
-                    @click="mediaType = 'video'"
-                  >
-                    Promo Video
-                  </UButton>
-                </div>
-
-                <!-- Cover Image Upload -->
-                <ImageUpload
-                  v-if="mediaType === 'image'"
-                  v-model="form.coverImage"
-                  folder="events"
-                  placeholder="Click or drag to upload a cover image"
-                />
-
-                <!-- YouTube Video URL -->
-                <div v-else class="space-y-2">
-                  <UInput
-                    v-model="form.promoVideoUrl"
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    icon="i-heroicons-play-circle"
-                  />
-                  <p class="text-sm text-gray-500">
-                    Paste a YouTube video URL to embed as your event promo video
-                  </p>
-                </div>
-              </div>
+            <UFormGroup label="Thumbnail Image" name="thumbnailImage" hint="Optional - displayed on event cards">
+              <ImageUpload
+                v-model="form.thumbnailImage"
+                folder="events"
+                placeholder="Click or drag to upload a thumbnail image"
+                cropper-title="Adjust Thumbnail"
+                :aspect-ratio="16 / 9"
+              />
             </UFormGroup>
 
             <UFormGroup label="Organization Name" name="organizationName" hint="Optional - overrides your name as organizer">

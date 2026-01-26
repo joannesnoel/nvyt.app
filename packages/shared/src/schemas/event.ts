@@ -96,6 +96,7 @@ const youtubeUrlSchema = z.union([
 const baseEventFields = {
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
   description: z.string().max(5000).optional(),
+  thumbnailImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || undefined),
   coverImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || undefined),
   promoVideoUrl: youtubeUrlSchema.optional(),
   mediaType: eventMediaType.default('image'),
@@ -124,16 +125,7 @@ const baseEventFields = {
   bodyFontFamily: eventFontFamily.default('system'), // Body text font
 }
 
-export const createEventSchema = z.object(baseEventFields).refine((data) => {
-  // Public events require either a cover image or promo video
-  if (data.visibility === 'public') {
-    return !!(data.coverImage || data.promoVideoUrl)
-  }
-  return true
-}, {
-  message: 'Public events require a cover image or promo video',
-  path: ['coverImage'], // Show error on the media field
-})
+export const createEventSchema = z.object(baseEventFields)
 
 // Sex option schema for attendee sex field
 const sexOptionSchema = z.object({

@@ -50,14 +50,23 @@ export function useYoutubeThumbnail() {
 
   /**
    * Get the best available image for an event with fallback support
-   * Priority: coverImage > YouTube thumbnail
+   * Priority: thumbnailImage > coverImage > YouTube thumbnail
    * Returns object with src and fallback for YouTube thumbnails
    */
-  function getEventImage(event: { coverImage?: string | null; promoVideoUrl?: string | null }): {
+  function getEventImage(event: { thumbnailImage?: string | null; coverImage?: string | null; promoVideoUrl?: string | null }): {
     src: string
     fallback?: string
     isYoutube: boolean
   } | null {
+    // Priority 1: Thumbnail image (for cards/lists)
+    if (event.thumbnailImage) {
+      return {
+        src: event.thumbnailImage,
+        isYoutube: false,
+      }
+    }
+
+    // Priority 2: Cover image (fallback)
     if (event.coverImage) {
       return {
         src: event.coverImage,
@@ -65,6 +74,7 @@ export function useYoutubeThumbnail() {
       }
     }
 
+    // Priority 3: YouTube thumbnail (last resort)
     const thumbnailUrl = getThumbnailUrl(event.promoVideoUrl)
     if (thumbnailUrl) {
       return {
