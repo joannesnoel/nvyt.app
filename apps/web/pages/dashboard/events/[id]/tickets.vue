@@ -749,6 +749,28 @@ function getTierTypeColor(tierType: string) {
             </div>
           </UCard>
         </div>
+
+        <!-- Next Step: Setup Public Page -->
+        <div v-if="ticketTypes.length > 0" class="mt-8 p-6 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h3 class="font-semibold text-gray-900 dark:text-white">
+                Ready to go live?
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Customize your event page appearance, add a cover image, and publish when you're ready.
+              </p>
+            </div>
+            <UButton
+              :to="`/dashboard/events/${eventId}/preview`"
+              color="primary"
+              icon="i-heroicons-arrow-right"
+              trailing
+            >
+              Setup Public Page
+            </UButton>
+          </div>
+        </div>
       </div>
 
       <!-- Not Found -->

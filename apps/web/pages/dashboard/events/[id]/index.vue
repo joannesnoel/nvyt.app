@@ -39,9 +39,9 @@ const orderStats = computed(() => ordersData.value?.data?.stats)
 const recentOrders = computed(() => ordersData.value?.data?.orders ?? [])
 
 // Fetch verification status for ticket-mode events
-const { data: verificationResponse, refresh: refreshVerification } = await useFetch(
+const { data: verificationResponse } = await useFetch(
   () => `/api/v1/events/${eventId.value}/verification`,
-  { 
+  {
     watch: [eventId],
     immediate: true,
   }
@@ -95,9 +95,13 @@ function formatCurrency(amount: number | string) {
   }).format(num)
 }
 
-// Publish/Unpublish
+// Status update and QR generation
 const isUpdating = ref(false)
 const isGeneratingQR = ref(false)
+
+// Publish/Unpublish modals
+const showPublishModal = ref(false)
+const showUnpublishModal = ref(false)
 
 // Cancel confirmation modal
 const showCancelModal = ref(false)
@@ -120,21 +124,6 @@ async function confirmCancelEvent() {
   await updateEventStatus('cancelled')
 }
 
-// Verification modal
-const showVerificationModal = ref(false)
-
-// Publish/Unpublish confirmation modals
-const showPublishModal = ref(false)
-const showUnpublishModal = ref(false)
-
-function openPublishModal() {
-  showPublishModal.value = true
-}
-
-function openUnpublishModal() {
-  showUnpublishModal.value = true
-}
-
 async function confirmPublish() {
   showPublishModal.value = false
   await updateEventStatus('published')
@@ -145,28 +134,30 @@ async function confirmUnpublish() {
   await updateEventStatus('draft')
 }
 
-async function updateEventStatus(status: 'draft' | 'published' | 'cancelled') {
+async function updateEventStatus(status: 'published' | 'draft' | 'cancelled') {
   isUpdating.value = true
   try {
     await $fetch(`/api/v1/events/${eventId.value}`, {
       method: 'PATCH',
       body: { status },
     })
+
+    const messages: Record<string, { title: string; description: string }> = {
+      published: { title: 'Event Published', description: 'Your event is now live and visible to the public.' },
+      draft: { title: 'Event Unpublished', description: 'Your event is now a draft and hidden from the public.' },
+      cancelled: { title: 'Event Cancelled', description: 'Event has been cancelled and attendees notified.' },
+    }
+
     toast.add({
-      title: 'Event Updated',
-      description: `Event is now ${status}`,
+      title: messages[status].title,
+      description: messages[status].description,
       color: 'green',
     })
     await refresh()
   } catch (e: any) {
-    // Check if this is a verification error
-    if (e.data?.data?.code === 'VERIFICATION_REQUIRED' || e.data?.data?.code === 'VERIFICATION_NOT_APPROVED') {
-      showVerificationModal.value = true
-      await refreshVerification()
-    }
     toast.add({
       title: 'Error',
-      description: e.data?.message || 'Failed to update event',
+      description: e.data?.message || `Failed to update event status`,
       color: 'red',
     })
   } finally {
@@ -341,22 +332,23 @@ function getStatusColor(status: string) {
             >
               View Public Page
             </UButton>
+            <!-- Publish/Unpublish buttons -->
             <UButton
               v-if="event.status === 'draft'"
-              color="green"
+              color="primary"
               icon="i-heroicons-rocket-launch"
               :loading="isUpdating"
-              @click="openPublishModal"
+              @click="showPublishModal = true"
             >
               Publish
             </UButton>
             <UButton
               v-else-if="event.status === 'published'"
-              color="yellow"
+              color="gray"
               variant="outline"
-              icon="i-heroicons-pause"
+              icon="i-heroicons-eye-slash"
               :loading="isUpdating"
-              @click="openUnpublishModal"
+              @click="showUnpublishModal = true"
             >
               Unpublish
             </UButton>
@@ -857,66 +849,6 @@ function getStatusColor(status: string) {
       </UCard>
     </UModal>
 
-    <!-- Verification Required Modal -->
-    <UModal v-model="showVerificationModal">
-      <UCard>
-        <template #header>
-          <div class="flex items-center gap-3">
-            <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-              <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-yellow-600" />
-            </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Verification Required
-            </h3>
-          </div>
-        </template>
-
-        <div class="space-y-4">
-          <p class="text-gray-600 dark:text-gray-400">
-            Events selling paid tickets require business verification before they can be published.
-            This helps ensure a safe and trustworthy experience for ticket buyers.
-          </p>
-
-          <div v-if="verification?.status === 'rejected'" class="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-            <p class="text-sm font-medium text-red-800 dark:text-red-200">
-              Your verification was rejected:
-            </p>
-            <p class="text-sm text-red-600 dark:text-red-300 mt-1">
-              {{ verification?.verification?.rejectionReason || 'Please resubmit with valid documents.' }}
-            </p>
-          </div>
-
-          <div class="space-y-2">
-            <h4 class="font-medium text-gray-900 dark:text-white">What you'll need:</h4>
-            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-              <li>Business registration documents (DTI/SEC for Philippines)</li>
-              <li>Valid government-issued business license</li>
-              <li>Business registration number</li>
-            </ul>
-          </div>
-        </div>
-
-        <template #footer>
-          <div class="flex justify-end gap-3">
-            <UButton
-              color="gray"
-              variant="outline"
-              @click="showVerificationModal = false"
-            >
-              Close
-            </UButton>
-            <UButton
-              :to="`/dashboard/events/${eventId}/verification`"
-              color="primary"
-              @click="showVerificationModal = false"
-            >
-              {{ verification?.status === 'not_submitted' ? 'Start Verification' : 'View Verification' }}
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </UModal>
-
     <!-- Publish Confirmation Modal -->
     <UModal v-model="showPublishModal">
       <UCard>
@@ -933,19 +865,13 @@ function getStatusColor(status: string) {
 
         <div class="space-y-4">
           <p class="text-gray-600 dark:text-gray-400">
-            Are you ready to publish <span class="font-semibold text-gray-900 dark:text-white">{{ event?.title }}</span>?
+            Ready to go live? Publishing will:
           </p>
-
-          <div class="space-y-2">
-            <h4 class="font-medium text-gray-900 dark:text-white">Once published:</h4>
-            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-              <li v-if="event?.visibility === 'public'">Your event will be visible to the public</li>
-              <li v-else>Your event will be accessible via invite link</li>
-              <li v-if="event?.registrationMode === 'tickets'">Attendees will be able to purchase tickets</li>
-              <li v-else>Attendees will be able to RSVP</li>
-              <li>You can still edit event details after publishing</li>
-            </ul>
-          </div>
+          <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <li>Make your event visible to the public</li>
+            <li>Allow people to register or purchase tickets</li>
+            <li>Enable sharing and discovery</li>
+          </ul>
         </div>
 
         <template #footer>
@@ -955,10 +881,10 @@ function getStatusColor(status: string) {
               variant="outline"
               @click="showPublishModal = false"
             >
-              Cancel
+              Not Yet
             </UButton>
             <UButton
-              color="green"
+              color="primary"
               :loading="isUpdating"
               @click="confirmPublish"
             >
@@ -975,7 +901,7 @@ function getStatusColor(status: string) {
         <template #header>
           <div class="flex items-center gap-3">
             <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-              <UIcon name="i-heroicons-pause" class="w-5 h-5 text-yellow-600" />
+              <UIcon name="i-heroicons-eye-slash" class="w-5 h-5 text-yellow-600" />
             </div>
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
               Unpublish Event
@@ -985,18 +911,13 @@ function getStatusColor(status: string) {
 
         <div class="space-y-4">
           <p class="text-gray-600 dark:text-gray-400">
-            Are you sure you want to unpublish <span class="font-semibold text-gray-900 dark:text-white">{{ event?.title }}</span>?
+            Are you sure you want to unpublish this event? This will:
           </p>
-
-          <div class="space-y-2">
-            <h4 class="font-medium text-gray-900 dark:text-white">What happens when you unpublish:</h4>
-            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-              <li>The public event page will no longer be accessible</li>
-              <li>New RSVPs and ticket purchases will be disabled</li>
-              <li>Existing attendees will keep their tickets/RSVPs</li>
-              <li>You can republish the event at any time</li>
-            </ul>
-          </div>
+          <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <li>Hide the event from public view</li>
+            <li>Prevent new registrations</li>
+            <li>Existing attendees will still have access</li>
+          </ul>
         </div>
 
         <template #footer>
@@ -1019,5 +940,6 @@ function getStatusColor(status: string) {
         </template>
       </UCard>
     </UModal>
+
   </div>
 </template>

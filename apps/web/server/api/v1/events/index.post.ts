@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
       title: data.title,
       slug,
       description: data.description,
+      thumbnailImage: data.thumbnailImage,
       coverImage: data.coverImage,
       promoVideoUrl: data.promoVideoUrl,
       mediaType: data.mediaType,

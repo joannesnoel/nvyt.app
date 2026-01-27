@@ -79,6 +79,7 @@ export const events = pgTable('events', {
   title: text('title').notNull(),
   slug: text('slug').notNull().unique(),
   description: text('description'),
+  thumbnailImage: text('thumbnail_image'), // Card/list display image
   coverImage: text('cover_image'),
   promoVideoUrl: text('promo_video_url'), // YouTube video URL for promo video embed
   mediaType: eventMediaTypeEnum('media_type').default('image').notNull(), // Which media to display: 'image' or 'video'

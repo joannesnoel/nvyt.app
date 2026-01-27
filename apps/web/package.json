@@ -30,6 +30,7 @@
     "pusher-js": "^8.4.0",
     "qrcode": "^1.5.4",
     "vue": "^3.5.13",
+    "vue-advanced-cropper": "^2.8.9",
     "zod": "^3.24.1"
   },
   "devDependencies": {
