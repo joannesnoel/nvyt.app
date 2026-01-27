@@ -99,6 +99,10 @@ function formatCurrency(amount: number | string) {
 const isUpdating = ref(false)
 const isGeneratingQR = ref(false)
 
+// Publish/Unpublish modals
+const showPublishModal = ref(false)
+const showUnpublishModal = ref(false)
+
 // Cancel confirmation modal
 const showCancelModal = ref(false)
 const cancelConfirmText = ref('')
@@ -120,23 +124,40 @@ async function confirmCancelEvent() {
   await updateEventStatus('cancelled')
 }
 
-async function updateEventStatus(status: 'cancelled') {
+async function confirmPublish() {
+  showPublishModal.value = false
+  await updateEventStatus('published')
+}
+
+async function confirmUnpublish() {
+  showUnpublishModal.value = false
+  await updateEventStatus('draft')
+}
+
+async function updateEventStatus(status: 'published' | 'draft' | 'cancelled') {
   isUpdating.value = true
   try {
     await $fetch(`/api/v1/events/${eventId.value}`, {
       method: 'PATCH',
       body: { status },
     })
+
+    const messages: Record<string, { title: string; description: string }> = {
+      published: { title: 'Event Published', description: 'Your event is now live and visible to the public.' },
+      draft: { title: 'Event Unpublished', description: 'Your event is now a draft and hidden from the public.' },
+      cancelled: { title: 'Event Cancelled', description: 'Event has been cancelled and attendees notified.' },
+    }
+
     toast.add({
-      title: 'Event Cancelled',
-      description: 'Event has been cancelled and attendees notified.',
+      title: messages[status].title,
+      description: messages[status].description,
       color: 'green',
     })
     await refresh()
   } catch (e: any) {
     toast.add({
       title: 'Error',
-      description: e.data?.message || 'Failed to cancel event',
+      description: e.data?.message || `Failed to update event status`,
       color: 'red',
     })
   } finally {
@@ -310,6 +331,26 @@ function getStatusColor(status: string) {
               target="_blank"
             >
               View Public Page
+            </UButton>
+            <!-- Publish/Unpublish buttons -->
+            <UButton
+              v-if="event.status === 'draft'"
+              color="primary"
+              icon="i-heroicons-rocket-launch"
+              :loading="isUpdating"
+              @click="showPublishModal = true"
+            >
+              Publish
+            </UButton>
+            <UButton
+              v-else-if="event.status === 'published'"
+              color="gray"
+              variant="outline"
+              icon="i-heroicons-eye-slash"
+              :loading="isUpdating"
+              @click="showUnpublishModal = true"
+            >
+              Unpublish
             </UButton>
           </div>
         </div>
@@ -802,6 +843,98 @@ function getStatusColor(status: string) {
               @click="confirmCancelEvent"
             >
               Cancel Event
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Publish Confirmation Modal -->
+    <UModal v-model="showPublishModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 text-green-600" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Publish Event
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Ready to go live? Publishing will:
+          </p>
+          <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <li>Make your event visible to the public</li>
+            <li>Allow people to register or purchase tickets</li>
+            <li>Enable sharing and discovery</li>
+          </ul>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showPublishModal = false"
+            >
+              Not Yet
+            </UButton>
+            <UButton
+              color="primary"
+              :loading="isUpdating"
+              @click="confirmPublish"
+            >
+              Publish Event
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
+
+    <!-- Unpublish Confirmation Modal -->
+    <UModal v-model="showUnpublishModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <UIcon name="i-heroicons-eye-slash" class="w-5 h-5 text-yellow-600" />
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              Unpublish Event
+            </h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Are you sure you want to unpublish this event? This will:
+          </p>
+          <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <li>Hide the event from public view</li>
+            <li>Prevent new registrations</li>
+            <li>Existing attendees will still have access</li>
+          </ul>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton
+              color="gray"
+              variant="outline"
+              @click="showUnpublishModal = false"
+            >
+              Keep Published
+            </UButton>
+            <UButton
+              color="yellow"
+              :loading="isUpdating"
+              @click="confirmUnpublish"
+            >
+              Unpublish Event
             </UButton>
           </div>
         </template>
