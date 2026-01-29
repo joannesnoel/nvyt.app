@@ -160,7 +160,7 @@ const features = [
             <!-- Background illustration -->
             <div class="absolute inset-0">
               <img 
-                src="/picnic-friends-bg.png" 
+                src="/picnic-friends-bg.webp" 
                 alt="Friends having a picnic illustration" 
                 class="w-full h-full object-cover opacity-40"
               />
@@ -216,7 +216,7 @@ const features = [
             <!-- Background illustration -->
             <div class="absolute inset-0">
               <img 
-                src="/rsvp-events-bg.png" 
+                src="/rsvp-events-bg.webp" 
                 alt="RSVP events illustration" 
                 class="w-full h-full object-cover opacity-40"
               />
@@ -269,7 +269,7 @@ const features = [
             <!-- Background illustration -->
             <div class="absolute inset-0">
               <img 
-                src="/public-events-bg.png" 
+                src="/public-events-bg.webp" 
                 alt="Public events illustration" 
                 class="w-full h-full object-cover opacity-40"
               />
@@ -321,7 +321,7 @@ const features = [
             <!-- Background illustration -->
             <div class="absolute inset-0">
               <img 
-                src="/public-free-events-bg.png" 
+                src="/public-free-events-bg.webp" 
                 alt="Public and free events illustration" 
                 class="w-full h-full object-cover opacity-40"
               />
