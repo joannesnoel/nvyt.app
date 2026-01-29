@@ -259,13 +259,14 @@ const ogDescription = computed(() => {
   return desc.length > 160 ? desc.substring(0, 157) + '...' : desc
 })
 const ogImage = computed(() => {
-  // If media type is video and we have a promo video URL, use the YouTube thumbnail
+  if (event.value?.thumbnailImage) return event.value.thumbnailImage
+  if (event.value?.coverImage) return event.value.coverImage
+  // Fallback to YouTube thumbnail if media type is video
   if (event.value?.mediaType === 'video' && event.value?.promoVideoUrl) {
     const thumbnail = getThumbnailUrl(event.value.promoVideoUrl)
     if (thumbnail) return thumbnail
   }
-  // Prefer thumbnail image (optimized for cards/social), fallback to cover image
-  return event.value?.thumbnailImage || event.value?.coverImage || ''
+  return ''
 })
 const ogUrl = computed(() => `${config.public.appUrl}/events/${route.params.slug}`)
 
