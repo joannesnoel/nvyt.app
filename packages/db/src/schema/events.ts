@@ -122,6 +122,14 @@ export const events = pgTable('events', {
   // Invite-only settings
   inviteToken: text('invite_token').unique(), // For private events
 
+  // Contact & Social
+  phone: text('phone'),
+  email: text('email'),
+  website: text('website'),
+  facebookUrl: text('facebook_url'),
+  instagramUrl: text('instagram_url'),
+  xUrl: text('x_url'),
+
   // Metadata
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

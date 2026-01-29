@@ -102,6 +102,14 @@ const baseEventFields = {
   mediaType: eventMediaType.default('image'),
   organizationName: z.string().max(100).optional(), // Override "Organized by" display
 
+  // Contact & Social
+  phone: z.string().min(1, 'Phone number is required'),
+  email: z.string().email('Please enter a valid email'),
+  website: z.union([z.literal(''), z.string().url('Please enter a valid URL')]).optional().transform(val => val || undefined),
+  facebookUrl: z.string().optional(),
+  instagramUrl: z.string().optional(),
+  xUrl: z.string().optional(),
+
   startDate: dateTimeString,
   endDate: dateTimeString.optional().or(z.literal('')).transform(val => val || undefined),
   timezone: z.string().default('Asia/Manila'),

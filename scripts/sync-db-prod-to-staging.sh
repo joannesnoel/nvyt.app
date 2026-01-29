@@ -253,31 +253,18 @@ else
   fi
   rm -f /tmp/ecs_output.log
 
+  # Download from S3
   echo "      Downloading dump from S3..."
-  aws s3 cp "s3://$S3_BUCKET/$S3_KEY" "$DUMP_FILE" --profile "$AWS_PROFILE" --region "$AWS_REGION"
-
-  if [[ $? -ne 0 ]]; then
+  if ! aws s3 cp "s3://$S3_BUCKET/$S3_KEY" "$DUMP_FILE" --profile "$AWS_PROFILE" --region "$AWS_REGION"; then
     echo -e "${RED}Error: Failed to download dump from S3${NC}"
+    echo "      The file s3://$S3_BUCKET/$S3_KEY may not have been uploaded."
+    echo "      Check that the ECS container has pg_dump and aws CLI installed,"
+    echo "      and that the task role has s3:PutObject permission."
     exit 1
   fi
 
-  # Cleanup S3
-  aws s3 rm "s3://$S3_BUCKET/$S3_KEY" --profile "$AWS_PROFILE" --region "$AWS_REGION" 2>/dev/null || true
-
-  echo "      S3 dump size: $(numfmt --to=iec $S3_SIZE 2>/dev/null || echo $S3_SIZE bytes)"
-
-  # Download from S3
-  echo "      Downloading from S3..."
-  aws s3 cp \
-    --profile "$AWS_PROFILE" \
-    --region "$AWS_REGION" \
-    "s3://$S3_BUCKET/$S3_KEY" "$DUMP_FILE"
-
   # Clean up S3
-  aws s3 rm \
-    --profile "$AWS_PROFILE" \
-    --region "$AWS_REGION" \
-    "s3://$S3_BUCKET/$S3_KEY" 2>/dev/null || true
+  aws s3 rm "s3://$S3_BUCKET/$S3_KEY" --profile "$AWS_PROFILE" --region "$AWS_REGION" 2>/dev/null || true
 
   echo -e "${GREEN}✓ Database dumped via ECS/S3${NC}"
 fi

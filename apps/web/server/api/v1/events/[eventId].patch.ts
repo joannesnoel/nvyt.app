@@ -132,6 +132,13 @@ export default defineEventHandler(async (event) => {
     if ('titleFontFamily' in body) updateData.titleFontFamily = data.titleFontFamily
     if ('fontFamily' in body) updateData.fontFamily = data.fontFamily
     if ('bodyFontFamily' in body) updateData.bodyFontFamily = data.bodyFontFamily
+    // Contact & Social
+    if ('phone' in body) updateData.phone = data.phone
+    if ('email' in body) updateData.email = data.email
+    if ('website' in body) updateData.website = data.website ?? null
+    if ('facebookUrl' in body) updateData.facebookUrl = data.facebookUrl ?? null
+    if ('instagramUrl' in body) updateData.instagramUrl = data.instagramUrl ?? null
+    if ('xUrl' in body) updateData.xUrl = data.xUrl ?? null
     // Registration form built-in fields
     if ('collectAttendeeAddress' in body) updateData.collectAttendeeAddress = data.collectAttendeeAddress
     if ('collectAttendeeSex' in body) updateData.collectAttendeeSex = data.collectAttendeeSex

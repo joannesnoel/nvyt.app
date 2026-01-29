@@ -1359,6 +1359,39 @@ function getCategoryColor(category: string) {
                     </UButton>
                   </template>
                 </UCard>
+
+                <!-- Contact & Social -->
+                <UCard v-if="event.phone || event.email || event.website || event.facebookUrl || event.instagramUrl || event.xUrl">
+                  <template #header>
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Contact & Social</h3>
+                  </template>
+                  <div class="space-y-3">
+                    <div v-if="event.phone" class="flex items-center gap-3">
+                      <UIcon name="i-heroicons-phone" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <span class="text-sm text-gray-600 dark:text-gray-400">{{ event.phone }}</span>
+                    </div>
+                    <div v-if="event.email" class="flex items-center gap-3">
+                      <UIcon name="i-heroicons-envelope" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <a :href="`mailto:${event.email}`" class="text-sm text-primary hover:underline">{{ event.email }}</a>
+                    </div>
+                    <div v-if="event.website" class="flex items-center gap-3">
+                      <UIcon name="i-heroicons-globe-alt" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <a :href="event.website" target="_blank" rel="noopener noreferrer" class="text-sm text-primary hover:underline truncate">{{ event.website }}</a>
+                    </div>
+                    <div v-if="event.facebookUrl" class="flex items-center gap-3">
+                      <UIcon name="i-simple-icons-facebook" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <a :href="event.facebookUrl.startsWith('http') ? event.facebookUrl : `https://facebook.com/${event.facebookUrl}`" target="_blank" rel="noopener noreferrer" class="text-sm text-primary hover:underline truncate">{{ event.facebookUrl }}</a>
+                    </div>
+                    <div v-if="event.instagramUrl" class="flex items-center gap-3">
+                      <UIcon name="i-simple-icons-instagram" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <a :href="event.instagramUrl.startsWith('http') ? event.instagramUrl : `https://instagram.com/${event.instagramUrl}`" target="_blank" rel="noopener noreferrer" class="text-sm text-primary hover:underline truncate">{{ event.instagramUrl }}</a>
+                    </div>
+                    <div v-if="event.xUrl" class="flex items-center gap-3">
+                      <UIcon name="i-simple-icons-x" class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <a :href="event.xUrl.startsWith('http') ? event.xUrl : `https://x.com/${event.xUrl}`" target="_blank" rel="noopener noreferrer" class="text-sm text-primary hover:underline truncate">{{ event.xUrl }}</a>
+                    </div>
+                  </div>
+                </UCard>
               </div>
             </div>
           </div>

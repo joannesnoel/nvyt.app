@@ -60,6 +60,12 @@ export default defineEventHandler(async (event) => {
       contributionsEnabled: data.contributionsEnabled,
       theme: data.theme ?? null, // null = follow visitor's system preference
       colorTemplate: data.colorTemplate,
+      phone: data.phone,
+      email: data.email,
+      website: data.website,
+      facebookUrl: data.facebookUrl,
+      instagramUrl: data.instagramUrl,
+      xUrl: data.xUrl,
       inviteToken,
       status: 'draft',
     })

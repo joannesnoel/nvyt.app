@@ -19,6 +19,12 @@ const form = reactive<Partial<CreateEventInput>>({
   maxAttendees: undefined,
   requiresApproval: false,
   contributionsEnabled: false,
+  phone: '',
+  email: '',
+  website: '',
+  facebookUrl: '',
+  instagramUrl: '',
+  xUrl: '',
 })
 
 const registrationModeOptions = [
@@ -228,6 +234,66 @@ async function handleSubmit() {
                 @update:location-details="updateLocationDetails"
               />
             </UFormGroup>
+          </div>
+
+          <UDivider />
+
+          <!-- Contact & Social -->
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+              Contact & Social
+            </h3>
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <UFormGroup label="Phone" name="phone" required>
+                <UInput
+                  v-model="form.phone"
+                  placeholder="e.g., +63 912 345 6789"
+                  icon="i-heroicons-phone"
+                />
+              </UFormGroup>
+
+              <UFormGroup label="Email" name="email" required>
+                <UInput
+                  v-model="form.email"
+                  type="email"
+                  placeholder="e.g., hello@example.com"
+                  icon="i-heroicons-envelope"
+                />
+              </UFormGroup>
+            </div>
+
+            <UFormGroup label="Website" name="website" hint="Optional">
+              <UInput
+                v-model="form.website"
+                type="url"
+                placeholder="https://example.com"
+                icon="i-heroicons-globe-alt"
+              />
+            </UFormGroup>
+
+            <div class="grid md:grid-cols-3 gap-4">
+              <UFormGroup label="Facebook" name="facebookUrl" hint="Optional">
+                <UInput
+                  v-model="form.facebookUrl"
+                  placeholder="Facebook URL or username"
+                />
+              </UFormGroup>
+
+              <UFormGroup label="Instagram" name="instagramUrl" hint="Optional">
+                <UInput
+                  v-model="form.instagramUrl"
+                  placeholder="Instagram URL or username"
+                />
+              </UFormGroup>
+
+              <UFormGroup label="X.com" name="xUrl" hint="Optional">
+                <UInput
+                  v-model="form.xUrl"
+                  placeholder="X URL or username"
+                />
+              </UFormGroup>
+            </div>
           </div>
 
           <UDivider />
