@@ -9,7 +9,7 @@ const isProduction = process.env.NODE_ENV === 'production' && process.env.NUXT_P
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
-
+  telemetry: false,
   app: {
     head: {
       viewport: 'width=device-width, initial-scale=1, maximum-scale=1',

@@ -69,29 +69,48 @@ const userMenuItems = computed(() => {
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
     <!-- Header -->
-    <header class="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+    <header class="fixed top-0 left-0 right-0 z-50 glass-header">
       <div class="max-w-7xl 2xl:max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-          <!-- Mobile: Hamburger menu (left) -->
-          <div class="flex md:hidden">
-            <UButton
-              v-if="isAuthenticated"
-              icon="i-heroicons-bars-3"
-              color="gray"
-              variant="ghost"
-              @click="mobileMenuOpen = !mobileMenuOpen"
-            />
-            <div v-else class="w-10" />
+          <!-- Mobile: Left section (hamburger or logo) -->
+          <div class="flex lg:hidden">
+            <template v-if="isAuthenticated">
+              <UButton
+                icon="i-heroicons-bars-3"
+                color="gray"
+                variant="ghost"
+                @click="mobileMenuOpen = !mobileMenuOpen"
+              />
+            </template>
+            <template v-else>
+              <NuxtLink to="/" class="flex items-center gap-2">
+                <img src="/logo.png" alt="nvyt" width="36" height="36" class="h-9 w-9" />
+                <span class="text-2xl font-bold ml-1 pb-2 text-logo-metallic">nvyt</span>
+              </NuxtLink>
+            </template>
           </div>
 
-          <!-- Logo (centered on mobile, left on desktop) -->
-          <NuxtLink to="/" class="flex items-center gap-2 md:flex-none absolute left-1/2 -translate-x-1/2 md:relative md:left-0 md:translate-x-0">
+          <!-- Desktop Logo -->
+          <NuxtLink 
+            to="/" 
+            class="hidden lg:flex items-center gap-2"
+          >
             <img src="/logo.png" alt="nvyt" width="36" height="36" class="h-9 w-9" />
-            <span class="text-2xl font-bold ml-1 pb-2 text-metallic-3d">nvyt</span>
+            <span class="text-2xl font-bold ml-1 pb-2 text-logo-metallic">nvyt</span>
+          </NuxtLink>
+
+          <!-- Mobile Logo (centered when authenticated) -->
+          <NuxtLink 
+            v-if="isAuthenticated"
+            to="/" 
+            class="flex lg:hidden items-center gap-2 absolute left-1/2 -translate-x-1/2"
+          >
+            <img src="/logo.png" alt="nvyt" width="36" height="36" class="h-9 w-9" />
+            <span class="text-2xl font-bold ml-1 pb-2 text-logo-metallic">nvyt</span>
           </NuxtLink>
 
           <!-- Desktop: Main Navigation -->
-          <nav v-if="isAuthenticated" class="hidden md:flex items-center gap-1 ml-8">
+          <nav v-if="isAuthenticated" class="hidden lg:flex items-center gap-1 ml-8">
             <NuxtLink
               v-for="item in mainNavItems"
               :key="item.to"
@@ -107,7 +126,7 @@ const userMenuItems = computed(() => {
           </nav>
 
           <!-- Spacer to push actions to right on desktop -->
-          <div class="flex-1 hidden md:block" />
+          <div class="flex-1 hidden lg:block" />
 
           <!-- Actions -->
           <div class="flex items-center gap-3">
@@ -175,7 +194,7 @@ const userMenuItems = computed(() => {
       >
         <div
           v-if="mobileMenuOpen && isAuthenticated"
-          class="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+          class="lg:hidden glass-header border-t-0"
         >
           <nav class="px-4 py-3 space-y-1">
             <NuxtLink
@@ -196,7 +215,7 @@ const userMenuItems = computed(() => {
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1">
+    <main class="flex-1 pt-16">
       <slot />
     </main>
 
@@ -206,7 +225,7 @@ const userMenuItems = computed(() => {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <!-- Company Info -->
           <div>
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">nvyt</h3>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">nvyt™</h3>
             <p class="text-gray-500 dark:text-gray-400 text-sm">
               Create events, sell tickets, and manage everything — all in one place.
             </p>
@@ -262,7 +281,7 @@ const userMenuItems = computed(() => {
         <!-- Bottom Bar -->
         <div class="border-t border-gray-200 dark:border-gray-800 pt-6">
           <p class="text-gray-500 dark:text-gray-400 text-sm text-center">
-            &copy; {{ new Date().getFullYear() }} nvyt. All rights reserved.
+            &copy; {{ new Date().getFullYear() }} nvyt™. All rights reserved.
           </p>
         </div>
       </div>

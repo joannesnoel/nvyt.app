@@ -8,7 +8,7 @@
 
 ## Overview
 
-**nvyt** (pronounced "invite") is a modern event management platform that enables organizers to create events, sell tickets, and manage contributions. Built with Vue.js/Nuxt 3 and designed for the Philippine market with PayMongo integration.
+**nvyt™** (pronounced "invite") is a modern event management platform that enables organizers to create events, sell tickets, and manage contributions. Built with Vue.js/Nuxt 3 and designed for the Philippine market with PayMongo integration.
 
 ### Key Features
 

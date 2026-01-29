@@ -79,8 +79,8 @@ async function handleSubmit() {
     toast.add({
       title: 'Account created!',
       description: inviteData.value
-        ? `Welcome to nvyt! You're now a collaborator on "${inviteData.value.eventTitle}".`
-        : 'Welcome to nvyt.',
+        ? `Welcome to nvyt™! You're now a collaborator on "${inviteData.value.eventTitle}".`
+        : 'Welcome to nvyt™.',
       color: 'green',
     })
 

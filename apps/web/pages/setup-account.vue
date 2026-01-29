@@ -58,7 +58,7 @@ async function handleSubmit() {
 
     toast.add({
       title: 'Account Setup Complete!',
-      description: 'Welcome to nvyt. You are now logged in.',
+      description: 'Welcome to nvyt™. You are now logged in.',
       color: 'green',
     })
 
