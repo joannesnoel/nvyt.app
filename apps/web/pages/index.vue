@@ -3,6 +3,9 @@ definePageMeta({
   layout: 'default',
 })
 
+// Color mode for lazy loading hero images
+const colorMode = useColorMode()
+
 // Parallax effect
 const heroBeach = ref<HTMLImageElement>()
 const heroRave = ref<HTMLImageElement>()
@@ -59,20 +62,22 @@ const features = [
       <!-- Hero Background Images with Parallax -->
       <div class="absolute inset-0 overflow-hidden">
         <!-- Light Mode - Beach Festival -->
-        <img 
+        <img
           ref="heroBeach"
-          src="/hero-festival.png" 
-          alt="Epic beach sunset music festival" 
+          src="/hero-festival.webp"
+          alt="Epic beach sunset music festival"
           class="w-full h-[120%] object-cover dark:hidden parallax-image"
           style="object-position: center 40%;"
+          :loading="colorMode.value === 'dark' ? 'lazy' : 'eager'"
         />
         <!-- Dark Mode - Electric Rave -->
-        <img 
+        <img
           ref="heroRave"
-          src="/hero-rave.png" 
-          alt="Electric rave party with neon lights" 
+          src="/hero-rave.webp"
+          alt="Electric rave party with neon lights"
           class="hidden dark:block w-full h-[120%] object-cover parallax-image"
           style="object-position: center 40%;"
+          :loading="colorMode.value === 'dark' ? 'eager' : 'lazy'"
         />
       </div>
       
