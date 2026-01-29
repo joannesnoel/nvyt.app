@@ -378,14 +378,14 @@ const features = [
             </p>
             <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mobile-button-spacing">
               <UButton to="/register" size="lg" color="primary" class="hover-lift btn-3d w-full sm:w-auto">
-                🎊 Start Planning Your Event
+                Create Your First Event
               </UButton>
               <UButton to="/events" size="lg" variant="outline" color="gray" class="hover-lift border-2 w-full sm:w-auto">
-                Browse Local Events
+                Browse Events
               </UButton>
             </div>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-4">
-              Free to start • No credit card required • GCash/Maya ready
+              Free to start • No credit card required • Accept payments today
             </p>
           </div>
         </div>
@@ -465,16 +465,21 @@ const features = [
         <div class="max-w-2xl mx-auto text-center">
           <div class="bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-sm">
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Ready to start planning events?
+              Ready to create your perfect event?
             </h3>
             <p class="text-gray-600 dark:text-gray-400 mb-6">
-              Join nvyt™ and discover a better way to plan events
+              Your first event is just minutes away
             </p>
-            <UButton to="/register" size="lg" color="primary">
-              Test Drive Now
-            </UButton>
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <UButton to="/register" size="lg" color="primary" class="w-full sm:w-auto">
+                Create Your First Event
+              </UButton>
+              <UButton to="/events" size="lg" variant="outline" color="gray" class="w-full sm:w-auto">
+                Browse Events
+              </UButton>
+            </div>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-4">
-              Free account • No credit card required • Cancel anytime
+              Free to start • No credit card required • Accept payments today
             </p>
           </div>
         </div>
@@ -493,30 +498,85 @@ const features = [
           </p>
         </div>
         
-        <div class="grid md:grid-cols-4 gap-8 items-center justify-center opacity-70">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-6 items-center justify-center max-w-5xl mx-auto">
+          <!-- QRph -->
           <div class="flex flex-col items-center">
-            <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-3">
-              <span class="text-white font-bold text-lg">💳</span>
+            <div class="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center mb-3 shadow-md p-2">
+              <img src="/qrph.svg" alt="QRph" class="w-full h-full object-contain">
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Credit Cards</span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">QRph</span>
           </div>
+          
+          <!-- GCash -->
           <div class="flex flex-col items-center">
-            <div class="w-16 h-16 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center mb-3">
-              <span class="text-white font-bold text-lg">📱</span>
+            <div class="w-16 h-16 rounded-lg mb-3 shadow-md overflow-hidden">
+              <img src="/gcash.svg" alt="GCash" class="w-full h-full object-cover">
             </div>
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">GCash</span>
           </div>
+          
+          <!-- Maya -->
           <div class="flex flex-col items-center">
-            <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center mb-3">
-              <span class="text-white font-bold text-lg">💰</span>
+            <div class="w-16 h-16 rounded-lg mb-3 shadow-md overflow-hidden">
+              <img src="/maya.svg" alt="Maya" class="w-full h-full object-cover">
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Maya (PayMaya)</span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Maya</span>
           </div>
+          
+          <!-- GrabPay -->
           <div class="flex flex-col items-center">
-            <div class="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mb-3">
-              <span class="text-white font-bold text-lg">🏦</span>
+            <div class="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center mb-3 shadow-md p-2">
+              <img src="/grabpay.svg" alt="GrabPay" class="w-full h-full object-contain">
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Online Banking</span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">GrabPay</span>
+          </div>
+          
+          <!-- ShopeePay -->
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 rounded-lg mb-3 shadow-md overflow-hidden">
+              <img src="/shopee.svg" alt="ShopeePay" class="w-full h-full object-cover">
+            </div>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">ShopeePay</span>
+          </div>
+          
+          <!-- PayPal -->
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center mb-3 shadow-md p-2">
+              <img src="/paypal.svg" alt="PayPal" class="w-full h-full object-contain">
+            </div>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">PayPal</span>
+          </div>
+          
+          <!-- Visa -->
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center mb-3 shadow-md p-2">
+              <img src="/visa.svg" alt="Visa" class="w-full h-full object-contain">
+            </div>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Visa</span>
+          </div>
+          
+          <!-- Mastercard -->
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center mb-3 shadow-md p-2">
+              <img src="/mastercard.svg" alt="Mastercard" class="w-full h-full object-contain">
+            </div>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Mastercard</span>
+          </div>
+          
+          <!-- American Express -->
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 rounded-lg mb-3 shadow-md overflow-hidden">
+              <img src="/american-express.svg" alt="American Express" class="w-full h-full object-cover">
+            </div>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">American Express</span>
+          </div>
+          
+          <!-- Discover -->
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center mb-3 shadow-md p-2">
+              <img src="/discover-network.svg" alt="Discover" class="w-full h-full object-contain">
+            </div>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Discover</span>
           </div>
         </div>
         
@@ -576,37 +636,24 @@ const features = [
       
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
         <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">
-          Ready to create your event?
+          Ready to create your perfect event?
         </h2>
         <p class="text-white/90 mb-8 text-lg">
-          Test drive nvyt™ - see why it works better
+          Your first event is just minutes away
         </p>
         
         <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
           <UButton to="/register" size="xl" color="white" class="hover-lift">
-            🚀 Create Your First Event
+            Create Your First Event
           </UButton>
           <UButton to="/events" size="xl" variant="outline" color="white" class="border-white/50 text-white hover:bg-white/10">
             Browse Events
           </UButton>
         </div>
         
-        <!-- Newsletter signup -->
-        <div class="max-w-md mx-auto">
-          <p class="text-white/80 text-sm mb-4">
-            Get event planning tips and feature updates:
-          </p>
-          <form class="flex gap-2">
-            <input 
-              type="email" 
-              placeholder="Enter your email" 
-              class="flex-1 px-4 py-2 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-sm"
-            >
-            <UButton color="white" size="sm" class="px-6">
-              Subscribe
-            </UButton>
-          </form>
-        </div>
+        <p class="text-white/80 text-sm">
+          Free to start • No credit card required • Accept payments today
+        </p>
       </div>
     </section>
   </div>
