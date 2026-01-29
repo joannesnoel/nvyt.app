@@ -280,15 +280,8 @@ function handlePayNow() {
     return
   }
 
-  if (selectedPaymentMethod.value === 'card') {
-    // Trigger card form validation and submission
-    if (cardFormRef.value) {
-      cardFormRef.value.submit()
-    }
-  } else {
-    // Process e-wallet payment
-    processEWalletPayment()
-  }
+  // Process e-wallet payment
+  processEWalletPayment()
 }
 
 function goBack() {
@@ -368,21 +361,9 @@ function goBack() {
             :allowed-methods="orderData?.paymentMethodAllowed"
           />
 
-          <!-- Card form (shown when card is selected) -->
+          <!-- E-wallet info (shown when a payment method is selected) -->
           <div
-            v-if="selectedPaymentMethod === 'card'"
-            class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700"
-          >
-            <CheckoutCardPaymentForm
-              ref="cardFormRef"
-              :disabled="isProcessing"
-              @submit="handleCardSubmit"
-            />
-          </div>
-
-          <!-- E-wallet info (shown for e-wallet methods) -->
-          <div
-            v-else-if="selectedPaymentMethod"
+            v-if="selectedPaymentMethod"
             class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800"
           >
             <div class="flex items-start gap-3">

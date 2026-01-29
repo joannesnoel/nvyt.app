@@ -12,6 +12,6 @@ data:
   DB_SSL: "false"
   # Comma-separated list of admin emails
   ADMIN_EMAILS: "jon@creativelogik.net,hello@nvyt.app"
-  # PayMongo payment methods (comma-separated, leave empty for defaults: gcash,paymaya,card,grab_pay,qrph)
-  # Available: gcash, paymaya, card, grab_pay, qrph, dob, dob_ubp (dob/dob_ubp require PayMongo activation)
+  # PayMongo payment methods (comma-separated, leave empty for defaults: gcash,paymaya,grab_pay,qrph,shopee_pay)
+  # Available: gcash, paymaya, card, grab_pay, qrph, shopee_pay, dob, dob_ubp (some methods require PayMongo activation)
   PAYMONGO_PAYMENT_METHODS: ""

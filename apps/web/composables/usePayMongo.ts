@@ -58,7 +58,7 @@ declare global {
   }
 }
 
-export type PaymentMethodType = 'card' | 'gcash' | 'paymaya' | 'grab_pay' | 'qrph'
+export type PaymentMethodType = 'gcash' | 'paymaya' | 'grab_pay' | 'qrph' | 'shopee_pay'
 
 export interface PaymentMethod {
   type: PaymentMethodType
@@ -91,17 +91,17 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
     needsClientCreation: false,
   },
   {
-    type: 'card',
-    label: 'Credit/Debit Card',
-    description: 'Visa, Mastercard, JCB',
-    icon: 'i-heroicons-credit-card',
-    needsClientCreation: true,
-  },
-  {
     type: 'qrph',
     label: 'QR Ph',
     description: 'Scan QR with your banking app',
     icon: 'i-heroicons-qr-code',
+    needsClientCreation: false,
+  },
+  {
+    type: 'shopee_pay',
+    label: 'ShopeePay',
+    description: 'Pay with your ShopeePay wallet',
+    icon: 'i-heroicons-shopping-bag',
     needsClientCreation: false,
   },
 ]

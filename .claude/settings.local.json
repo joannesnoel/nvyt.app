@@ -122,7 +122,8 @@
       "Bash(gh pr create:*)",
       "Bash(pnpm --filter web build:*)",
       "Bash(aws s3 ls:*)",
-      "Bash(PGPASSWORD=nvyt psql:*)"
+      "Bash(PGPASSWORD=nvyt psql:*)",
+      "WebSearch"
     ]
   },
   "hooks": {

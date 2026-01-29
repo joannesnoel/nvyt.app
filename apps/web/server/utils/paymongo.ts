@@ -1,7 +1,7 @@
 // PayMongo API integration for Philippine payments
 import crypto from 'crypto'
 
-// Supports: GCash, Maya, Cards, Grab Pay, QR Ph, BPI, UnionBank
+// Supports: GCash, Maya, Grab Pay, QR Ph, ShopeePay, BPI, UnionBank
 
 interface PayMongoConfig {
   secretKey: string
@@ -11,7 +11,7 @@ interface PayMongoConfig {
 }
 
 // Default payment methods if not configured
-const DEFAULT_PAYMENT_METHODS = ['gcash', 'paymaya', 'card', 'grab_pay', 'qrph']
+const DEFAULT_PAYMENT_METHODS = ['gcash', 'paymaya', 'grab_pay', 'qrph', 'shopee_pay']
 
 interface LineItem {
   name: string
@@ -450,6 +450,7 @@ export type PaymentMethodType =
   | 'paymaya'
   | 'grab_pay'
   | 'qrph'
+  | 'shopee_pay'
   | 'dob'
   | 'dob_ubp'
   | 'brankas_bdo'
