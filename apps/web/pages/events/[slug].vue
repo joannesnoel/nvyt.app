@@ -264,8 +264,8 @@ const ogImage = computed(() => {
     const thumbnail = getThumbnailUrl(event.value.promoVideoUrl)
     if (thumbnail) return thumbnail
   }
-  // Fallback to cover image
-  return event.value?.coverImage || ''
+  // Prefer thumbnail image (optimized for cards/social), fallback to cover image
+  return event.value?.thumbnailImage || event.value?.coverImage || ''
 })
 const ogUrl = computed(() => `${config.public.appUrl}/events/${route.params.slug}`)
 
