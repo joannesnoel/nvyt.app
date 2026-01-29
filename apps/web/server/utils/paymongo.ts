@@ -11,7 +11,7 @@ interface PayMongoConfig {
 }
 
 // Default payment methods if not configured
-const DEFAULT_PAYMENT_METHODS = ['gcash', 'paymaya', 'grab_pay', 'qrph', 'shopee_pay']
+const DEFAULT_PAYMENT_METHODS = ['qrph', 'gcash', 'paymaya', 'grab_pay', 'shopee_pay']
 
 interface LineItem {
   name: string

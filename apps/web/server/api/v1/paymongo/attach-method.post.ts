@@ -11,7 +11,7 @@ import {
 const attachMethodSchema = z.object({
   orderNumber: z.string().min(1),
   paymentMethodId: z.string().optional(), // For card payments created client-side
-  paymentMethodType: z.enum(['card', 'gcash', 'paymaya', 'grab_pay', 'qrph']),
+  paymentMethodType: z.enum(['card', 'gcash', 'paymaya', 'grab_pay', 'qrph', 'shopee_pay']),
   billing: z.object({
     name: z.string().optional(),
     email: z.string().email().optional(),

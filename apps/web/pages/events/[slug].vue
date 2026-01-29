@@ -1997,24 +1997,25 @@ onBeforeUnmount(() => {
                   class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all"
                   :class="selectedPaymentProvider === 'paymongo'
                     ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-gray-50 dark:bg-gray-800'"
                   @click="selectedPaymentProvider = 'paymongo'"
                 >
                   <span class="text-xs font-medium text-gray-600 dark:text-gray-400">E-wallets & Banks</span>
                   <div class="flex items-center justify-center gap-1.5 flex-wrap">
-                    <!-- GCash -->
-                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
-                      <img src="/gcash.svg" alt="GCash" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm p-1">
+                      <img src="/qrph.svg" alt="QRPh" class="w-full h-full object-contain" />
                     </div>
-                    <!-- Maya -->
-                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
-                      <img src="/maya.png" alt="Maya" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg shadow-sm overflow-hidden">
+                      <img src="/gcash.svg" alt="GCash" class="w-full h-full object-cover" />
                     </div>
-                    <!-- Bank -->
-                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
-                      <svg class="h-5 w-5 sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="#0066b2">
-                        <path d="M12 2L2 7v2h20V7L12 2zm0 2.5L18 7H6l6-2.5zM4 10v8h2v-8H4zm5 0v8h2v-8H9zm5 0v8h2v-8h-2zm5 0v8h2v-8h-2zM2 19v2h20v-2H2z"/>
-                      </svg>
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg shadow-sm overflow-hidden">
+                      <img src="/maya.svg" alt="Maya" class="w-full h-full object-cover" />
+                    </div>
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm p-1">
+                      <img src="/grabpay.svg" alt="GrabPay" class="w-full h-full object-contain" />
+                    </div>
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg shadow-sm overflow-hidden">
+                      <img src="/shopee.svg" alt="ShopeePay" class="w-full h-full object-cover" />
                     </div>
                   </div>
                 </button>
@@ -2024,22 +2025,25 @@ onBeforeUnmount(() => {
                   class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all"
                   :class="selectedPaymentProvider === 'paypal'
                     ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-gray-50 dark:bg-gray-800'"
                   @click="selectedPaymentProvider = 'paypal'"
                 >
                   <span class="text-xs font-medium text-gray-600 dark:text-gray-400">PayPal & Cards</span>
                   <div class="flex items-center justify-center gap-1.5 flex-wrap">
-                    <!-- PayPal -->
-                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
-                      <img src="/paypal.svg" alt="PayPal" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm p-1">
+                      <img src="/paypal.svg" alt="PayPal" class="w-full h-full object-contain" />
                     </div>
-                    <!-- Visa -->
-                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
-                      <img src="/visa.webp" alt="Visa" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm p-1">
+                      <img src="/visa.svg" alt="Visa" class="w-full h-full object-contain" />
                     </div>
-                    <!-- Mastercard -->
-                    <div class="bg-white rounded flex-shrink-0 w-12 h-7 sm:w-14 sm:h-8 flex items-center justify-center">
-                      <img src="/mastercard.png" alt="Mastercard" class="max-h-5 sm:max-h-6 max-w-[90%] object-contain" />
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm p-1">
+                      <img src="/mastercard.svg" alt="Mastercard" class="w-full h-full object-contain" />
+                    </div>
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg shadow-sm overflow-hidden">
+                      <img src="/american-express.svg" alt="American Express" class="w-full h-full object-cover" />
+                    </div>
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm p-1">
+                      <img src="/discover-network.svg" alt="Discover" class="w-full h-full object-contain" />
                     </div>
                   </div>
                 </button>

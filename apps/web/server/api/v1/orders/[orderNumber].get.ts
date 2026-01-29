@@ -2,7 +2,7 @@ import { orders, events, tickets, ticketTypes, ticketRegistrationFields, users }
 import { eq, and, sql, asc, inArray } from 'drizzle-orm'
 
 // Default payment methods if not configured
-const DEFAULT_PAYMENT_METHODS = ['gcash', 'paymaya', 'card', 'grab_pay', 'qrph']
+const DEFAULT_PAYMENT_METHODS = ['qrph', 'gcash', 'paymaya', 'grab_pay', 'shopee_pay']
 
 export default defineEventHandler(async (event) => {
   const orderNumber = getRouterParam(event, 'orderNumber')

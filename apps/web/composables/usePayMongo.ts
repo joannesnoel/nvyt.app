@@ -70,6 +70,13 @@ export interface PaymentMethod {
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
   {
+    type: 'qrph',
+    label: 'QR Ph',
+    description: 'Scan QR with your banking app',
+    icon: 'i-heroicons-qr-code',
+    needsClientCreation: false,
+  },
+  {
     type: 'gcash',
     label: 'GCash',
     description: 'Pay with your GCash wallet',
@@ -88,13 +95,6 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
     label: 'GrabPay',
     description: 'Pay with your Grab wallet',
     icon: 'i-heroicons-banknotes',
-    needsClientCreation: false,
-  },
-  {
-    type: 'qrph',
-    label: 'QR Ph',
-    description: 'Scan QR with your banking app',
-    icon: 'i-heroicons-qr-code',
     needsClientCreation: false,
   },
   {

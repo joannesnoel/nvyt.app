@@ -378,8 +378,11 @@ function goBack() {
                 <p v-else-if="selectedPaymentMethod === 'grab_pay'">
                   You will be redirected to GrabPay to authorize the payment.
                 </p>
+                <p v-else-if="selectedPaymentMethod === 'shopee_pay'">
+                  You will be redirected to ShopeePay to authorize the payment.
+                </p>
                 <p v-else-if="selectedPaymentMethod === 'qrph'">
-                  A QR code will be generated. Scan it with your banking app to complete payment.
+                  A QR code will be generated. Upload it to your banking app to complete payment.
                 </p>
               </div>
             </div>

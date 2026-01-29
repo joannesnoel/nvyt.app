@@ -89,7 +89,7 @@ const features = [
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mobile-container-padding relative z-20 w-full">
         <div class="text-center max-w-3xl mx-auto hero-mobile-spacing">
           <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 animate-fade-in-up">
-            <span class="text-metallic-3d">Create events.</span> <span class="text-purple-3d">Bring people.</span>
+            <span class="text-metallic-3d">Create Events That</span> <span class="text-purple-3d">Bring People Together</span>
           </h1>
           <p class="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 animate-fade-in-up animation-delay-200 hero-tagline">
             Create events, sell tickets, and manage everything — all in one place.
@@ -499,12 +499,12 @@ const features = [
         </div>
         
         <div class="grid grid-cols-2 md:grid-cols-5 gap-6 items-center justify-center max-w-5xl mx-auto">
-          <!-- QRph -->
+          <!-- QRPh -->
           <div class="flex flex-col items-center">
             <div class="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center mb-3 shadow-md p-2">
-              <img src="/qrph.svg" alt="QRph" class="w-full h-full object-contain">
+              <img src="/qrph.svg" alt="QRPh" class="w-full h-full object-contain">
             </div>
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">QRph</span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">QRPh</span>
           </div>
           
           <!-- GCash -->
