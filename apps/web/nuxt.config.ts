@@ -5,7 +5,7 @@ import { resolve } from 'path'
 // Load .env from monorepo root
 config({ path: resolve(__dirname, '../../.env') })
 
-const isProduction = process.env.NODE_ENV === 'production' && process.env.APP_URL === 'https://nvyt.app'
+const enableGTM = process.env.ENABLE_GTM === 'true'
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -13,7 +13,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
-      script: isProduction
+      script: enableGTM
         ? [
             {
               src: 'https://www.googletagmanager.com/gtag/js?id=G-56XD48QPN8',
