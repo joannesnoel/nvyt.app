@@ -155,6 +155,8 @@ export default defineEventHandler(async (event) => {
     ...result.order,
     event: eventData,
     tickets: ticketList,
+    // Viewer context
+    isOrganizer: isEventOrganizer && !isOrderOwner,
     // Payment methods allowed
     paymentMethodAllowed,
     // Registration info

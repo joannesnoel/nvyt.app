@@ -25,6 +25,7 @@ const { data: orderResponse, pending, error } = await useFetch<{
     customerEmail: string
     createdAt: string
     paidAt?: string | null
+    isOrganizer?: boolean
     hasRegistrationFields?: boolean
     registrationStats?: {
       total: number
@@ -241,11 +242,11 @@ async function retryPayment() {
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Back Link -->
       <NuxtLink
-        to="/tickets"
+        :to="order?.isOrganizer ? `/dashboard/events/${order?.event?.id}/orders` : '/tickets'"
         class="inline-flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-primary mb-6"
       >
         <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
-        Back to My Tickets
+        {{ order?.isOrganizer ? 'Back to Event Dashboard' : 'Back to My Tickets' }}
       </NuxtLink>
 
       <!-- Loading -->
@@ -266,6 +267,19 @@ async function retryPayment() {
 
       <!-- Order Details -->
       <div v-else>
+        <!-- Organizer Banner -->
+        <UAlert
+          v-if="order.isOrganizer"
+          color="blue"
+          icon="i-heroicons-eye"
+          class="mb-6"
+        >
+          <template #title>Viewing as organizer</template>
+          <template #description>
+            This order was placed by {{ order.customerName }} ({{ order.customerEmail }}).
+          </template>
+        </UAlert>
+
         <!-- Order Header -->
         <div class="mb-6">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Order Details</h1>
@@ -341,26 +355,28 @@ async function retryPayment() {
                   >
                     {{ ticket.registrationCompleted ? 'Registered' : 'Pending' }}
                   </UBadge>
-                  <UButton
-                    v-if="ticket.status === 'confirmed' || ticket.status === 'checked_in'"
-                    color="gray"
-                    variant="ghost"
-                    size="xs"
-                    icon="i-heroicons-arrow-down-tray"
-                    :loading="downloadingTicket === ticket.id"
-                    @click="downloadSingleTicket(ticket.id, ticket.ticketNumber)"
-                  >
-                    PDF
-                  </UButton>
-                  <UButton
-                    :to="`/tickets/${ticket.id}`"
-                    color="gray"
-                    variant="ghost"
-                    size="xs"
-                    icon="i-heroicons-qr-code"
-                  >
-                    QR
-                  </UButton>
+                  <template v-if="!order.isOrganizer">
+                    <UButton
+                      v-if="ticket.status === 'confirmed' || ticket.status === 'checked_in'"
+                      color="gray"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-heroicons-arrow-down-tray"
+                      :loading="downloadingTicket === ticket.id"
+                      @click="downloadSingleTicket(ticket.id, ticket.ticketNumber)"
+                    >
+                      PDF
+                    </UButton>
+                    <UButton
+                      :to="`/tickets/${ticket.id}`"
+                      color="gray"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-heroicons-qr-code"
+                    >
+                      QR
+                    </UButton>
+                  </template>
                 </div>
               </div>
             </div>
@@ -420,7 +436,7 @@ async function retryPayment() {
         </UCard>
 
         <!-- Registration Incomplete Alert -->
-        <UCard v-if="hasIncompleteRegistration" class="mb-6 border-2 border-primary">
+        <UCard v-if="hasIncompleteRegistration && !order.isOrganizer" class="mb-6 border-2 border-primary">
           <div class="flex items-start gap-4">
             <div class="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-full">
               <UIcon name="i-heroicons-clipboard-document-list" class="w-6 h-6 text-primary" />
@@ -448,7 +464,7 @@ async function retryPayment() {
 
         <!-- Payment Pending/Failed Alert -->
         <UAlert
-          v-if="canRetryPayment"
+          v-if="canRetryPayment && !order.isOrganizer"
           :color="order.paymentStatus === 'failed' ? 'red' : 'yellow'"
           :icon="order.paymentStatus === 'failed' ? 'i-heroicons-x-circle' : 'i-heroicons-clock'"
           class="mb-6"
@@ -466,47 +482,49 @@ async function retryPayment() {
 
         <!-- Actions -->
         <div class="flex flex-col gap-3">
+          <template v-if="!order.isOrganizer">
+            <UButton
+              v-if="canRetryPayment"
+              color="primary"
+              block
+              size="lg"
+              icon="i-heroicons-credit-card"
+              :loading="retryingPayment"
+              @click="retryPayment"
+            >
+              {{ order.paymentStatus === 'failed' ? 'Retry Payment' : 'Complete Payment' }}
+            </UButton>
+            <UButton
+              v-if="canDownload"
+              color="primary"
+              block
+              size="lg"
+              icon="i-heroicons-arrow-down-tray"
+              :loading="downloading"
+              @click="downloadAllTickets"
+            >
+              Download All Tickets (PDF)
+            </UButton>
+            <UButton
+              to="/tickets"
+              :color="canDownload || canRetryPayment ? 'gray' : 'primary'"
+              :variant="canDownload || canRetryPayment ? 'outline' : 'solid'"
+              block
+              size="lg"
+              icon="i-heroicons-ticket"
+            >
+              View My Tickets
+            </UButton>
+          </template>
           <UButton
-            v-if="canRetryPayment"
-            color="primary"
-            block
-            size="lg"
-            icon="i-heroicons-credit-card"
-            :loading="retryingPayment"
-            @click="retryPayment"
-          >
-            {{ order.paymentStatus === 'failed' ? 'Retry Payment' : 'Complete Payment' }}
-          </UButton>
-          <UButton
-            v-if="canDownload"
-            color="primary"
-            block
-            size="lg"
-            icon="i-heroicons-arrow-down-tray"
-            :loading="downloading"
-            @click="downloadAllTickets"
-          >
-            Download All Tickets (PDF)
-          </UButton>
-          <UButton
-            to="/tickets"
-            :color="canDownload || canRetryPayment ? 'gray' : 'primary'"
-            :variant="canDownload || canRetryPayment ? 'outline' : 'solid'"
-            block
-            size="lg"
-            icon="i-heroicons-ticket"
-          >
-            View My Tickets
-          </UButton>
-          <UButton
-            :to="`/events/${order.event?.slug}`"
+            :to="order.isOrganizer ? `/events/${order.event?.slug}/dashboard` : `/events/${order.event?.slug}`"
             color="gray"
             variant="outline"
             block
             size="lg"
-            icon="i-heroicons-calendar"
+            :icon="order.isOrganizer ? 'i-heroicons-chart-bar' : 'i-heroicons-calendar'"
           >
-            Back to Event
+            {{ order.isOrganizer ? 'Back to Event Dashboard' : 'Back to Event' }}
           </UButton>
         </div>
       </div>

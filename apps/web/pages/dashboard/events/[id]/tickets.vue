@@ -784,7 +784,7 @@ function getTierTypeColor(tierType: string) {
         </div>
 
         <!-- Next Step: Setup Public Page -->
-        <div v-if="ticketTypes.length > 0" class="mt-8 p-6 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+        <div v-if="ticketTypes.length > 0 && event.status !== 'published'" class="mt-8 p-6 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h3 class="font-semibold text-gray-900 dark:text-white">
