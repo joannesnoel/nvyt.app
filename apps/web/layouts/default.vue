@@ -241,7 +241,7 @@ const userMenuItems = computed(() => {
               </li>
               <li class="flex items-center gap-2">
                 <UIcon name="i-heroicons-phone" class="w-4 h-4 flex-shrink-0" />
-                <a href="tel:+639524773274" class="hover:text-primary">+63 (952) 477-3274</a>
+                <a href="tel:+639495741457" class="hover:text-primary">+63 (949) 574-1457</a>
               </li>
               <li class="flex items-center gap-2">
                 <UIcon name="i-heroicons-envelope" class="w-4 h-4 flex-shrink-0" />
