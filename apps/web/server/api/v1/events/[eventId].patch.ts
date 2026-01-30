@@ -39,6 +39,28 @@ export default defineEventHandler(async (event) => {
     ? { status: body.status as typeof allowedStatusValues[number] }
     : {}
 
+  // Require thumbnail image when publishing (public events only)
+  const eventVisibility = ('visibility' in body && body.visibility) || existingEvent.visibility
+  if (statusUpdate.status === 'published' && existingEvent.status !== 'published' && eventVisibility !== 'private') {
+    const hasThumbnail = ('thumbnailImage' in body && body.thumbnailImage) || existingEvent.thumbnailImage
+    if (!hasThumbnail) {
+      throw createError({
+        statusCode: 400,
+        message: 'A thumbnail image is required before publishing. Please upload a thumbnail image in the event settings.',
+        data: { code: 'THUMBNAIL_REQUIRED' },
+      })
+    }
+  }
+
+  // Prevent removing thumbnail image on a published public event
+  if (existingEvent.status === 'published' && eventVisibility !== 'private' && 'thumbnailImage' in body && !body.thumbnailImage) {
+    throw createError({
+      statusCode: 400,
+      message: 'Cannot remove the thumbnail image while the event is published. You can replace it with a different image.',
+      data: { code: 'THUMBNAIL_REMOVAL_BLOCKED' },
+    })
+  }
+
   // Check verification requirement when publishing
   if (statusUpdate.status === 'published' && existingEvent.status !== 'published') {
     // Check if this event has paid tickets

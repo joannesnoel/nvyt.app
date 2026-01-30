@@ -274,6 +274,13 @@
       "when": 1769690347466,
       "tag": "0038_mean_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1769761236502,
+      "tag": "0039_certain_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

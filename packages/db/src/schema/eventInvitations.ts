@@ -15,6 +15,9 @@ export const eventInvitations = pgTable('event_invitations', {
   // The invited email (may or may not be an existing user)
   email: text('email').notNull(),
 
+  // Invitee name (optional)
+  name: text('name'),
+
   // Unique token for tracking this invitation
   inviteToken: text('invite_token').unique().notNull(),
 

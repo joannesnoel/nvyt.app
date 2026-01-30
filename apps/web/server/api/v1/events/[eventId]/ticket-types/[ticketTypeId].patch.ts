@@ -1,6 +1,7 @@
-import { ticketTypes, events } from '@nvyt/db'
+import { ticketTypes } from '@nvyt/db'
 import { updateTicketTypeSchema } from '@nvyt/shared'
 import { eq, and } from 'drizzle-orm'
+import { unpublishIfUnverified } from '~/server/utils/eventVerification'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -51,6 +52,11 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       message: `Cannot reduce quantity below already sold amount (${existingTicketType.quantitySold})`,
     })
+  }
+
+  // If setting price > 0, unpublish the event if not verified
+  if (data.price !== undefined && data.price > 0) {
+    await unpublishIfUnverified(eventId)
   }
 
   // Build update object

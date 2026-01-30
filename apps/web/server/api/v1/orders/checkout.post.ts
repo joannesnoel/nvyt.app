@@ -137,6 +137,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  if (eventRecord.status === 'draft' && eventRecord.visibility === 'public') {
+    throw createError({
+      statusCode: 400,
+      message: 'This event is not yet published',
+    })
+  }
+
   // Get event verification to retrieve admin fee rate (for paid events)
   const [verification] = await db
     .select({ adminFeeRate: eventVerifications.adminFeeRate })

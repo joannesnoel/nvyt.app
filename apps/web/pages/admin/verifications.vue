@@ -416,7 +416,7 @@ const statusOptions = [
                     variant="soft"
                     size="xs"
                   >
-                    {{ selectedVerification.verification.eventStatus }}
+                    {{ selectedVerification.verification.eventStatus === 'published' ? 'Live' : selectedVerification.verification.eventStatus }}
                   </UBadge>
                 </div>
               </div>

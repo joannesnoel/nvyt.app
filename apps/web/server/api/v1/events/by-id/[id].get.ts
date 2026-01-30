@@ -73,13 +73,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Check access - must be organizer or event must be public/have invite token
+  // Private events are viewable by anyone with the URL, just not listed publicly
   const isOrganizer = currentUser?.id === eventData.organizerId
 
-  if (!isOrganizer && eventData.visibility === 'private') {
+  // Block draft events from non-organizers
+  if (!isOrganizer && eventData.status === 'draft') {
     throw createError({
-      statusCode: 403,
-      message: 'You do not have access to this event',
+      statusCode: 404,
+      message: 'Event not found',
     })
   }
 

@@ -8,7 +8,7 @@ const eventId = computed(() => route.params.id as string)
 const toast = useToast()
 
 // Fetch event details
-const { data: eventResponse, pending: eventPending } = await useFetch(
+const { data: eventResponse, pending: eventPending, refresh: refreshEvent } = await useFetch(
   () => `/api/v1/events/by-id/${eventId.value}`,
   { watch: [eventId] }
 )
@@ -21,10 +21,32 @@ const { data: ticketTypesResponse, pending: ticketsPending, refresh: refreshTick
 )
 const ticketTypes = computed(() => ticketTypesResponse.value?.data ?? [])
 
+// Fetch verification status
+const { data: verificationResponse } = await useFetch(
+  () => `/api/v1/events/${eventId.value}/verification`,
+  { watch: [eventId] }
+)
+const verification = computed(() => verificationResponse.value?.data)
+
 // Modal state
 const showModal = ref(false)
 const editingTicketType = ref<any>(null)
 const isSubmitting = ref(false)
+const unpublishConfirmed = ref(false)
+
+// Whether saving will unpublish the event
+const willUnpublish = computed(() => {
+  if (!event.value || event.value.status !== 'published') return false
+  if (verification.value?.status === 'approved') return false
+  // Creating a new paid ticket
+  if (!editingTicketType.value && formData.value.price > 0) return true
+  // Editing an existing ticket: changing to paid
+  if (editingTicketType.value && formData.value.price > 0) {
+    const oldPrice = parseFloat(editingTicketType.value.price)
+    if (oldPrice === 0) return true
+  }
+  return false
+})
 
 // Form data
 const formData = ref({
@@ -54,11 +76,13 @@ function openCreateModal() {
     showAvailability: true,
     showNextTierPrice: true,
   }
+  unpublishConfirmed.value = false
   showModal.value = true
 }
 
 function openEditModal(ticketType: any) {
   editingTicketType.value = ticketType
+  unpublishConfirmed.value = false
   formData.value = {
     name: ticketType.name,
     description: ticketType.description || '',
@@ -126,8 +150,17 @@ async function saveTicketType() {
       })
     }
 
+    const wasUnpublished = willUnpublish.value
     showModal.value = false
     await refreshTicketTypes()
+    if (wasUnpublished) {
+      await refreshEvent()
+      toast.add({
+        title: 'Event Unpublished',
+        description: 'Your event has been moved to draft. Complete business verification to re-publish.',
+        color: 'orange',
+      })
+    }
   } catch (e: any) {
     toast.add({
       title: 'Error',
@@ -889,6 +922,27 @@ function getTierTypeColor(tierType: string) {
             </div>
           </div>
 
+          <!-- Unpublish warning -->
+          <UAlert
+            v-if="willUnpublish && !unpublishConfirmed"
+            color="orange"
+            variant="subtle"
+            icon="i-heroicons-exclamation-triangle"
+            title="This will unpublish your event"
+            description="Adding a paid ticket requires business verification. Your event will be moved to draft until verification is approved."
+          >
+            <template #actions>
+              <UButton
+                color="orange"
+                variant="solid"
+                size="sm"
+                @click="unpublishConfirmed = true"
+              >
+                I understand, continue
+              </UButton>
+            </template>
+          </UAlert>
+
           <div class="flex justify-end gap-3 pt-4">
             <UButton
               color="gray"
@@ -901,6 +955,7 @@ function getTierTypeColor(tierType: string) {
               type="submit"
               color="primary"
               :loading="isSubmitting"
+              :disabled="willUnpublish && !unpublishConfirmed"
             >
               {{ editingTicketType ? 'Save Changes' : 'Create Ticket Type' }}
             </UButton>

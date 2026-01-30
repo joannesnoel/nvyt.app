@@ -32,7 +32,7 @@ const { data: events, pending } = await useFetch('/api/v1/events')
         <div
           v-for="i in 6"
           :key="i"
-          class="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+          class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
         >
           <USkeleton class="h-48 w-full" />
           <div class="p-4 space-y-3">
@@ -49,7 +49,7 @@ const { data: events, pending } = await useFetch('/api/v1/events')
           v-for="event in events.data"
           :key="event.id"
           :to="`/events/${event.slug}`"
-          class="group rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-primary dark:hover:border-primary transition-colors"
+          class="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden hover:border-primary dark:hover:border-primary transition-colors"
         >
           <div class="relative bg-gray-100 dark:bg-gray-800 overflow-hidden" style="padding-bottom: 56.25%;">
             <img

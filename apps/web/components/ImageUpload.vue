@@ -11,6 +11,9 @@ const props = withDefaults(defineProps<{
   enableCrop?: boolean
   aspectRatio?: number // e.g., 16/9, 1, or undefined for free
   cropperTitle?: string
+  // Output size constraints (resizes after cropping)
+  maxWidth?: number
+  maxHeight?: number
 }>(), {
   enableCrop: true,
   aspectRatio: 16 / 9,
@@ -112,6 +115,26 @@ function onCropperReady() {
   cropperLoading.value = false
 }
 
+function resizeCanvas(source: HTMLCanvasElement, maxW?: number, maxH?: number): HTMLCanvasElement {
+  if (!maxW && !maxH) return source
+  let { width, height } = source
+  if (maxW && width > maxW) {
+    height = Math.round(height * (maxW / width))
+    width = maxW
+  }
+  if (maxH && height > maxH) {
+    width = Math.round(width * (maxH / height))
+    height = maxH
+  }
+  if (width === source.width && height === source.height) return source
+  const resized = document.createElement('canvas')
+  resized.width = width
+  resized.height = height
+  const ctx = resized.getContext('2d')
+  ctx?.drawImage(source, 0, 0, width, height)
+  return resized
+}
+
 async function confirmCrop() {
   if (!cropperRef.value || !originalFile.value) return
 
@@ -124,9 +147,12 @@ async function confirmCrop() {
       return
     }
 
+    // Resize to max dimensions if specified
+    const outputCanvas = resizeCanvas(canvas, props.maxWidth, props.maxHeight)
+
     // Convert canvas to blob
     const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((b) => resolve(b), originalFile.value!.type, 0.9)
+      outputCanvas.toBlob((b) => resolve(b), originalFile.value!.type, 0.9)
     })
 
     if (!blob) {

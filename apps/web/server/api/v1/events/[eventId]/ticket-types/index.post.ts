@@ -1,6 +1,7 @@
 import { ticketTypes, events } from '@nvyt/db'
 import { createTicketTypeSchema } from '@nvyt/shared'
 import { eq } from 'drizzle-orm'
+import { unpublishIfUnverified } from '~/server/utils/eventVerification'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -51,6 +52,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const data = result.data
+
+  // If adding a paid ticket, unpublish the event if not verified
+  if (data.price > 0) {
+    await unpublishIfUnverified(eventId)
+  }
 
   // Create ticket type
   const [newTicketType] = await db

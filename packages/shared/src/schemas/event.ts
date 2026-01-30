@@ -96,8 +96,8 @@ const youtubeUrlSchema = z.union([
 const baseEventFields = {
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
   description: z.string().max(5000).optional(),
-  thumbnailImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || undefined),
-  coverImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || undefined),
+  thumbnailImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || null),
+  coverImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || null),
   promoVideoUrl: youtubeUrlSchema.optional(),
   mediaType: eventMediaType.default('image'),
   organizationName: z.string().max(100).optional(), // Override "Organized by" display

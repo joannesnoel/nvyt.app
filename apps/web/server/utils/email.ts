@@ -61,7 +61,7 @@ async function sendViaSmtp(options: SendEmailOptions): Promise<EmailResult> {
 
   try {
     const info = await smtp.sendMail({
-      from: (config.smtpFrom as string) || 'nvyt <noreply@nvyt.app>',
+      from: (config.smtpFrom as string) || 'NVYT <noreply@nvyt.app>',
       to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
       subject: options.subject,
       html: options.html,
@@ -91,7 +91,7 @@ async function sendViaResend(options: SendEmailOptions): Promise<EmailResult> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'nvyt <noreply@nvyt.app>',
+        from: 'NVYT <noreply@nvyt.app>',
         to: Array.isArray(options.to) ? options.to : [options.to],
         subject: options.subject,
         html: options.html,
@@ -161,7 +161,10 @@ export function rsvpConfirmationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're confirmed!</h2>
@@ -188,7 +191,7 @@ export function rsvpConfirmationEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           See you there!<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -212,7 +215,10 @@ export function rsvpPendingEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">RSVP Pending Approval</h2>
@@ -230,7 +236,7 @@ export function rsvpPendingEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -255,7 +261,10 @@ export function rsvpWaitlistEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're on the Waitlist</h2>
@@ -275,7 +284,7 @@ export function rsvpWaitlistEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -302,7 +311,10 @@ export function waitlistPromotedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're In!</h2>
@@ -329,7 +341,7 @@ export function waitlistPromotedEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           See you there!<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -356,7 +368,10 @@ export function rsvpApprovedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">RSVP Approved!</h2>
@@ -383,7 +398,7 @@ export function rsvpApprovedEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           See you there!<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -407,7 +422,10 @@ export function rsvpDeclinedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">RSVP Update</h2>
@@ -425,7 +443,7 @@ export function rsvpDeclinedEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -453,7 +471,10 @@ export function eventReminderEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Event Reminder</h2>
@@ -480,7 +501,7 @@ export function eventReminderEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           See you soon!<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -505,7 +526,10 @@ export function eventCancelledEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Event Cancelled</h2>
@@ -519,7 +543,7 @@ export function eventCancelledEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -576,7 +600,7 @@ export function ticketPurchaseConfirmationEmail(data: {
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
         <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           <div style="text-align: center; margin-bottom: 24px;">
-            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
           </div>
 
           <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Your Tickets Are Confirmed!</h2>
@@ -606,7 +630,7 @@ export function ticketPurchaseConfirmationEmail(data: {
 
           <p style="color: #666; font-size: 14px; text-align: center;">
             See you at the event!<br>
-            The nvyt Team
+            The NVYT&trade; Team
           </p>
         </div>
       </body>
@@ -655,7 +679,7 @@ export function paymentSuccessfulEmail(data: {
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
         <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           <div style="text-align: center; margin-bottom: 24px;">
-            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
           </div>
 
           <div style="text-align: center; margin-bottom: 20px;">
@@ -693,7 +717,7 @@ export function paymentSuccessfulEmail(data: {
 
           <p style="color: #666; font-size: 14px; text-align: center;">
             See you at the event!<br>
-            The nvyt Team
+            The NVYT&trade; Team
           </p>
         </div>
       </body>
@@ -724,7 +748,7 @@ export function attendeeTicketEmail(data: {
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
         <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           <div style="text-align: center; margin-bottom: 24px;">
-            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
           </div>
 
           <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Your Ticket is Ready!</h2>
@@ -764,7 +788,7 @@ export function attendeeTicketEmail(data: {
 
           <p style="color: #666; font-size: 14px; text-align: center;">
             See you at the event!<br>
-            The nvyt Team
+            The NVYT&trade; Team
           </p>
         </div>
       </body>
@@ -791,7 +815,10 @@ export function accountSetupEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Set Up Your Account</h2>
@@ -813,7 +840,7 @@ export function accountSetupEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -836,7 +863,10 @@ export function accountSetupReminderEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Set Up Your Account</h2>
@@ -856,7 +886,7 @@ export function accountSetupReminderEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -887,7 +917,10 @@ export function collaboratorInvitationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're Invited to Collaborate!</h2>
@@ -927,7 +960,7 @@ export function collaboratorInvitationEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -936,14 +969,22 @@ export function collaboratorInvitationEmail(data: {
 }
 
 export function rsvpInvitationEmail(data: {
+  inviteeName?: string
   organizerName: string
   eventTitle: string
   eventDate: string
   eventLocation?: string
   eventDescription?: string
+  eventThumbnail?: string
+  isTicketEvent?: boolean
   customMessage?: string
   rsvpUrl: string
 }): { subject: string; html: string } {
+  const greeting = data.inviteeName ? `Hi ${data.inviteeName},` : 'Hi there,'
+  const ctaLabel = data.isTicketEvent ? 'View Event & Get Tickets' : 'View Event & RSVP'
+  const ctaHint = data.isTicketEvent
+    ? 'Click the button above to view the full event details and get your tickets.'
+    : 'Click the button above to view the full event details and let us know if you can make it.'
   return {
     subject: `You're invited to ${data.eventTitle}`,
     html: `
@@ -955,14 +996,23 @@ export function rsvpInvitationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're Invited!</h2>
 
-        <p>Hi there,</p>
+        <p>${greeting}</p>
 
         <p><strong>${data.organizerName}</strong> has invited you to:</p>
+
+        ${data.eventThumbnail ? `
+        <div style="margin: 20px 0; text-align: center;">
+          <img src="${data.eventThumbnail}" alt="${data.eventTitle}" style="max-width: 100%; height: auto; border-radius: 8px;" />
+        </div>
+        ` : ''}
 
         <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <h3 style="margin: 0 0 15px 0; color: #111;">${data.eventTitle}</h3>
@@ -980,18 +1030,18 @@ export function rsvpInvitationEmail(data: {
 
         <p style="text-align: center; margin: 30px 0;">
           <a href="${data.rsvpUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">
-            View Event & RSVP
+            ${ctaLabel}
           </a>
         </p>
 
         <p style="color: #666; font-size: 14px; text-align: center;">
-          Click the button above to view the full event details and let us know if you can make it.
+          ${ctaHint}
         </p>
 
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1014,7 +1064,10 @@ export function passwordResetEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Reset Your Password</h2>
@@ -1036,7 +1089,7 @@ export function passwordResetEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1063,7 +1116,10 @@ export function verificationApprovedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <div style="text-align: center; margin-bottom: 20px;">
@@ -1098,7 +1154,7 @@ export function verificationApprovedEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           Thank you for verifying your business with nvyt.<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1124,7 +1180,10 @@ export function verificationRejectedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Verification Update</h2>
@@ -1161,7 +1220,7 @@ export function verificationRejectedEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1185,7 +1244,10 @@ export function verificationUnderReviewEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <div style="text-align: center; margin-bottom: 20px;">
@@ -1216,7 +1278,7 @@ export function verificationUnderReviewEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           Thank you for your patience.<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1241,7 +1303,10 @@ export function verificationSubmittedEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Verification Submitted</h2>
@@ -1275,7 +1340,7 @@ export function verificationSubmittedEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           Thank you for choosing nvyt.<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1298,7 +1363,10 @@ export function welcomeEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Welcome to nvyt!</h2>
@@ -1319,7 +1387,7 @@ export function welcomeEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           Welcome aboard!<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1342,7 +1410,10 @@ export function emailVerificationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">Verify Your Email</h2>
@@ -1360,7 +1431,7 @@ export function emailVerificationEmail(data: {
         <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
         <p style="color: #666; font-size: 14px;">
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1388,7 +1459,10 @@ export function ticketRegisteredNotificationEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're Going to ${data.eventTitle}!</h2>
@@ -1414,7 +1488,7 @@ export function ticketRegisteredNotificationEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           See you at the event!<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>
@@ -1442,7 +1516,10 @@ export function ticketRegisteredSetupEmail(data: {
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 40px; width: auto;" />
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
 
         <h2 style="color: #111; margin-bottom: 10px;">You're Going to ${data.eventTitle}!</h2>
@@ -1470,7 +1547,7 @@ export function ticketRegisteredSetupEmail(data: {
 
         <p style="color: #666; font-size: 14px;">
           See you at the event!<br>
-          The nvyt Team
+          The NVYT&trade; Team
         </p>
       </body>
       </html>

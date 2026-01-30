@@ -111,8 +111,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Check if event is published
-  if (eventData.status !== 'published') {
+  // Block RSVPs for draft public events (private draft events are accessible via invite link)
+  if (eventData.status !== 'published' && !(eventData.status === 'draft' && eventData.visibility === 'private')) {
     throw createError({
       statusCode: 400,
       message: 'This event is not accepting RSVPs',

@@ -340,6 +340,8 @@ async function handleSubmit() {
                   placeholder="Click or drag to upload a thumbnail image"
                   cropper-title="Adjust Thumbnail"
                   :aspect-ratio="16 / 9"
+                  :max-width="737"
+                  :max-height="414"
                 />
               </UFormGroup>
 

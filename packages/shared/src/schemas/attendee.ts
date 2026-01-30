@@ -34,7 +34,10 @@ export const bulkUpdateRsvpSchema = z.object({
 
 export const inviteAttendeesSchema = z.object({
   eventId: z.string().uuid(),
-  emails: z.array(z.string().email()).min(1).max(100),
+  invitees: z.array(z.object({
+    name: z.string().max(100).optional(),
+    email: z.string().email(),
+  })).min(1).max(1000),
   message: z.string().max(1000).optional(), // Custom invitation message
 })
 

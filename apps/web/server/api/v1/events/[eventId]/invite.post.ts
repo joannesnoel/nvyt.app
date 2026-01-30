@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { emails, message } = result.data
+  const { invitees, message } = result.data
   const db = useDatabase()
 
   // Verify user is the organizer or has permission
@@ -43,6 +43,8 @@ export default defineEventHandler(async (event) => {
       inviteToken: events.inviteToken,
       organizerId: events.organizerId,
       organizationName: events.organizationName,
+      registrationMode: events.registrationMode,
+      thumbnailImage: events.thumbnailImage,
     })
     .from(events)
     .where(eq(events.id, eventId))
@@ -62,8 +64,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Normalize emails to lowercase
-  const normalizedEmails = emails.map(e => e.toLowerCase())
+  // Normalize emails to lowercase and build lookup
+  const normalizedInvitees = invitees.map(i => ({ name: i.name, email: i.email.toLowerCase() }))
+  const allEmails = normalizedInvitees.map(i => i.email)
 
   // Check for already invited emails
   const existingInvitations = await db
@@ -72,18 +75,18 @@ export default defineEventHandler(async (event) => {
     .where(
       and(
         eq(eventInvitations.eventId, eventId),
-        inArray(eventInvitations.email, normalizedEmails)
+        inArray(eventInvitations.email, allEmails)
       )
     )
 
   const alreadyInvitedEmails = new Set(existingInvitations.map(i => i.email))
-  const newEmails = normalizedEmails.filter(e => !alreadyInvitedEmails.has(e))
+  const newInvitees = normalizedInvitees.filter(i => !alreadyInvitedEmails.has(i.email))
 
-  if (newEmails.length === 0) {
+  if (newInvitees.length === 0) {
     return successResponse({
       message: 'All recipients have already been invited',
       sent: 0,
-      alreadyInvited: normalizedEmails.length,
+      alreadyInvited: allEmails.length,
       invitations: [],
     })
   }
@@ -103,72 +106,84 @@ export default defineEventHandler(async (event) => {
       })
     : 'TBD'
 
-  // Create invitation records and send emails
-  const invitations = []
-  const emailResults = []
-
-  for (const email of newEmails) {
+  // Prepare invitation records with tokens
+  const invitationValues = newInvitees.map(invitee => {
     const inviteToken = randomBytes(32).toString('hex')
-
-    // Build RSVP URL - include invite token for tracking
-    // For private events, also include the event access token
-    let rsvpUrl = `${baseUrl}/events/${eventData.slug}?invite=${inviteToken}`
-    if (eventData.visibility === 'private' && eventData.inviteToken) {
-      rsvpUrl += `&token=${eventData.inviteToken}`
+    return {
+      eventId,
+      email: invitee.email,
+      name: invitee.name || null,
+      inviteToken,
+      invitedBy: user.id,
+      message: message || null,
     }
+  })
 
-    // Create invitation record
-    const [invitation] = await db
-      .insert(eventInvitations)
-      .values({
-        eventId,
-        email,
-        inviteToken,
-        invitedBy: user.id,
-        message: message || null,
+  // Batch insert all invitation records at once
+  const invitations = await db
+    .insert(eventInvitations)
+    .values(invitationValues)
+    .returning()
+
+  // Build a lookup from email to invitation for RSVP URLs
+  const invitationByEmail = new Map(invitations.map(i => [i.email, i]))
+
+  // Send emails in parallel with concurrency limit
+  const CONCURRENCY = 10
+  const emailResults: { email: string; success: boolean; error?: string }[] = []
+
+  for (let i = 0; i < newInvitees.length; i += CONCURRENCY) {
+    const batch = newInvitees.slice(i, i + CONCURRENCY)
+    const batchResults = await Promise.all(
+      batch.map(async (invitee) => {
+        const invitation = invitationByEmail.get(invitee.email)
+        if (!invitation) return { email: invitee.email, success: false, error: 'No invitation record' }
+
+        let rsvpUrl = `${baseUrl}/events/${eventData.slug}?invite=${invitation.inviteToken}`
+        if (eventData.visibility === 'private' && eventData.inviteToken) {
+          rsvpUrl += `&token=${eventData.inviteToken}`
+        }
+
+        const emailContent = rsvpInvitationEmail({
+          inviteeName: invitee.name,
+          organizerName: eventData.organizationName || user.name || 'Event Organizer',
+          eventTitle: eventData.title,
+          eventDate,
+          eventLocation: eventData.location || undefined,
+          eventDescription: eventData.description || undefined,
+          eventThumbnail: eventData.thumbnailImage || undefined,
+          isTicketEvent: eventData.registrationMode === 'tickets',
+          customMessage: message,
+          rsvpUrl,
+        })
+
+        const result = await sendEmail({
+          to: invitee.email,
+          subject: emailContent.subject,
+          html: emailContent.html,
+        })
+
+        return { email: invitee.email, success: result.success, error: result.error }
       })
-      .returning()
-
-    invitations.push(invitation)
-
-    // Send invitation email
-    const emailContent = rsvpInvitationEmail({
-      organizerName: eventData.organizationName || user.name || 'Event Organizer',
-      eventTitle: eventData.title,
-      eventDate,
-      eventLocation: eventData.location || undefined,
-      eventDescription: eventData.description || undefined,
-      customMessage: message,
-      rsvpUrl,
-    })
-
-    const emailResult = await sendEmail({
-      to: email,
-      subject: emailContent.subject,
-      html: emailContent.html,
-    })
-
-    emailResults.push({
-      email,
-      success: emailResult.success,
-      error: emailResult.error,
-    })
+    )
+    emailResults.push(...batchResults)
   }
 
   const successCount = emailResults.filter(r => r.success).length
   const failedEmails = emailResults.filter(r => !r.success).map(r => r.email)
 
   return successResponse({
-    message: `Invitations sent to ${successCount} of ${newEmails.length} recipients`,
+    message: `Invitations sent to ${successCount} of ${newInvitees.length} recipients`,
     sent: successCount,
     failed: failedEmails.length,
     failedEmails: failedEmails.length > 0 ? failedEmails : undefined,
     alreadyInvited: alreadyInvitedEmails.size,
-    invitations: invitations.filter(Boolean).map(i => ({
-      id: i!.id,
-      email: i!.email,
-      status: i!.status,
-      invitedAt: i!.invitedAt,
+    invitations: invitations.map(i => ({
+      id: i.id,
+      email: i.email,
+      name: i.name,
+      status: i.status,
+      invitedAt: i.invitedAt,
     })),
   })
 })

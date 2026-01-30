@@ -143,8 +143,8 @@ async function updateEventStatus(status: 'published' | 'draft' | 'cancelled') {
     })
 
     const messages: Record<string, { title: string; description: string }> = {
-      published: { title: 'Event Published', description: 'Your event is now live and visible to the public.' },
-      draft: { title: 'Event Unpublished', description: 'Your event is now a draft and hidden from the public.' },
+      published: { title: 'Event is Live', description: 'Your event is now live and accepting registrations.' },
+      draft: { title: 'Event Offline', description: 'Your event has been taken offline.' },
       cancelled: { title: 'Event Cancelled', description: 'Event has been cancelled and attendees notified.' },
     }
 
@@ -256,6 +256,10 @@ function formatDate(date: string) {
   })
 }
 
+function getStatusLabel(status: string) {
+  return status === 'published' ? 'Live' : status
+}
+
 function getStatusColor(status: string) {
   switch (status) {
     case 'published': return 'green'
@@ -296,7 +300,7 @@ function getStatusColor(status: string) {
                 {{ event.title }}
               </h1>
               <UBadge :color="getStatusColor(event.status)" variant="soft">
-                {{ event.status }}
+                {{ getStatusLabel(event.status) }}
               </UBadge>
             </div>
             <p class="text-gray-600 dark:text-gray-400 mt-1">
@@ -340,7 +344,7 @@ function getStatusColor(status: string) {
               :loading="isUpdating"
               @click="showPublishModal = true"
             >
-              Publish
+              Go Live
             </UButton>
             <UButton
               v-else-if="event.status === 'published'"
@@ -350,7 +354,7 @@ function getStatusColor(status: string) {
               :loading="isUpdating"
               @click="showUnpublishModal = true"
             >
-              Unpublish
+              Take Offline
             </UButton>
           </div>
         </div>
@@ -731,7 +735,7 @@ function getStatusColor(status: string) {
                   </p>
                 </div>
 
-                <div>
+                <div v-if="event.registrationMode === 'rsvp'">
                   <p class="text-sm text-gray-500 mb-1">Requires Approval</p>
                   <p class="font-medium text-gray-900 dark:text-white">
                     {{ event.requiresApproval ? 'Yes' : 'No' }}
@@ -858,20 +862,74 @@ function getStatusColor(status: string) {
               <UIcon name="i-heroicons-rocket-launch" class="w-5 h-5 text-green-600" />
             </div>
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Publish Event
+              Go Live
             </h3>
           </div>
         </template>
 
         <div class="space-y-4">
-          <p class="text-gray-600 dark:text-gray-400">
-            Ready to go live? Publishing will:
+          <UAlert
+            v-if="!event?.thumbnailImage && event?.visibility !== 'private'"
+            color="orange"
+            variant="subtle"
+            icon="i-heroicons-exclamation-triangle"
+            title="Thumbnail image required"
+            description="Please upload a thumbnail image in the event media settings before publishing."
+          >
+            <template #actions>
+              <UButton
+                color="orange"
+                variant="solid"
+                size="sm"
+                icon="i-heroicons-pencil-square"
+                :to="`/dashboard/events/${eventId}/edit`"
+                @click="showPublishModal = false"
+              >
+                Edit Event
+              </UButton>
+            </template>
+          </UAlert>
+
+          <UAlert
+            v-if="needsVerification"
+            color="orange"
+            variant="subtle"
+            icon="i-heroicons-shield-exclamation"
+            title="Business verification required"
+            :description="verification?.status === 'rejected'
+              ? 'Your verification was rejected. Please resubmit with valid documents before publishing.'
+              : verification?.status === 'pending' || verification?.status === 'under_review'
+                ? 'Your verification is being reviewed. Please wait for approval before publishing.'
+                : 'Events selling paid tickets require business verification before publishing.'"
+          >
+            <template #actions>
+              <UButton
+                color="orange"
+                variant="solid"
+                size="sm"
+                icon="i-heroicons-shield-check"
+                :to="`/dashboard/events/${eventId}/verification`"
+                @click="showPublishModal = false"
+              >
+                {{ verification?.status === 'not_submitted' ? 'Start Verification' : 'View Verification' }}
+              </UButton>
+            </template>
+          </UAlert>
+
+          <p v-if="(event?.thumbnailImage || event?.visibility === 'private') && !needsVerification" class="text-gray-600 dark:text-gray-400">
+            Are you ready to publish <span class="font-semibold text-gray-900 dark:text-white">{{ event?.title }}</span>?
           </p>
-          <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-            <li>Make your event visible to the public</li>
-            <li>Allow people to register or purchase tickets</li>
-            <li>Enable sharing and discovery</li>
-          </ul>
+
+          <div class="space-y-2">
+            <h4 class="font-medium text-gray-900 dark:text-white">Once published:</h4>
+            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li v-if="event?.visibility === 'public'">Your event will be visible to the public</li>
+              <li v-else>Your event will be accessible via invite link</li>
+              <li v-if="event?.registrationMode === 'tickets'">Attendees will be able to purchase tickets</li>
+              <li v-else>Attendees will be able to RSVP</li>
+              <li>You can still edit event details after publishing</li>
+            </ul>
+          </div>
         </div>
 
         <template #footer>
@@ -881,14 +939,15 @@ function getStatusColor(status: string) {
               variant="outline"
               @click="showPublishModal = false"
             >
-              Not Yet
+              Cancel
             </UButton>
             <UButton
-              color="primary"
+              color="green"
               :loading="isUpdating"
+              :disabled="(!event?.thumbnailImage && event?.visibility !== 'private') || needsVerification"
               @click="confirmPublish"
             >
-              Publish Event
+              Go Live
             </UButton>
           </div>
         </template>
@@ -904,14 +963,14 @@ function getStatusColor(status: string) {
               <UIcon name="i-heroicons-eye-slash" class="w-5 h-5 text-yellow-600" />
             </div>
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Unpublish Event
+              Take Offline
             </h3>
           </div>
         </template>
 
         <div class="space-y-4">
           <p class="text-gray-600 dark:text-gray-400">
-            Are you sure you want to unpublish this event? This will:
+            Are you sure you want to take this event offline? This will:
           </p>
           <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
             <li>Hide the event from public view</li>
@@ -927,14 +986,14 @@ function getStatusColor(status: string) {
               variant="outline"
               @click="showUnpublishModal = false"
             >
-              Keep Published
+              Keep Live
             </UButton>
             <UButton
               color="yellow"
               :loading="isUpdating"
               @click="confirmUnpublish"
             >
-              Unpublish Event
+              Take Offline
             </UButton>
           </div>
         </template>

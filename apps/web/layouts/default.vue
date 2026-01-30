@@ -19,7 +19,7 @@ watch(() => route.path, () => {
 const mainNavItems = [
   { label: 'Dashboard', icon: 'i-heroicons-squares-2x2', to: '/dashboard' },
   { label: 'My Events', icon: 'i-heroicons-calendar-days', to: '/my-events' },
-  { label: 'My Tickets', icon: 'i-heroicons-ticket', to: '/tickets' },
+  { label: 'My Registrations', icon: 'i-heroicons-ticket', to: '/tickets' },
 ]
 
 // Check if a nav item is active

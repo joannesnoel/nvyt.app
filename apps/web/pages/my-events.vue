@@ -49,7 +49,7 @@ const stats = computed(() => {
 
 const statusOptions = [
   { label: 'All Events', value: 'all' },
-  { label: 'Published', value: 'published' },
+  { label: 'Live', value: 'published' },
   { label: 'Draft', value: 'draft' },
   { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
@@ -61,6 +61,10 @@ function formatDate(date: string) {
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+function getStatusLabel(status: string) {
+  return status === 'published' ? 'Live' : status
 }
 
 function getStatusColor(status: string) {
@@ -182,71 +186,62 @@ function isUpcoming(date: string) {
           v-for="event in filteredEvents"
           :key="event.id"
           :to="`/dashboard/events/${event.id}`"
-          class="group block"
+          class="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden hover:border-primary dark:hover:border-primary transition-colors"
         >
-          <UCard class="h-full hover:ring-2 hover:ring-primary transition-all">
-            <!-- Cover Image -->
-            <template #header>
-              <div class="relative bg-gray-100 dark:bg-gray-800 -m-4 mb-0 rounded-t-lg overflow-hidden" style="padding-bottom: 56.25%;">
-                <img
-                  v-if="getEventImage(event)"
-                  :src="getEventImage(event)!.src"
-                  :alt="event.title"
-                  class="absolute inset-0 w-full h-full object-cover"
-                  @error="(e: Event) => {
-                    const img = e.target as HTMLImageElement
-                    const eventImg = getEventImage(event)
-                    if (eventImg?.fallback && img.src !== eventImg.fallback) {
-                      img.src = eventImg.fallback
-                    }
-                  }"
-                >
-                <div v-else class="absolute inset-0 flex items-center justify-center">
-                  <UIcon name="i-heroicons-photo" class="w-10 h-10 text-gray-400" />
-                </div>
-
-                <!-- Upcoming Badge -->
-                <div v-if="isUpcoming(event.startDate) && event.status === 'published'" class="absolute top-2 left-2">
-                  <UBadge color="blue" variant="solid" size="xs">
-                    Upcoming
-                  </UBadge>
-                </div>
-              </div>
-            </template>
-
-            <!-- Content -->
-            <div>
-              <div class="flex items-start justify-between gap-2 mb-2">
-                <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-2">
-                  {{ event.title }}
-                </h3>
-                <UBadge :color="getStatusColor(event.status)" variant="soft" size="xs" class="flex-shrink-0">
-                  {{ event.status }}
-                </UBadge>
-              </div>
-
-              <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                <UIcon name="i-heroicons-calendar-days" class="w-4 h-4 inline mr-1" />
-                {{ formatDate(event.startDate) }}
-              </p>
-
-              <p v-if="event.location" class="text-sm text-gray-500 mb-3 truncate">
-                <UIcon name="i-heroicons-map-pin" class="w-4 h-4 inline mr-1" />
-                {{ event.location }}
-              </p>
-
-              <!-- Stats -->
-              <div class="flex items-center gap-4 text-sm pt-3 border-t border-gray-100 dark:border-gray-800">
-                <span class="text-green-600">
-                  <UIcon name="i-heroicons-users" class="w-4 h-4 inline mr-1" />
-                  {{ event.stats?.confirmed ?? 0 }} confirmed
-                </span>
-                <span v-if="event.stats?.pending > 0" class="text-yellow-600">
-                  {{ event.stats.pending }} pending
-                </span>
-              </div>
+          <div class="relative bg-gray-100 dark:bg-gray-800 overflow-hidden" style="padding-bottom: 56.25%;">
+            <img
+              v-if="getEventImage(event)"
+              :src="getEventImage(event)!.src"
+              :alt="event.title"
+              class="absolute inset-0 w-full h-full object-cover"
+              @error="(e: Event) => {
+                const img = e.target as HTMLImageElement
+                const eventImg = getEventImage(event)
+                if (eventImg?.fallback && img.src !== eventImg.fallback) {
+                  img.src = eventImg.fallback
+                }
+              }"
+            >
+            <div v-else class="absolute inset-0 flex items-center justify-center">
+              <UIcon name="i-heroicons-photo" class="w-12 h-12 text-gray-400" />
             </div>
-          </UCard>
+
+            <!-- Upcoming Badge -->
+            <div v-if="isUpcoming(event.startDate) && event.status === 'published'" class="absolute top-2 left-2">
+              <UBadge color="blue" variant="solid" size="xs">
+                Upcoming
+              </UBadge>
+            </div>
+          </div>
+          <div class="p-4">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-2">
+                {{ event.title }}
+              </h3>
+              <UBadge :color="getStatusColor(event.status)" variant="soft" size="xs" class="flex-shrink-0">
+                {{ getStatusLabel(event.status) }}
+              </UBadge>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <UIcon name="i-heroicons-calendar-days" class="w-4 h-4 inline mr-1" />
+              {{ formatDate(event.startDate) }}
+            </p>
+            <p v-if="event.location" class="text-sm text-gray-500 mt-1 truncate">
+              <UIcon name="i-heroicons-map-pin" class="w-4 h-4 inline mr-1" />
+              {{ event.location }}
+            </p>
+
+            <!-- Stats -->
+            <div class="flex items-center gap-4 text-sm pt-3 mt-3 border-t border-gray-100 dark:border-gray-800">
+              <span class="text-green-600">
+                <UIcon name="i-heroicons-users" class="w-4 h-4 inline mr-1" />
+                {{ event.stats?.confirmed ?? 0 }} confirmed
+              </span>
+              <span v-if="event.stats?.pending > 0" class="text-yellow-600">
+                {{ event.stats.pending }} pending
+              </span>
+            </div>
+          </div>
         </NuxtLink>
       </div>
     </div>

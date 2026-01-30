@@ -2,6 +2,7 @@ import { ticketTypes, ticketPriceTiers } from '@nvyt/db'
 import { createPriceTierSchema } from '@nvyt/shared'
 import { eq } from 'drizzle-orm'
 import { checkTierOverlap, type PriceTierType } from '~/server/utils/pricing'
+import { unpublishIfUnverified } from '~/server/utils/eventVerification'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -58,6 +59,11 @@ export default defineEventHandler(async (event) => {
         message: 'Price tier dates overlap with an existing tier. Please adjust the dates.',
       })
     }
+  }
+
+  // If adding a paid price tier, unpublish the event if not verified
+  if (data.price > 0) {
+    await unpublishIfUnverified(eventId)
   }
 
   // Create the price tier

@@ -9,42 +9,47 @@ const { getEventImage } = useYoutubeThumbnail()
 // Fetch my events
 const { data: eventsData, pending: eventsPending } = await useFetch('/api/v1/events/my-events')
 
-// Fetch my tickets/registrations (confirmed or checked-in)
-const { data: ticketsResponse, pending: ticketsPending } = await useFetch('/api/v1/tickets', {
-  query: {
-    limit: 5,
-  },
+// Fetch my registrations (tickets + RSVPs unified)
+const { data: registrationsResponse, pending: registrationsPending } = await useFetch('/api/v1/registrations', {
+  query: { limit: 10 },
 })
 
 const myEvents = computed(() => eventsData.value?.data?.events ?? [])
-const myTickets = computed(() => ticketsResponse.value?.data ?? [])
+const myRegistrations = computed(() => registrationsResponse.value?.data ?? [])
 
-// Group tickets by event
-const ticketsByEvent = computed(() => {
+// Group registrations by event
+const registrationsByEvent = computed(() => {
   const grouped = new Map<string, {
     event: any
-    tickets: any[]
+    items: any[]
     count: number
+    hasRsvp: boolean
+    rsvpStatus?: string
   }>()
 
-  for (const ticket of myTickets.value) {
-    if (!ticket.event) continue
+  for (const reg of myRegistrations.value) {
+    if (!reg.event) continue
 
-    const eventId = ticket.event.id
+    const eventId = reg.event.id
     if (!grouped.has(eventId)) {
       grouped.set(eventId, {
-        event: ticket.event,
-        tickets: [],
+        event: reg.event,
+        items: [],
         count: 0,
+        hasRsvp: false,
       })
     }
 
     const group = grouped.get(eventId)!
-    group.tickets.push(ticket)
+    group.items.push(reg)
     group.count++
+    if (reg.type === 'rsvp') {
+      group.hasRsvp = true
+      group.rsvpStatus = reg.status
+    }
   }
 
-  // Convert to array and sort by event date (upcoming first)
+  // Sort by event date (upcoming first)
   return Array.from(grouped.values()).sort((a, b) => {
     const dateA = new Date(a.event.startDate).getTime()
     const dateB = new Date(b.event.startDate).getTime()
@@ -70,6 +75,10 @@ function formatDateTime(date: string) {
   })
 }
 
+function getStatusLabel(status: string) {
+  return status === 'published' ? 'Live' : status
+}
+
 function getStatusColor(status: string) {
   switch (status) {
     case 'published': return 'green'
@@ -80,13 +89,27 @@ function getStatusColor(status: string) {
   }
 }
 
-function getTicketStatusColor(status: string) {
+function getRegStatusColor(status: string) {
   switch (status) {
     case 'confirmed': return 'green'
     case 'pending': return 'yellow'
     case 'checked_in': return 'blue'
+    case 'waitlisted': return 'blue'
     case 'cancelled': return 'red'
+    case 'declined': return 'red'
     default: return 'gray'
+  }
+}
+
+function getRegStatusLabel(status: string) {
+  switch (status) {
+    case 'confirmed': return 'Confirmed'
+    case 'pending': return 'Pending Approval'
+    case 'waitlisted': return 'Waitlisted'
+    case 'checked_in': return 'Checked In'
+    case 'declined': return 'Declined'
+    case 'cancelled': return 'Cancelled'
+    default: return status
   }
 }
 
@@ -115,7 +138,7 @@ function isUpcoming(date: string) {
       </div>
 
       <!-- Getting Started (shown for new users with no events) -->
-      <div v-if="!eventsPending && !ticketsPending && myEvents.length === 0 && myTickets.length === 0" class="mb-8">
+      <div v-if="!eventsPending && !registrationsPending && myEvents.length === 0 && myRegistrations.length === 0" class="mb-8">
         <UCard class="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 border-primary-200 dark:border-primary-800">
           <div class="text-center py-4">
             <div class="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -162,8 +185,8 @@ function isUpcoming(date: string) {
         </UCard>
       </div>
 
-      <!-- My Registrations (only show if user has registrations) -->
-      <div v-if="myTickets.length > 0 || ticketsPending" class="mb-8">
+      <!-- My Registrations (tickets + RSVPs unified) -->
+      <div v-if="myRegistrations.length > 0 || registrationsPending" class="mb-8">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
             My Registrations
@@ -174,16 +197,16 @@ function isUpcoming(date: string) {
         </div>
 
         <!-- Loading -->
-        <div v-if="ticketsPending" class="space-y-3">
+        <div v-if="registrationsPending" class="space-y-3">
           <USkeleton v-for="i in 3" :key="i" class="h-20" />
         </div>
 
         <!-- Grouped by Event -->
         <div v-else class="space-y-3">
           <NuxtLink
-            v-for="group in ticketsByEvent"
+            v-for="group in registrationsByEvent"
             :key="group.event.id"
-            :to="`/tickets?eventId=${group.event.id}`"
+            :to="group.hasRsvp ? `/events/${group.event.slug}` : `/tickets?eventId=${group.event.id}`"
             class="block"
           >
             <UCard class="hover:ring-2 hover:ring-primary transition-all">
@@ -233,10 +256,22 @@ function isUpcoming(date: string) {
                   </p>
                 </div>
 
-                <!-- Ticket Count -->
-                <div class="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary rounded-full text-sm font-medium">
-                  <UIcon name="i-heroicons-ticket" class="w-4 h-4" />
-                  <span>{{ group.count }}</span>
+                <!-- Status / Count -->
+                <div class="flex-shrink-0">
+                  <!-- RSVP: show status badge -->
+                  <UBadge
+                    v-if="group.hasRsvp"
+                    :color="getRegStatusColor(group.rsvpStatus!)"
+                    variant="soft"
+                    size="sm"
+                  >
+                    {{ getRegStatusLabel(group.rsvpStatus!) }}
+                  </UBadge>
+                  <!-- Tickets: show count -->
+                  <div v-else class="flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary rounded-full text-sm font-medium">
+                    <UIcon name="i-heroicons-ticket" class="w-4 h-4" />
+                    <span>{{ group.count }}</span>
+                  </div>
                 </div>
               </div>
             </UCard>
@@ -275,63 +310,55 @@ function isUpcoming(date: string) {
             v-for="event in myEvents"
             :key="event.id"
             :to="`/dashboard/events/${event.id}`"
-            class="group block"
+            class="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden hover:border-primary dark:hover:border-primary transition-colors"
           >
-            <UCard class="h-full hover:ring-2 hover:ring-primary transition-all">
-              <!-- Cover Image -->
-              <template #header>
-                <div class="relative bg-gray-100 dark:bg-gray-800 -m-4 mb-0 rounded-t-lg overflow-hidden" style="padding-bottom: 56.25%;">
-                  <img
-                    v-if="getEventImage(event)"
-                    :src="getEventImage(event)!.src"
-                    :alt="event.title"
-                    class="absolute inset-0 w-full h-full object-cover"
-                    @error="(e: Event) => {
-                      const img = e.target as HTMLImageElement
-                      const eventImg = getEventImage(event)
-                      if (eventImg?.fallback && img.src !== eventImg.fallback) {
-                        img.src = eventImg.fallback
-                      }
-                    }"
-                  >
-                  <div v-else class="absolute inset-0 flex items-center justify-center">
-                    <UIcon name="i-heroicons-photo" class="w-10 h-10 text-gray-400" />
-                  </div>
-                </div>
-              </template>
-
-              <!-- Content -->
-              <div>
-                <div class="flex items-start justify-between gap-2 mb-2">
-                  <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-1">
-                    {{ event.title }}
-                  </h3>
-                  <UBadge :color="getStatusColor(event.status)" variant="soft" size="xs">
-                    {{ event.status }}
-                  </UBadge>
-                </div>
-
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  <UIcon name="i-heroicons-calendar-days" class="w-4 h-4 inline mr-1" />
-                  {{ formatDate(event.startDate) }}
-                  <span v-if="event.location" class="ml-2">
-                    <UIcon name="i-heroicons-map-pin" class="w-4 h-4 inline mr-1" />
-                    {{ event.location }}
-                  </span>
-                </p>
-
-                <!-- Stats -->
-                <div class="flex items-center gap-4 text-sm">
-                  <span class="text-green-600">
-                    <UIcon name="i-heroicons-users" class="w-4 h-4 inline mr-1" />
-                    {{ event.stats.confirmed }} confirmed
-                  </span>
-                  <span v-if="event.stats.pending > 0" class="text-yellow-600">
-                    {{ event.stats.pending }} pending
-                  </span>
-                </div>
+            <div class="relative bg-gray-100 dark:bg-gray-800 overflow-hidden" style="padding-bottom: 56.25%;">
+              <img
+                v-if="getEventImage(event)"
+                :src="getEventImage(event)!.src"
+                :alt="event.title"
+                class="absolute inset-0 w-full h-full object-cover"
+                @error="(e: Event) => {
+                  const img = e.target as HTMLImageElement
+                  const eventImg = getEventImage(event)
+                  if (eventImg?.fallback && img.src !== eventImg.fallback) {
+                    img.src = eventImg.fallback
+                  }
+                }"
+              >
+              <div v-else class="absolute inset-0 flex items-center justify-center">
+                <UIcon name="i-heroicons-photo" class="w-12 h-12 text-gray-400" />
               </div>
-            </UCard>
+            </div>
+            <div class="p-4">
+              <div class="flex items-start justify-between gap-2 mb-1">
+                <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-2">
+                  {{ event.title }}
+                </h3>
+                <UBadge :color="getStatusColor(event.status)" variant="soft" size="xs" class="flex-shrink-0">
+                  {{ getStatusLabel(event.status) }}
+                </UBadge>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <UIcon name="i-heroicons-calendar-days" class="w-4 h-4 inline mr-1" />
+                {{ formatDate(event.startDate) }}
+              </p>
+              <p v-if="event.location" class="text-sm text-gray-500 mt-1 truncate">
+                <UIcon name="i-heroicons-map-pin" class="w-4 h-4 inline mr-1" />
+                {{ event.location }}
+              </p>
+
+              <!-- Stats -->
+              <div class="flex items-center gap-4 text-sm pt-3 mt-3 border-t border-gray-100 dark:border-gray-800">
+                <span class="text-green-600">
+                  <UIcon name="i-heroicons-users" class="w-4 h-4 inline mr-1" />
+                  {{ event.stats.confirmed }} confirmed
+                </span>
+                <span v-if="event.stats.pending > 0" class="text-yellow-600">
+                  {{ event.stats.pending }} pending
+                </span>
+              </div>
+            </div>
           </NuxtLink>
         </div>
       </div>
