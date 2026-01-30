@@ -281,6 +281,44 @@ function getTicketSaleWarning(tt: any): { show: boolean; message: string } | nul
   }
 }
 
+// Drag and drop reordering
+const isDragging = ref(false)
+const draggedIndex = ref<number | null>(null)
+
+function handleDragStart(index: number) {
+  isDragging.value = true
+  draggedIndex.value = index
+}
+
+function handleDragEnd() {
+  isDragging.value = false
+  draggedIndex.value = null
+}
+
+async function handleDrop(targetIndex: number) {
+  if (draggedIndex.value === null || draggedIndex.value === targetIndex) return
+
+  const ticketTypeIds = [...ticketTypes.value].map(t => t.id)
+  const [movedId] = ticketTypeIds.splice(draggedIndex.value!, 1)
+  if (movedId) {
+    ticketTypeIds.splice(targetIndex, 0, movedId)
+  }
+
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}/ticket-types/reorder`, {
+      method: 'PATCH',
+      body: { ticketTypeIds },
+    })
+    await refreshTicketTypes()
+  } catch (e: any) {
+    toast.add({
+      title: 'Error',
+      description: e.data?.message || 'Failed to reorder ticket types',
+      color: 'red',
+    })
+  }
+}
+
 // Price tier management
 const expandedTiers = ref<Set<string>>(new Set())
 const priceTiersCache = ref<Record<string, any[]>>({})
@@ -570,9 +608,23 @@ function getTierTypeColor(tierType: string) {
         </div>
 
         <div v-else class="space-y-4">
-          <UCard v-for="tt in ticketTypes" :key="tt.id">
+          <div
+            v-for="(tt, index) in ticketTypes"
+            :key="tt.id"
+            draggable="true"
+            @dragstart="handleDragStart(index)"
+            @dragend="handleDragEnd"
+            @drop.prevent="handleDrop(index)"
+            @dragover.prevent
+          >
+          <UCard :class="{ 'opacity-50': isDragging && draggedIndex === index }">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div class="flex-1">
+              <div class="flex items-start gap-3 flex-1">
+                <!-- Drag handle -->
+                <div class="cursor-move text-gray-400 hover:text-gray-600 mt-1">
+                  <UIcon name="i-heroicons-bars-3" class="w-5 h-5" />
+                </div>
+                <div class="flex-1">
                 <div class="flex items-center gap-3 mb-2">
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                     {{ tt.name }}
@@ -626,6 +678,7 @@ function getTierTypeColor(tierType: string) {
                     <span class="text-sm">{{ getTicketSaleWarning(tt)?.message }}</span>
                   </template>
                 </UAlert>
+              </div>
               </div>
 
               <div class="flex items-center gap-2">
@@ -781,6 +834,7 @@ function getTierTypeColor(tierType: string) {
               </div>
             </div>
           </UCard>
+          </div>
         </div>
 
         <!-- Next Step: Setup Public Page -->
