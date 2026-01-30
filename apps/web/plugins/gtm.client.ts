@@ -1,7 +1,7 @@
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
 
-  if (config.public.enableGtm !== 'true') return
+  if (!config.public.enableGtm || config.public.enableGtm === 'false') return
 
   const gtagScript = document.createElement('script')
   gtagScript.async = true

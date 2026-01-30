@@ -58,6 +58,7 @@ resource "aws_ecs_task_definition" "main" {
         { name = "PORT", value = tostring(var.container_port) },
         { name = "NUXT_PUBLIC_APP_URL", value = var.app_url },
         { name = "APP_URL", value = var.app_url },
+        { name = "NUXT_PUBLIC_ENABLE_GTM", value = "true" },
       ]
 
       secrets = [
