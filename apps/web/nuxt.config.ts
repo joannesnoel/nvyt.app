@@ -5,7 +5,7 @@ import { resolve } from 'path'
 // Load .env from monorepo root
 config({ path: resolve(__dirname, '../../.env') })
 
-const enableGTM = process.env.ENABLE_GTM === 'true'
+const enableGTM = process.env.NUXT_PUBLIC_ENABLE_GTM === 'true'
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
