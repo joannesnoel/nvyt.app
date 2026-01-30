@@ -5,30 +5,12 @@ import { resolve } from 'path'
 // Load .env from monorepo root
 config({ path: resolve(__dirname, '../../.env') })
 
-const enableGTM = process.env.NUXT_PUBLIC_ENABLE_GTM === 'true'
-
 export default defineNuxtConfig({
   devtools: { enabled: true },
   telemetry: false,
   app: {
     head: {
       viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
-      script: enableGTM
-        ? [
-            {
-              src: 'https://www.googletagmanager.com/gtag/js?id=G-56XD48QPN8',
-              async: true,
-            },
-            {
-              innerHTML: `
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', 'G-56XD48QPN8');
-              `,
-            },
-          ]
-        : [],
     },
   },
 
@@ -94,6 +76,7 @@ export default defineNuxtConfig({
       // PayPal (client-side)
       paypalClientId: process.env.PAYPAL_CLIENT_ID,
       paypalMode: process.env.PAYPAL_MODE || 'sandbox',
+      enableGtm: process.env.ENABLE_GTM || 'false',
     },
   },
 
