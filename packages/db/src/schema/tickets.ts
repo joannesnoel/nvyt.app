@@ -79,6 +79,10 @@ export const tickets = pgTable('tickets', {
   // Sort order within an order (0-indexed, set during ticket creation)
   sortOrder: integer('sort_order').default(0).notNull(),
 
+  // Price at time of purchase (for tier pricing)
+  pricePaid: decimal('price_paid', { precision: 10, scale: 2 }),
+  priceTierName: text('price_tier_name'),
+
   status: ticketStatusEnum('status').default('pending').notNull(),
   checkedInAt: timestamp('checked_in_at', { withTimezone: true }),
 

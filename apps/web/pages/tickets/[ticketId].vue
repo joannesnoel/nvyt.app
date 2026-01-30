@@ -140,7 +140,10 @@ function getStatusColor(status: string) {
             <div class="space-y-3 border-t border-dashed border-gray-200 dark:border-gray-700 pt-4">
               <div class="flex items-center justify-between">
                 <span class="text-gray-500">Ticket Type</span>
-                <span class="font-medium text-gray-900 dark:text-white">{{ ticket.ticketType?.name }}</span>
+                <span class="font-medium text-gray-900 dark:text-white">
+                  {{ ticket.ticketType?.name }}
+                  <span v-if="ticket.priceTierName" class="text-xs text-gray-500 font-normal">({{ ticket.priceTierName }})</span>
+                </span>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-gray-500">Ticket Number</span>
@@ -149,7 +152,7 @@ function getStatusColor(status: string) {
               <div class="flex items-center justify-between">
                 <span class="text-gray-500">Price</span>
                 <span class="font-medium text-gray-900 dark:text-white">
-                  {{ parseFloat(ticket.ticketType?.price) === 0 ? 'Free' : formatCurrency(ticket.ticketType?.price) }}
+                  {{ parseFloat(ticket.pricePaid ?? ticket.ticketType?.price) === 0 ? 'Free' : formatCurrency(ticket.pricePaid ?? ticket.ticketType?.price) }}
                 </span>
               </div>
               <div v-if="ticket.attendeeName" class="flex items-center justify-between">
