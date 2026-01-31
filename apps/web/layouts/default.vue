@@ -49,6 +49,10 @@ const userMenuItems = computed(() => {
       icon: 'i-heroicons-shield-check',
       to: '/admin/verifications',
     }, {
+      label: 'Users',
+      icon: 'i-heroicons-users',
+      to: '/admin/users',
+    }, {
       label: 'Payouts',
       icon: 'i-heroicons-banknotes',
       to: '/admin/payouts',

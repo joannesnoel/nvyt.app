@@ -17,6 +17,7 @@
     "@nvyt/db": "workspace:*",
     "@nvyt/shared": "workspace:*",
     "@pinia/nuxt": "^0.5.5",
+    "@sentry/nuxt": "^10.38.0",
     "@vueuse/nuxt": "^11.3.0",
     "dotenv": "^16.4.7",
     "html5-qrcode": "^2.3.8",

@@ -49,19 +49,27 @@ export default defineEventHandler(async (event) => {
     })
     .where(eq(users.id, verificationToken.userId))
 
-  // Get user info for response
+  // Get user for session creation
   const [user] = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-    })
+    .select()
     .from(users)
     .where(eq(users.id, verificationToken.userId))
     .limit(1)
 
+  // Auto-login: create session and set cookie
+  const sessionToken = await createSession(event, user)
+  const accessToken = await createAccessToken(user)
+
   return successResponse({
     message: 'Email verified successfully',
-    user,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      emailVerified: true,
+    },
+    accessToken,
+    sessionToken,
   })
 })

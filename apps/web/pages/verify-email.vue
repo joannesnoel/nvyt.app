@@ -22,12 +22,12 @@ onMounted(async () => {
   }
 
   try {
-    await $fetch('/api/v1/auth/verify-email', {
+    const response = await $fetch('/api/v1/auth/verify-email', {
       method: 'POST',
       body: { token: token.value },
     })
 
-    // Refresh user state to update emailVerified
+    // Session cookie is set by the server; refresh user state so the app recognizes the logged-in user
     await fetchUser()
 
     verified.value = true

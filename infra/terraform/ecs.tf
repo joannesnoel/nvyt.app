@@ -59,6 +59,7 @@ resource "aws_ecs_task_definition" "main" {
         { name = "NUXT_PUBLIC_APP_URL", value = var.app_url },
         { name = "APP_URL", value = var.app_url },
         { name = "NUXT_PUBLIC_ENABLE_GTM", value = "true" },
+        { name = "NUXT_PUBLIC_SENTRY_DSN", value = var.sentry_dsn },
       ]
 
       secrets = [

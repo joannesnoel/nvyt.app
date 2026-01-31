@@ -237,3 +237,9 @@ variable "smtp_from" {
   type        = string
   default     = "nvyt <noreply@nvyt.app>"
 }
+
+variable "sentry_dsn" {
+  description = "Sentry DSN for error tracking"
+  type        = string
+  default     = ""
+}
