@@ -68,9 +68,9 @@ const resentFor = ref<Set<string>>(new Set())
 async function resendVerification(userId: string) {
   resendingFor.value = userId
   try {
-    await $fetch(`/api/v1/admin/users/${userId}/resend-verification`, { method: 'POST' })
+    const res = await $fetch(`/api/v1/admin/users/${userId}/resend-verification`, { method: 'POST' })
     resentFor.value.add(userId)
-    toast.add({ title: 'Verification email sent', color: 'green' })
+    toast.add({ title: (res as any).data?.message || 'Email sent', color: 'green' })
   } catch (e: any) {
     toast.add({ title: e?.data?.message || 'Failed to send email', color: 'red' })
   } finally {
@@ -225,11 +225,11 @@ const emailVerifiedOptions = [
                   />
                   <UButton
                     v-else-if="!u.emailVerified"
-                    icon="i-heroicons-envelope"
+                    :icon="u.hasPassword ? 'i-heroicons-envelope' : 'i-heroicons-key'"
                     size="xs"
                     color="gray"
                     variant="ghost"
-                    title="Resend verification email"
+                    :title="u.hasPassword ? 'Resend verification email' : 'Send account setup email'"
                     :loading="resendingFor === u.id"
                     @click="resendVerification(u.id)"
                   />

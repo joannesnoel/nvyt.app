@@ -54,6 +54,7 @@ export default defineEventHandler(async (event) => {
       emailVerified: users.emailVerified,
       createdAt: users.createdAt,
       avatarUrl: users.avatarUrl,
+      hasPassword: sql<boolean>`${users.passwordHash} is not null`,
       hasGoogle: sql<boolean>`${users.googleId} is not null`,
       hasFacebook: sql<boolean>`${users.facebookId} is not null`,
       eventCount: sql<number>`(select count(*) from ${events} where ${events.organizerId} = ${users.id})`,
