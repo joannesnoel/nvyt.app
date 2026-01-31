@@ -1,6 +1,6 @@
+import * as Sentry from '@sentry/nuxt'
+
 export default defineEventHandler(() => {
-  throw createError({
-    statusCode: 500,
-    message: 'Sentry test error - safe to ignore',
-  })
+  Sentry.captureException(new Error('Sentry server test - safe to ignore'))
+  throw new Error('Sentry server test - unhandled')
 })
