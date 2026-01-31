@@ -39,6 +39,9 @@ paypal_client_secret = "your-client-secret"
 paypal_mode          = "live"  # or "sandbox" for testing
 paypal_webhook_id    = "your-webhook-id"
 
+# Sentry (error tracking)
+sentry_dsn = "https://examplePublicKey@o0.ingest.sentry.io/0"
+
 # SMTP (for sending emails)
 smtp_host = "smtp.example.com"
 smtp_port = "587"
