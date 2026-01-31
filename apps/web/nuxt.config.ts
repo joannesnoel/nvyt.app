@@ -19,7 +19,7 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@vueuse/nuxt',
     '@nuxt/eslint',
-    ...(process.env.NUXT_PUBLIC_SENTRY_DSN ? ['@sentry/nuxt/module'] : []),
+    '@sentry/nuxt/module',
   ],
 
   css: ['~/assets/css/main.css'],
@@ -82,13 +82,11 @@ export default defineNuxtConfig({
     },
   },
 
-  ...(process.env.NUXT_PUBLIC_SENTRY_DSN ? {
-    sentry: {
-      sourceMapsUploadOptions: {
-        enabled: false,
-      },
+  sentry: {
+    sourceMapsUploadOptions: {
+      enabled: false,
     },
-  } : {}),
+  },
 
   sourcemap: {
     client: 'hidden',
