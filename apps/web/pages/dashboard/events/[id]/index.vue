@@ -370,7 +370,7 @@ function getStatusColor(status: string) {
                 <p class="text-2xl font-bold text-gray-900 dark:text-white">
                   {{ stats?.confirmed ?? 0 }}
                 </p>
-                <p class="text-sm text-gray-500">Confirmed</p>
+                <p class="text-sm text-gray-500">{{ isTicketMode ? 'Confirmed Tickets' : 'Confirmed RSVPs' }}</p>
               </div>
             </div>
           </UCard>
@@ -384,7 +384,7 @@ function getStatusColor(status: string) {
                 <p class="text-2xl font-bold text-gray-900 dark:text-white">
                   {{ stats?.pending ?? 0 }}
                 </p>
-                <p class="text-sm text-gray-500">Pending</p>
+                <p class="text-sm text-gray-500">{{ isTicketMode ? 'Pending Tickets' : 'Pending RSVPs' }}</p>
               </div>
             </div>
           </UCard>
