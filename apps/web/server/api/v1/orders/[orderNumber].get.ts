@@ -1,5 +1,5 @@
-import { orders, events, tickets, ticketTypes, ticketRegistrationFields, users } from '@nvyt/db'
-import { eq, and, sql, asc, inArray } from 'drizzle-orm'
+import { orders, events, tickets, ticketTypes, ticketRegistrationFields, users, eventCollaborators } from '@nvyt/db'
+import { eq, and, sql, asc, inArray, isNotNull } from 'drizzle-orm'
 
 // Default payment methods if not configured
 const DEFAULT_PAYMENT_METHODS = ['qrph', 'gcash', 'paymaya', 'grab_pay', 'shopee_pay']
@@ -68,15 +68,30 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify access: order owner OR event organizer can view
+  // Verify access: order owner OR event organizer OR collaborator with canViewAnalytics
   const isOrderOwner = result.order.userId === userId
   const isEventOrganizer = result.event.organizerId === userId
 
+  let isCollaborator = false
   if (!isOrderOwner && !isEventOrganizer) {
-    throw createError({
-      statusCode: 403,
-      message: 'You are not authorized to view this order',
+    // Check if user is a collaborator with canViewAnalytics permission
+    const collaborator = await db.query.eventCollaborators.findFirst({
+      where: and(
+        eq(eventCollaborators.eventId, result.event.id),
+        eq(eventCollaborators.userId, userId),
+        eq(eventCollaborators.canViewAnalytics, true),
+        isNotNull(eventCollaborators.acceptedAt)
+      ),
     })
+
+    if (collaborator) {
+      isCollaborator = true
+    } else {
+      throw createError({
+        statusCode: 403,
+        message: 'You are not authorized to view this order',
+      })
+    }
   }
 
   // Get tickets with ticket type info (ordered by sortOrder for consistency)
@@ -156,7 +171,7 @@ export default defineEventHandler(async (event) => {
     event: eventData,
     tickets: ticketList,
     // Viewer context
-    isOrganizer: isEventOrganizer && !isOrderOwner,
+    isOrganizer: (isEventOrganizer || isCollaborator) && !isOrderOwner,
     // Payment methods allowed
     paymentMethodAllowed,
     // Registration info
