@@ -1,5 +1,5 @@
 import { eq, desc, and, ilike, or, sql, inArray } from 'drizzle-orm'
-import { orders, tickets, ticketTypes, users, events, ticketRegistrationFields } from '@nvyt/db'
+import { orders, tickets, ticketTypes, users, ticketRegistrationFields } from '@nvyt/db'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -13,28 +13,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const db = useDatabase()
-  const user = await requireAuth(event)
 
-  // Verify event exists and user is organizer
-  const [eventData] = await db
-    .select()
-    .from(events)
-    .where(eq(events.id, eventId))
-    .limit(1)
-
-  if (!eventData) {
-    throw createError({
-      statusCode: 404,
-      message: 'Event not found',
-    })
-  }
-
-  if (eventData.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'Only the event organizer can view orders',
-    })
-  }
+  // Verify event exists and user has analytics access (owner or collaborator with canViewAnalytics)
+  await requireEventAccess(event, eventId, 'canViewAnalytics')
 
   // Parse query params
   const page = parseInt(query.page as string) || 1
