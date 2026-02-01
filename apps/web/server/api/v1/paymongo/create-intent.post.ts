@@ -150,6 +150,52 @@ export default defineEventHandler(async (event) => {
 
   const adminFeeRate = verification?.adminFeeRate ? parseFloat(verification.adminFeeRate) : 0
 
+  // Cancel any existing pending orders from this user for this event
+  // This prevents orphaned orders when users retry after a failed/abandoned payment
+  const existingPendingOrders = await db
+    .select({ id: orders.id, orderNumber: orders.orderNumber })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.userId, user.id),
+        eq(orders.eventId, data.eventId),
+        eq(orders.paymentStatus, 'pending')
+      )
+    )
+
+  for (const pendingOrder of existingPendingOrders) {
+    const pendingTickets = await db
+      .select({ ticketTypeId: tickets.ticketTypeId })
+      .from(tickets)
+      .where(eq(tickets.orderId, pendingOrder.id))
+
+    const ticketTypeCountMap = new Map<string, number>()
+    for (const t of pendingTickets) {
+      ticketTypeCountMap.set(t.ticketTypeId, (ticketTypeCountMap.get(t.ticketTypeId) || 0) + 1)
+    }
+    for (const [ttId, count] of ticketTypeCountMap) {
+      await db
+        .update(ticketTypes)
+        .set({
+          quantitySold: sql`GREATEST(${ticketTypes.quantitySold} - ${count}, 0)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(ticketTypes.id, ttId))
+    }
+
+    await db
+      .update(tickets)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(eq(tickets.orderId, pendingOrder.id))
+
+    await db
+      .update(orders)
+      .set({ paymentStatus: 'failed', updatedAt: new Date() })
+      .where(eq(orders.id, pendingOrder.id))
+
+    console.log(`[Create Intent] Cancelled stale pending order ${pendingOrder.orderNumber} for user ${user.id}`)
+  }
+
   // Calculate total tickets being purchased
   const totalTicketsRequested = data.items.reduce((sum, item) => sum + item.quantity, 0)
 

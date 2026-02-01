@@ -80,41 +80,34 @@ async function fetchOrderData() {
       throw new Error('No payment intent found. Please start checkout again.')
     }
 
-    // Build items from tickets grouped by ticket type
-    // Use the order's subtotalAmount to derive actual unit prices (accounts for price tiers)
-    const ticketGroups = new Map<string, { name: string; quantity: number }>()
+    // Build items from tickets grouped by ticket type, using actual pricePaid
+    const ticketGroups = new Map<string, { name: string; quantity: number; unitPrice: number; subtotal: number }>()
     for (const ticket of order.tickets || []) {
       const key = ticket.ticketTypeId
+      const pricePaid = parseFloat(ticket.pricePaid || '0')
       const existing = ticketGroups.get(key)
       if (existing) {
         existing.quantity++
+        existing.subtotal += pricePaid
       } else {
         ticketGroups.set(key, {
           name: ticket.ticketType?.name || 'Ticket',
           quantity: 1,
+          unitPrice: pricePaid,
+          subtotal: pricePaid,
         })
       }
     }
 
     const subtotal = parseFloat(order.subtotalAmount || '0')
-    const totalTickets = order.tickets?.length || 1
 
-    const items: OrderItem[] = Array.from(ticketGroups.entries()).map(([ticketTypeId, info]) => {
-      // Calculate unit price from subtotal - this accounts for price tiers
-      // If all tickets are same type, unit price = subtotal / total tickets
-      // If multiple types exist, we proportionally distribute based on count
-      const proportion = info.quantity / totalTickets
-      const groupSubtotal = subtotal * proportion
-      const unitPrice = groupSubtotal / info.quantity
-
-      return {
-        ticketTypeId,
-        ticketTypeName: info.name,
-        quantity: info.quantity,
-        unitPrice,
-        subtotal: groupSubtotal,
-      }
-    })
+    const items: OrderItem[] = Array.from(ticketGroups.entries()).map(([ticketTypeId, info]) => ({
+      ticketTypeId,
+      ticketTypeName: info.name,
+      quantity: info.quantity,
+      unitPrice: info.unitPrice,
+      subtotal: info.subtotal,
+    }))
 
     const processingFee = parseFloat(order.processingFee || '0')
     const adminFee = parseFloat(order.adminFee || '0')
