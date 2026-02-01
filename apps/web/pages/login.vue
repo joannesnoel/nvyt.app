@@ -108,7 +108,7 @@ async function requestSetupLink() {
       </div>
 
       <UCard>
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <form method="post" @submit.prevent="handleSubmit" class="space-y-4">
           <UAlert v-if="error" color="red" :title="error" />
 
           <UFormGroup label="Email" name="email">

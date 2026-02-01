@@ -266,6 +266,8 @@ export default defineEventHandler(async (event) => {
     qrCode: string
     attendeeName?: string
     status: 'pending' | 'confirmed'
+    pricePaid: string
+    priceTierName: string | null
   }> = []
 
   for (const item of data.items) {
@@ -370,6 +372,8 @@ export default defineEventHandler(async (event) => {
         qrCode: generateQRCode(),
         attendeeName: attendee?.name,
         status: 'pending',
+        pricePaid: String(price),
+        priceTierName: activePriceInfo.tierName || null,
         sortOrder: ticketsToCreate.length, // Sequential order within the order
       })
     }

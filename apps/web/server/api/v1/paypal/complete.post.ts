@@ -197,6 +197,8 @@ export default defineEventHandler(async (event) => {
     ticketNumber: string
     qrCode: string
     status: 'pending' | 'confirmed'
+    pricePaid: string
+    priceTierName: string | null
   }> = []
 
   const tierUpdates: Array<{ tierId: string; quantity: number }> = []
@@ -223,6 +225,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create tickets
+    const price = parseFloat(activePriceInfo.price)
     for (let i = 0; i < item.quantity; i++) {
       ticketsToCreate.push({
         ticketTypeId: item.ticketTypeId,
@@ -232,6 +235,8 @@ export default defineEventHandler(async (event) => {
         ticketNumber: generateTicketNumber(),
         qrCode: generateQRCode(),
         status: 'pending',
+        pricePaid: String(price),
+        priceTierName: activePriceInfo.tierName || null,
         sortOrder: ticketsToCreate.length, // Sequential order within the order
       })
     }

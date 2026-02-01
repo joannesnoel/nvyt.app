@@ -15,5 +15,6 @@ export default defineEventHandler(async (event) => {
     emailVerified: user.emailVerified,
     createdAt: user.createdAt,
     isAdmin: isAdmin(user.email),
+    isImpersonating: !!getCookie(event, 'admin-session'),
   })
 })

@@ -124,7 +124,8 @@
       "Bash(aws s3 ls:*)",
       "Bash(PGPASSWORD=nvyt psql:*)",
       "WebSearch",
-      "Bash(pnpm dev)"
+      "Bash(pnpm dev)",
+      "mcp__ide__getDiagnostics"
     ]
   },
   "hooks": {

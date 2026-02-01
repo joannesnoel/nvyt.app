@@ -72,8 +72,9 @@ const userMenuItems = computed(() => {
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+    <ImpersonationBanner />
     <!-- Header -->
-    <header class="fixed top-0 left-0 right-0 z-50 glass-header">
+    <header class="fixed top-0 left-0 right-0 z-50 glass-header" :class="{ 'top-9': user?.isImpersonating }">
       <div class="max-w-7xl 2xl:max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
           <!-- Mobile: Left section (hamburger or logo) -->
@@ -219,7 +220,7 @@ const userMenuItems = computed(() => {
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 pt-16">
+    <main class="flex-1" :class="user?.isImpersonating ? 'pt-[100px]' : 'pt-16'">
       <slot />
     </main>
 

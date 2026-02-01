@@ -6,6 +6,7 @@ export interface User {
   avatarUrl?: string | null
   emailVerified?: boolean
   isAdmin?: boolean
+  isImpersonating?: boolean
 }
 
 export const useAuth = () => {

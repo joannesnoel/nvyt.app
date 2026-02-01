@@ -78,6 +78,22 @@ async function resendVerification(userId: string) {
   }
 }
 
+const impersonatingId = ref<string | null>(null)
+
+async function loginAs(userId: string) {
+  impersonatingId.value = userId
+  try {
+    await $fetch('/api/v1/admin/impersonate', {
+      method: 'POST',
+      body: { userId },
+    })
+    await navigateTo('/dashboard')
+  } catch (e: any) {
+    toast.add({ title: e?.data?.message || 'Failed to impersonate', color: 'red' })
+    impersonatingId.value = null
+  }
+}
+
 const emailVerifiedOptions = [
   { label: 'All', value: '' },
   { label: 'Verified', value: 'true' },
@@ -217,6 +233,16 @@ const emailVerifiedOptions = [
                   {{ formatDate(u.createdAt) }}
                 </td>
                 <td class="px-4 py-3 text-center">
+                  <div class="flex items-center justify-center gap-1">
+                    <UButton
+                      icon="i-heroicons-arrow-right-on-rectangle"
+                      size="xs"
+                      color="primary"
+                      variant="ghost"
+                      title="Login as this user"
+                      :loading="impersonatingId === u.id"
+                      @click="loginAs(u.id)"
+                    />
                   <UIcon
                     v-if="resentFor.has(u.id)"
                     name="i-heroicons-check-circle"
@@ -233,6 +259,7 @@ const emailVerifiedOptions = [
                     :loading="resendingFor === u.id"
                     @click="resendVerification(u.id)"
                   />
+                  </div>
                 </td>
               </tr>
             </tbody>
