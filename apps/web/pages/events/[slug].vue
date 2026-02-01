@@ -1394,16 +1394,16 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Event Details Grid -->
-        <div class="grid md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
           <!-- Main Content -->
-          <div class="md:col-span-2 space-y-8">
-            <!-- Description -->
-            <UCard>
+          <div class="md:col-span-2 flex flex-col gap-8 min-w-0 order-2 md:order-1">
+            <!-- Description (desktop only - on mobile it's shown in sidebar after date/location) -->
+            <UCard class="hidden md:block">
               <template #header>
                 <h2 class="font-semibold text-gray-900 dark:text-white">About this Event</h2>
               </template>
-              <div class="prose dark:prose-invert max-w-none">
-                <p v-if="event.description" class="whitespace-pre-wrap">{{ event.description }}</p>
+              <div class="prose dark:prose-invert max-w-none break-words">
+                <p v-if="event.description" class="whitespace-pre-wrap break-words">{{ event.description }}</p>
                 <p v-else class="text-gray-500">No description provided.</p>
               </div>
             </UCard>
@@ -1514,8 +1514,8 @@ onBeforeUnmount(() => {
               </template>
             </UCard>
 
-            <!-- Announcements Section -->
-            <UCard v-if="event.announcements?.length">
+            <!-- Announcements Section (desktop only - on mobile it's shown in sidebar) -->
+            <UCard v-if="event.announcements?.length" class="hidden md:block">
               <template #header>
                 <div class="flex items-center gap-3">
                   <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
@@ -1527,38 +1527,34 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
               </template>
-              <div class="space-y-4">
+              <div class="divide-y divide-gray-200 dark:divide-gray-700">
                 <div
                   v-for="announcement in event.announcements"
                   :key="announcement.id"
-                  class="relative"
+                  class="py-4 first:pt-0 last:pb-0"
                 >
-                  <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2 mb-1">
-                        <UIcon
-                          v-if="announcement.isPinned"
-                          name="i-heroicons-bookmark-solid"
-                          class="w-4 h-4 text-primary flex-shrink-0"
-                        />
-                        <h3 class="font-semibold text-gray-900 dark:text-white">
-                          {{ announcement.title }}
-                        </h3>
-                      </div>
-                      <p class="text-xs text-gray-500 mb-2">
-                        {{ new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-                      </p>
-                      <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                        {{ announcement.content }}
-                      </p>
-                    </div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <UIcon
+                      v-if="announcement.isPinned"
+                      name="i-heroicons-bookmark-solid"
+                      class="w-4 h-4 text-primary flex-shrink-0"
+                    />
+                    <h3 class="font-semibold text-gray-900 dark:text-white">
+                      {{ announcement.title }}
+                    </h3>
                   </div>
+                  <p class="text-xs text-gray-500 mb-2">
+                    {{ new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                  </p>
+                  <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">
+                    {{ announcement.content }}
+                  </p>
                 </div>
               </div>
             </UCard>
 
-            <!-- FAQs Section -->
-            <UCard v-if="event.faqs?.length">
+            <!-- FAQs Section (desktop only - on mobile it's shown in sidebar after About) -->
+            <UCard v-if="event.faqs?.length" class="hidden md:block">
               <template #header>
                 <div class="flex items-center gap-3">
                   <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
@@ -1570,53 +1566,45 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
               </template>
-              <div class="space-y-3">
-                <div
-                  v-for="(faq, index) in event.faqs"
-                  :key="faq.id"
-                  class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-                >
-                  <UAccordion
-                    :items="[{ label: faq.question, content: faq.answer, slot: 'faq-' + index }]"
-                    :ui="{
-                      wrapper: '',
-                      item: { base: '', padding: '' },
-                    }"
+              <UAccordion
+                :items="event.faqs.map((faq, i) => ({ label: faq.question, slot: 'faq-' + i }))"
+                :multiple="false"
+                :ui="{
+                  wrapper: 'divide-y divide-gray-200 dark:divide-gray-700',
+                  item: { base: '', padding: '' },
+                }"
+              >
+                <template #default="{ item, open, index }">
+                  <button
+                    class="w-full flex items-start gap-3 py-4 text-left transition-colors"
                   >
-                    <template #default="{ open }">
-                      <button
-                        class="w-full flex items-start gap-3 p-4 text-left transition-colors"
-                        :class="open ? 'bg-gray-50 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
-                      >
-                        <div
-                          class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
-                          :class="open ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
-                        >
-                          {{ index + 1 }}
-                        </div>
-                        <span class="flex-1 font-medium text-gray-900 dark:text-white">
-                          {{ faq.question }}
-                        </span>
-                        <UIcon
-                          name="i-heroicons-chevron-down"
-                          class="w-5 h-5 text-gray-400 transition-transform flex-shrink-0 mt-0.5"
-                          :class="{ 'rotate-180 text-primary': open }"
-                        />
-                      </button>
-                    </template>
-                    <template #[`faq-${index}`]>
-                      <div class="px-4 pb-4 pt-2">
-                        <div class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ faq.answer }}</div>
-                      </div>
-                    </template>
-                  </UAccordion>
-                </div>
-              </div>
+                    <div
+                      class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                      :class="open ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    >
+                      {{ index + 1 }}
+                    </div>
+                    <span class="flex-1 font-medium text-gray-900 dark:text-white">
+                      {{ item.label }}
+                    </span>
+                    <UIcon
+                      name="i-heroicons-chevron-down"
+                      class="w-5 h-5 text-gray-400 transition-transform flex-shrink-0 mt-0.5"
+                      :class="{ 'rotate-180 text-primary': open }"
+                    />
+                  </button>
+                </template>
+                <template v-for="(faq, index) in event.faqs" :key="faq.id" #[`faq-${index}`]>
+                  <div class="pb-4 pl-9">
+                    <div class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">{{ faq.answer }}</div>
+                  </div>
+                </template>
+              </UAccordion>
             </UCard>
           </div>
 
           <!-- Sidebar -->
-          <div class="space-y-4">
+          <div class="space-y-4 order-1 md:order-2">
             <!-- Date & Time -->
             <UCard>
               <div class="flex items-start gap-3">
@@ -1648,6 +1636,101 @@ onBeforeUnmount(() => {
                   </p>
                 </div>
               </div>
+            </UCard>
+
+            <!-- About this Event (mobile only - shown after date/location) -->
+            <UCard class="md:hidden">
+              <template #header>
+                <h2 class="font-semibold text-gray-900 dark:text-white">About this Event</h2>
+              </template>
+              <div class="prose dark:prose-invert max-w-none break-words">
+                <p v-if="event.description" class="whitespace-pre-wrap break-words">{{ event.description }}</p>
+                <p v-else class="text-gray-500">No description provided.</p>
+              </div>
+            </UCard>
+
+            <!-- Announcements (mobile only - shown after About) -->
+            <UCard v-if="event.announcements?.length" class="md:hidden">
+              <template #header>
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                    <UIcon name="i-heroicons-megaphone" class="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 class="font-semibold text-gray-900 dark:text-white">Announcements</h2>
+                    <p class="text-sm text-gray-500">Latest updates from the organizer</p>
+                  </div>
+                </div>
+              </template>
+              <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                <div
+                  v-for="announcement in event.announcements"
+                  :key="'m-'+announcement.id"
+                  class="py-4 first:pt-0 last:pb-0"
+                >
+                  <div class="flex items-center gap-2 mb-1">
+                    <UIcon
+                      v-if="announcement.isPinned"
+                      name="i-heroicons-bookmark-solid"
+                      class="w-4 h-4 text-primary flex-shrink-0"
+                    />
+                    <h3 class="font-semibold text-gray-900 dark:text-white">
+                      {{ announcement.title }}
+                    </h3>
+                  </div>
+                  <p class="text-xs text-gray-500 mb-2">
+                    {{ new Date(announcement.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                  </p>
+                  <p class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">
+                    {{ announcement.content }}
+                  </p>
+                </div>
+              </div>
+            </UCard>
+
+            <!-- FAQs (mobile only - shown after Announcements) -->
+            <UCard v-if="event.faqs?.length" class="md:hidden">
+              <template #header>
+                <div class="flex items-center gap-3">
+                  <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
+                    <UIcon name="i-heroicons-question-mark-circle" class="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 class="font-semibold text-gray-900 dark:text-white">Frequently Asked Questions</h2>
+                    <p class="text-sm text-gray-500">{{ event.faqs.length }} question{{ event.faqs.length !== 1 ? 's' : '' }}</p>
+                  </div>
+                </div>
+              </template>
+              <UAccordion
+                :items="event.faqs.map((faq, i) => ({ label: faq.question, slot: 'mfaq-' + i }))"
+                :multiple="false"
+                :ui="{
+                  wrapper: 'divide-y divide-gray-200 dark:divide-gray-700',
+                  item: { base: '', padding: '' },
+                }"
+              >
+                <template #default="{ item, open, index }">
+                  <button class="w-full flex items-start gap-3 py-4 text-left transition-colors">
+                    <div
+                      class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
+                      :class="open ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    >
+                      {{ index + 1 }}
+                    </div>
+                    <span class="flex-1 font-medium text-gray-900 dark:text-white">{{ item.label }}</span>
+                    <UIcon
+                      name="i-heroicons-chevron-down"
+                      class="w-5 h-5 text-gray-400 transition-transform flex-shrink-0 mt-0.5"
+                      :class="{ 'rotate-180 text-primary': open }"
+                    />
+                  </button>
+                </template>
+                <template v-for="(faq, index) in event.faqs" :key="'m-'+faq.id" #[`mfaq-${index}`]>
+                  <div class="pb-4 pl-9">
+                    <div class="text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">{{ faq.answer }}</div>
+                  </div>
+                </template>
+              </UAccordion>
             </UCard>
 
             <!-- Capacity (for RSVP mode) -->
