@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
         eq(tickets.userId, user.id),
         eq(tickets.attendeeUserId, user.id)
       ),
+      inArray(orders.paymentStatus, ['paid', 'pending']),
     ]
     if (status && ['pending', 'confirmed', 'cancelled', 'checked_in', 'refunded'].includes(status)) {
       ticketConditions.push(eq(tickets.status, status as any))

@@ -15,11 +15,13 @@ export default defineEventHandler(async (event) => {
   const db = useDatabase()
 
   // Build where conditions - include tickets where user is purchaser OR attendee
+  // Only show tickets from orders that are paid or pending (hide failed/refunded)
   const conditions = [
     or(
       eq(tickets.userId, user.id),
       eq(tickets.attendeeUserId, user.id)
-    )
+    ),
+    inArray(orders.paymentStatus, ['paid', 'pending']),
   ]
   if (status && ['pending', 'confirmed', 'cancelled', 'checked_in', 'refunded'].includes(status)) {
     conditions.push(eq(tickets.status, status as 'pending' | 'confirmed' | 'cancelled' | 'checked_in' | 'refunded'))
@@ -32,6 +34,7 @@ export default defineEventHandler(async (event) => {
   const [countResult] = await db
     .select({ total: count() })
     .from(tickets)
+    .innerJoin(orders, eq(tickets.orderId, orders.id))
     .where(and(...conditions))
 
   const total = countResult?.total || 0
