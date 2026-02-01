@@ -162,8 +162,11 @@ async function getTicketStats(
 ) {
   const { status, search, page, limit, offset } = options
 
-  // Build conditions for tickets
-  const conditions = [eq(tickets.eventId, eventId)]
+  // Build conditions for tickets (only from paid/pending orders)
+  const conditions = [
+    eq(tickets.eventId, eventId),
+    inArray(orders.paymentStatus, ['paid', 'pending']),
+  ]
 
   // Map attendee status filter to ticket status
   if (status) {
@@ -201,9 +204,15 @@ async function getTicketStats(
         email: users.email,
         avatarUrl: users.avatarUrl,
       },
+      // Order customer info (from checkout form - more accurate than user record)
+      customer: {
+        name: orders.customerName,
+        email: orders.customerEmail,
+      },
     })
     .from(tickets)
     .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
+    .innerJoin(orders, eq(tickets.orderId, orders.id))
     .leftJoin(users, eq(tickets.userId, users.id))
     .where(and(...conditions))
     .orderBy(desc(tickets.createdAt))
@@ -237,6 +246,7 @@ async function getTicketStats(
   const countResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(tickets)
+    .innerJoin(orders, eq(tickets.orderId, orders.id))
     .where(and(...conditions))
 
   const total = Number(countResult[0]?.count ?? 0)
@@ -250,6 +260,8 @@ async function getTicketStats(
       return (
         t.purchaser?.name?.toLowerCase().includes(searchLower) ||
         t.purchaser?.email?.toLowerCase().includes(searchLower) ||
+        t.customer?.name?.toLowerCase().includes(searchLower) ||
+        t.customer?.email?.toLowerCase().includes(searchLower) ||
         attendeeUser?.name?.toLowerCase().includes(searchLower) ||
         attendeeUser?.email?.toLowerCase().includes(searchLower) ||
         t.attendeeName?.toLowerCase().includes(searchLower) ||
@@ -258,14 +270,15 @@ async function getTicketStats(
     })
   }
 
-  // Get stats for tickets
+  // Get stats for tickets (only from paid/pending orders)
   const statsResult = await db
     .select({
       status: tickets.status,
       count: sql<number>`count(*)`,
     })
     .from(tickets)
-    .where(eq(tickets.eventId, eventId))
+    .innerJoin(orders, eq(tickets.orderId, orders.id))
+    .where(and(eq(tickets.eventId, eventId), inArray(orders.paymentStatus, ['paid', 'pending'])))
     .groupBy(tickets.status)
 
   const stats = {
@@ -292,7 +305,7 @@ async function getTicketStats(
   }
 
   // Transform tickets to attendee-like format for frontend compatibility
-  // Priority: attendeeUserId user > legacy fields > purchaser user
+  // Priority: attendeeName > attendeeUserId user > order customer > purchaser user
   const attendeesList = filteredList.map(t => {
     const attendeeUser = t.attendeeUserId ? attendeeUsersMap.get(t.attendeeUserId) : null
 
@@ -308,8 +321,8 @@ async function getTicketStats(
       ticketType: t.ticketType,
       user: {
         id: attendeeUser?.id ?? t.purchaser?.id ?? null,
-        name: attendeeUser?.name || t.attendeeName || t.purchaser?.name || null,
-        email: attendeeUser?.email || t.purchaser?.email || null, // Email from user records only
+        name: t.attendeeName || attendeeUser?.name || t.customer?.name || t.purchaser?.name || null,
+        email: attendeeUser?.email || t.customer?.email || t.purchaser?.email || null,
         avatarUrl: attendeeUser?.avatarUrl ?? t.purchaser?.avatarUrl ?? null,
       },
     }
