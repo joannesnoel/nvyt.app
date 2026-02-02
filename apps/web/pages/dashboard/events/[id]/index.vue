@@ -489,6 +489,16 @@ function getStatusColor(status: string) {
 
                 <NuxtLink
                   v-if="event.registrationMode === 'tickets'"
+                  :to="`/dashboard/events/${eventId}/discounts`"
+                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <UIcon name="i-heroicons-tag" class="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p class="font-medium text-gray-900 dark:text-white">Discounts</p>
+                  <p class="text-sm text-gray-500">Promo codes</p>
+                </NuxtLink>
+
+                <NuxtLink
+                  v-if="event.registrationMode === 'tickets'"
                   :to="`/dashboard/events/${eventId}/registration`"
                   class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
                 >

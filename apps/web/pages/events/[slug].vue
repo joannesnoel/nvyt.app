@@ -377,6 +377,66 @@ const guestForm = ref({
 // Checkout error state
 const checkoutError = ref<string | null>(null)
 
+// Promo code state
+const showPromoInput = ref(false)
+const promoCode = ref('')
+const promoLoading = ref(false)
+const promoError = ref<string | null>(null)
+const appliedDiscount = ref<{
+  code: string
+  discountType: 'percentage' | 'fixed'
+  discountValue: number
+  applicableTicketTypeIds: string[] | null
+  discountAmount: number
+} | null>(null)
+
+async function applyPromoCode() {
+  if (!promoCode.value.trim() || !event.value) return
+
+  promoLoading.value = true
+  promoError.value = null
+
+  try {
+    const items = Object.entries(ticketCart.value)
+      .filter(([_, qty]) => qty > 0)
+      .map(([ticketTypeId, quantity]) => {
+        const tt = event.value!.ticketTypes?.find((t: any) => t.id === ticketTypeId)
+        const unitPrice = parseFloat(tt?.activePrice ?? tt?.price ?? '0')
+        return { ticketTypeId, quantity, unitPrice }
+      })
+
+    if (items.length === 0) {
+      promoError.value = 'Please select tickets first'
+      return
+    }
+
+    const response = await $fetch(`/api/v1/events/${event.value.id}/discount-codes/validate`, {
+      method: 'POST',
+      body: { code: promoCode.value, items },
+    }) as any
+
+    appliedDiscount.value = response.data
+  } catch (e: any) {
+    promoError.value = e.data?.message || 'Invalid promo code'
+  } finally {
+    promoLoading.value = false
+  }
+}
+
+function removePromoCode() {
+  appliedDiscount.value = null
+  promoCode.value = ''
+  promoError.value = null
+}
+
+// Re-validate discount when cart changes
+watch(() => ticketCart.value, () => {
+  if (appliedDiscount.value) {
+    // Re-validate silently
+    applyPromoCode()
+  }
+}, { deep: true })
+
 // Payment provider state
 type PaymentProvider = 'paymongo' | 'paypal'
 const selectedPaymentProvider = ref<PaymentProvider>('paymongo')
@@ -401,6 +461,11 @@ function openTicketModal() {
   guestForm.value = { name: '', email: '' }
   // Clear any previous error
   checkoutError.value = null
+  // Reset promo code state
+  showPromoInput.value = false
+  promoCode.value = ''
+  promoError.value = null
+  appliedDiscount.value = null
   // Reset payment provider state
   selectedPaymentProvider.value = 'paymongo'
   // Initialize requirement responses (all checkboxes start unchecked)
@@ -455,28 +520,32 @@ const PAYPAL_FIXED_FEE = 15 // ₱15 fixed fee for PayPal
 const feeBreakdown = computed(() => {
   const subtotal = cartTotal.value
   const adminFeeRate = event.value?.adminFeeRate ?? 0
+  const discount = appliedDiscount.value?.discountAmount ?? 0
 
   if (subtotal <= 0) {
-    return { subtotal: 0, processingFee: 0, adminFee: 0, totalFees: 0, total: 0 }
+    return { subtotal: 0, discount: 0, discountedSubtotal: 0, processingFee: 0, adminFee: 0, totalFees: 0, total: 0 }
   }
 
-  // Processing fee: depends on payment provider
+  const discountedSubtotal = Math.max(0, subtotal - discount)
+
+  if (discountedSubtotal <= 0) {
+    return { subtotal, discount, discountedSubtotal: 0, processingFee: 0, adminFee: 0, totalFees: 0, total: 0 }
+  }
+
+  // Processing fee on discounted subtotal
   let processingFee: number
   if (selectedPaymentProvider.value === 'paypal') {
-    // PayPal: 3.9% + ₱15 fixed fee
-    processingFee = Math.round((subtotal * PAYPAL_PROCESSING_FEE_RATE + PAYPAL_FIXED_FEE) * 100) / 100
+    processingFee = Math.round((discountedSubtotal * PAYPAL_PROCESSING_FEE_RATE + PAYPAL_FIXED_FEE) * 100) / 100
   } else {
-    // PayMongo: 3.5%
-    processingFee = Math.round(subtotal * PROCESSING_FEE_RATE * 100) / 100
+    processingFee = Math.round(discountedSubtotal * PROCESSING_FEE_RATE * 100) / 100
   }
 
-  // Admin fee: additional percentage set per event
-  const adminFee = Math.round(subtotal * adminFeeRate * 100) / 100
+  const adminFee = Math.round(discountedSubtotal * adminFeeRate * 100) / 100
 
   const totalFees = Math.round((processingFee + adminFee) * 100) / 100
-  const total = Math.round((subtotal + totalFees) * 100) / 100
+  const total = Math.round((discountedSubtotal + totalFees) * 100) / 100
 
-  return { subtotal, processingFee, adminFee, totalFees, total }
+  return { subtotal, discount, discountedSubtotal, processingFee, adminFee, totalFees, total }
 })
 
 const cartItemCount = computed(() => {
@@ -722,7 +791,7 @@ async function checkout() {
         }))
       : undefined
 
-    // Check if this is a paid order with PayMongo
+    // Check if this is a paid order with PayMongo (after discount)
     const isPaidOrder = feeBreakdown.value.total > 0
     const isPayMongo = selectedPaymentProvider.value === 'paymongo'
 
@@ -738,6 +807,7 @@ async function checkout() {
           isGuest: !user.value,
           paymentProvider: selectedPaymentProvider.value,
           requirementResponses: reqResponses,
+          discountCode: appliedDiscount.value?.code,
         },
       }) as any
 
@@ -749,7 +819,7 @@ async function checkout() {
         : `/checkout/${response.data.orderNumber}`
       navigateTo(checkoutUrl)
     } else {
-      // Free tickets - use existing checkout flow
+      // Free tickets or discounted-to-free - use existing checkout flow
       const response = await $fetch('/api/v1/orders/checkout', {
         method: 'POST',
         body: {
@@ -760,6 +830,7 @@ async function checkout() {
           isGuest: !user.value,
           paymentProvider: selectedPaymentProvider.value,
           requirementResponses: reqResponses,
+          discountCode: appliedDiscount.value?.code,
         },
       }) as any
 
@@ -781,10 +852,11 @@ async function checkout() {
       showTicketModal.value = false
 
       // Check if registration is required
+      const tokenParam = response.data.setupToken ? `?token=${response.data.setupToken}` : ''
       if (response.data.registrationRequired) {
-        navigateTo(`/orders/${response.data.order.orderNumber}/register`)
+        navigateTo(`/orders/${response.data.order.orderNumber}/register${tokenParam}`)
       } else {
-        navigateTo(`/orders/${response.data.order.orderNumber}/success`)
+        navigateTo(`/orders/${response.data.order.orderNumber}/success${tokenParam}`)
       }
     }
   } catch (e: any) {
@@ -2084,13 +2156,69 @@ onBeforeUnmount(() => {
               Please check all the boxes above to continue
             </p>
 
+            <!-- Promo Code -->
+            <div v-if="cartTotal > 0" class="space-y-2">
+              <button
+                v-if="!showPromoInput && !appliedDiscount"
+                type="button"
+                class="text-sm text-primary hover:underline"
+                @click="showPromoInput = true"
+              >
+                Have a promo code?
+              </button>
+
+              <div v-if="showPromoInput && !appliedDiscount" class="flex gap-2">
+                <UInput
+                  v-model="promoCode"
+                  placeholder="Enter promo code"
+                  class="flex-1 uppercase"
+                  :disabled="promoLoading"
+                  @keyup.enter="applyPromoCode"
+                />
+                <UButton
+                  color="primary"
+                  variant="soft"
+                  :loading="promoLoading"
+                  :disabled="!promoCode.trim()"
+                  @click="applyPromoCode"
+                >
+                  Apply
+                </UButton>
+              </div>
+
+              <p v-if="promoError" class="text-sm text-red-500">{{ promoError }}</p>
+
+              <div v-if="appliedDiscount" class="flex items-center justify-between bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2">
+                <div class="flex items-center gap-2">
+                  <UIcon name="i-heroicons-tag" class="w-4 h-4 text-green-600" />
+                  <span class="text-sm font-medium text-green-700 dark:text-green-400">
+                    {{ appliedDiscount.code }}
+                  </span>
+                  <UBadge color="green" variant="soft" size="xs">
+                    {{ appliedDiscount.discountType === 'percentage' ? `${appliedDiscount.discountValue}% off` : `${formatCurrency(appliedDiscount.discountValue)} off` }}
+                  </UBadge>
+                </div>
+                <UButton
+                  color="gray"
+                  variant="ghost"
+                  icon="i-heroicons-x-mark"
+                  size="xs"
+                  @click="removePromoCode"
+                />
+              </div>
+            </div>
+
             <!-- Fee Breakdown (only for paid tickets) -->
             <div v-if="cartTotal > 0" class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-2">
               <div class="flex justify-between text-sm">
                 <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
                 <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.subtotal) }}</span>
               </div>
-              <div class="flex justify-between text-sm">
+              <div v-if="feeBreakdown.discount > 0" class="flex justify-between text-sm">
+                <span class="text-green-600 dark:text-green-400">Discount ({{ appliedDiscount?.code }})</span>
+                <span class="text-green-600 dark:text-green-400">-{{ formatCurrency(feeBreakdown.discount) }}</span>
+              </div>
+              <div v-if="feeBreakdown.discountedSubtotal > 0" class="flex justify-between text-sm">
                 <span class="text-gray-600 dark:text-gray-400">Transaction Fee</span>
                 <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.processingFee) }}</span>
               </div>
@@ -2100,12 +2228,12 @@ onBeforeUnmount(() => {
               </div>
               <div class="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between font-semibold">
                 <span class="text-gray-900 dark:text-white">Total</span>
-                <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.total) }}</span>
+                <span class="text-gray-900 dark:text-white">{{ feeBreakdown.total === 0 ? 'Free' : formatCurrency(feeBreakdown.total) }}</span>
               </div>
             </div>
 
-            <!-- Payment Method Selection (only for paid tickets) -->
-            <div v-if="cartTotal > 0 && requirementsSatisfied && isPayPalConfigured" class="space-y-3">
+            <!-- Payment Method Selection (only for paid tickets after discount) -->
+            <div v-if="feeBreakdown.total > 0 && requirementsSatisfied && isPayPalConfigured" class="space-y-3">
               <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method</p>
               <div class="grid grid-cols-2 gap-3">
                 <!-- PayMongo: E-wallets & Bank Transfers -->
@@ -2167,8 +2295,8 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <!-- Guest Form (shown when not logged in, for PayMongo or free tickets) -->
-            <div v-if="!user && (selectedPaymentProvider === 'paymongo' || cartTotal === 0)" class="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <!-- Guest Form (shown when not logged in, for PayMongo or free/discounted-to-free tickets) -->
+            <div v-if="!user && (selectedPaymentProvider === 'paymongo' || feeBreakdown.total === 0)" class="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4">
               <p class="text-sm text-gray-600 dark:text-gray-400">
                 Enter your details to continue as a guest. We'll send you an email to set up your account.
               </p>
@@ -2200,7 +2328,7 @@ onBeforeUnmount(() => {
               <div v-if="cartItemCount > 0">
                 <p class="text-sm text-gray-500">{{ cartItemCount }} ticket{{ cartItemCount === 1 ? '' : 's' }}</p>
                 <p class="text-xl font-bold text-gray-900 dark:text-white">
-                  {{ cartTotal === 0 ? 'Free' : formatCurrency(feeBreakdown.total) }}
+                  {{ feeBreakdown.total === 0 ? 'Free' : formatCurrency(feeBreakdown.total) }}
                 </p>
               </div>
               <div v-else>
@@ -2216,7 +2344,7 @@ onBeforeUnmount(() => {
                 <template v-if="cartItemCount === 0">
                   Select Tickets
                 </template>
-                <template v-else-if="cartTotal === 0">
+                <template v-else-if="feeBreakdown.total === 0">
                   Get Free Tickets
                 </template>
                 <template v-else>

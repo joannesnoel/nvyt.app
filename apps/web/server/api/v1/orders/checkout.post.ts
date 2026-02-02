@@ -1,4 +1,4 @@
-import { orders, tickets, ticketTypes, events, users, eventRequirements, ticketRegistrationFields, eventVerifications, type User } from '@nvyt/db'
+import { orders, tickets, ticketTypes, events, users, eventRequirements, ticketRegistrationFields, eventVerifications, discountCodes, type User } from '@nvyt/db'
 import { purchaseTicketsSchema } from '@nvyt/shared'
 import { eq, and, inArray, asc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -6,6 +6,7 @@ import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail, paymentSuccessfulEmail } from '~/server/utils/email'
 import { calculateProcessingFees, type PaymentProvider } from '~/server/utils/wallet'
 import { getActivePrice, validateTierAvailability, incrementTierQuantitySold, hasActiveTier } from '~/server/utils/pricing'
+import { calculateDiscount } from '~/server/utils/discount'
 
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -156,7 +157,7 @@ export default defineEventHandler(async (event) => {
   // Cancel any existing pending orders from this user for this event
   // This prevents orphaned orders when users retry after a failed/abandoned payment
   const existingPendingOrders = await db
-    .select({ id: orders.id, orderNumber: orders.orderNumber })
+    .select({ id: orders.id, orderNumber: orders.orderNumber, discountCodeId: orders.discountCodeId })
     .from(orders)
     .where(
       and(
@@ -199,6 +200,17 @@ export default defineEventHandler(async (event) => {
       .update(orders)
       .set({ paymentStatus: 'failed', updatedAt: new Date() })
       .where(eq(orders.id, pendingOrder.id))
+
+    // Decrement discount code usage if applicable
+    if (pendingOrder.discountCodeId) {
+      await db
+        .update(discountCodes)
+        .set({
+          usageCount: sql`GREATEST(${discountCodes.usageCount} - 1, 0)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(discountCodes.id, pendingOrder.discountCodeId))
+    }
 
     console.log(`[Checkout] Cancelled stale pending order ${pendingOrder.orderNumber} for user ${user.id}`)
   }
@@ -433,14 +445,93 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // --- Discount code handling ---
+  let discountAmount = 0
+  let discountCodeRecord: any = null
+
+  if (data.discountCode) {
+    const [codeRecord] = await db
+      .select()
+      .from(discountCodes)
+      .where(and(
+        eq(discountCodes.eventId, data.eventId),
+        eq(discountCodes.code, data.discountCode.toUpperCase()),
+      ))
+      .limit(1)
+
+    if (!codeRecord) {
+      throw createError({ statusCode: 400, message: 'Invalid discount code' })
+    }
+    if (!codeRecord.isActive) {
+      throw createError({ statusCode: 400, message: 'This discount code is no longer active' })
+    }
+    if (codeRecord.usageLimit !== null && codeRecord.usageCount >= codeRecord.usageLimit) {
+      throw createError({ statusCode: 400, message: 'This discount code has reached its usage limit' })
+    }
+
+    // Build items for discount calculation
+    const discountItems = data.items.map(item => {
+      const tt = ticketTypeMap.get(item.ticketTypeId)!
+      const lineItem = lineItems.find(li => li.name.includes(tt.name))
+      const unitPrice = lineItem ? lineItem.amount / 100 : parseFloat(tt.price) // convert back from centavos
+      return { ticketTypeId: item.ticketTypeId, quantity: item.quantity, unitPrice }
+    })
+
+    discountAmount = calculateDiscount(
+      codeRecord.discountType,
+      parseFloat(codeRecord.discountValue),
+      discountItems,
+      codeRecord.ticketTypeIds as string[] | null,
+    )
+
+    // Atomically increment usage count (race-safe)
+    const [updated] = await db
+      .update(discountCodes)
+      .set({
+        usageCount: sql`${discountCodes.usageCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(discountCodes.id, codeRecord.id),
+        codeRecord.usageLimit !== null
+          ? sql`${discountCodes.usageCount} < ${codeRecord.usageLimit}`
+          : sql`1=1`,
+      ))
+      .returning()
+
+    if (!updated) {
+      throw createError({ statusCode: 400, message: 'This discount code has reached its usage limit' })
+    }
+
+    discountCodeRecord = codeRecord
+  }
+
+  // Apply discount to total
+  const discountedSubtotal = Math.max(0, totalAmount - discountAmount)
+
   // Check for free tickets (no payment needed)
-  const isFreeOrder = totalAmount === 0
+  const isFreeOrder = discountedSubtotal === 0
 
   // Determine payment provider early (needed for fee calculation)
   const paymentProvider = (data.paymentProvider || 'paymongo') as PaymentProvider
 
-  // Calculate processing fees (only for paid orders, rate depends on payment provider)
-  const feeBreakdown = calculateProcessingFees(totalAmount, adminFeeRate, paymentProvider)
+  // Calculate processing fees on discounted subtotal
+  const feeBreakdown = calculateProcessingFees(discountedSubtotal, adminFeeRate, paymentProvider)
+
+  // Adjust line items for discount (reduce ticket amounts proportionally)
+  if (discountAmount > 0 && !isFreeOrder) {
+    // Distribute discount across applicable line items proportionally
+    let remainingDiscount = toCentavos(discountAmount)
+    for (let i = 0; i < lineItems.length && remainingDiscount > 0; i++) {
+      const item = lineItems[i]
+      const itemTotal = item.amount * item.quantity
+      const reduction = Math.min(remainingDiscount, itemTotal)
+      // Reduce per-unit amount (distribute evenly across quantity)
+      const perUnitReduction = Math.floor(reduction / item.quantity)
+      item.amount = item.amount - perUnitReduction
+      remainingDiscount -= perUnitReduction * item.quantity
+    }
+  }
 
   // Add fees to line items for PayMongo (only for paid orders)
   if (!isFreeOrder && feeBreakdown.totalFees > 0) {
@@ -508,6 +599,12 @@ export default defineEventHandler(async (event) => {
       totalFees: String(feeBreakdown.totalFees),
       totalAmount: String(finalTotal),
       currency: 'PHP',
+      // Discount fields
+      discountCodeId: discountCodeRecord?.id ?? null,
+      discountCode: discountCodeRecord?.code ?? null,
+      discountType: discountCodeRecord?.discountType ?? null,
+      discountValue: discountCodeRecord ? discountCodeRecord.discountValue : null,
+      discountAmount: String(discountAmount),
       paymongoCheckoutSessionId: checkoutSession?.id,
       paymongoPaymentIntentId: checkoutSession?.attributes.payment_intent?.id,
       paymentProvider: paymentProvider,
@@ -638,6 +735,7 @@ export default defineEventHandler(async (event) => {
       requiresPayment: false,
       registrationRequired: hasRegistrationFields,
       accountSetupRequired: needsAccountSetup,
+      setupToken: setupToken || undefined,
       message: needsAccountSetup
         ? 'Order confirmed! Check your email to set up your account.'
         : 'Order confirmed! Your tickets are ready.',

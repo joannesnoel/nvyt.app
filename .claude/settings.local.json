@@ -125,7 +125,8 @@
       "Bash(PGPASSWORD=nvyt psql:*)",
       "WebSearch",
       "Bash(pnpm dev)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(npx nuxi build:*)"
     ]
   },
   "hooks": {

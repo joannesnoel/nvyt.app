@@ -132,7 +132,8 @@ export default defineEventHandler(async (event) => {
       grossSales: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.totalAmount}::numeric else 0 end), 0)`,
       processingFees: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.processingFee}::numeric else 0 end), 0)`,
       platformFees: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.adminFee}::numeric else 0 end), 0)`,
-      netEarnings: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.subtotalAmount}::numeric else 0 end), 0)`,
+      totalDiscounts: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.discountAmount}::numeric else 0 end), 0)`,
+      netEarnings: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then (${orders.subtotalAmount}::numeric - ${orders.discountAmount}::numeric) else 0 end), 0)`,
     })
     .from(orders)
     .where(eq(orders.eventId, eventId))
@@ -156,6 +157,7 @@ export default defineEventHandler(async (event) => {
         grossSales: parseFloat(String(stats?.grossSales || 0)),
         processingFees: parseFloat(String(stats?.processingFees || 0)),
         platformFees: parseFloat(String(stats?.platformFees || 0)),
+        totalDiscounts: parseFloat(String(stats?.totalDiscounts || 0)),
         netEarnings: parseFloat(String(stats?.netEarnings || 0)),
       },
       hasRegistrationFields,

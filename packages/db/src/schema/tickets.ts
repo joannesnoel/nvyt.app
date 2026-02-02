@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp, uuid, integer, decimal, boolean, pgEnum, jsonb } from 'drizzle-orm/pg-core'
 import { events } from './events'
 import { users } from './users'
+import { discountCodes, discountTypeEnum } from './discountCodes'
 import type { TicketRegistrationData, AddressData } from './ticketRegistrationFields'
 
 // Enums
@@ -109,6 +110,14 @@ export const orders = pgTable('orders', {
   totalFees: decimal('total_fees', { precision: 10, scale: 2 }).default('0').notNull(), // Sum of all fees
   totalAmount: decimal('total_amount', { precision: 10, scale: 2 }).notNull(), // Final amount charged
   currency: text('currency').default('PHP').notNull(),
+
+  // Discount code snapshot
+  discountCodeId: uuid('discount_code_id')
+    .references(() => discountCodes.id, { onDelete: 'set null' }),
+  discountCode: text('discount_code'), // Snapshot of code string
+  discountType: discountTypeEnum('discount_type'), // Snapshot at purchase time
+  discountValue: decimal('discount_value', { precision: 10, scale: 2 }), // Snapshot at purchase time
+  discountAmount: decimal('discount_amount', { precision: 10, scale: 2 }).default('0').notNull(), // Actual PHP deducted
 
   // PayMongo integration
   paymongoPaymentIntentId: text('paymongo_payment_intent_id'),

@@ -58,6 +58,8 @@ export const purchaseTicketsSchema = z.object({
     requirementId: z.string().uuid(),
     response: z.boolean(),
   })).optional(),
+  // Discount/promo code
+  discountCode: z.string().optional(),
 })
 
 export const checkInSchema = z.object({
@@ -142,3 +144,46 @@ export type CheckInInput = z.infer<typeof checkInSchema>
 export type CreatePriceTierInput = z.infer<typeof createPriceTierSchema>
 export type UpdatePriceTierInput = z.infer<typeof updatePriceTierSchema>
 export type PaymentProvider = z.infer<typeof paymentProviderEnum>
+
+// Discount code schemas
+export const discountTypeEnum = z.enum(['percentage', 'fixed'])
+
+export const createDiscountCodeSchema = z.object({
+  code: z.string().min(1).max(50).transform(val => val.toUpperCase()),
+  description: z.string().max(500).optional(),
+  discountType: discountTypeEnum,
+  discountValue: z.number().positive(),
+  usageLimit: z.number().int().positive().nullable().optional(),
+  ticketTypeIds: z.array(z.string().uuid()).nullable().optional(),
+  isActive: z.boolean().default(true),
+}).refine((data) => {
+  if (data.discountType === 'percentage' && data.discountValue > 100) {
+    return false
+  }
+  return true
+}, { message: 'Percentage discount cannot exceed 100%', path: ['discountValue'] })
+
+export const updateDiscountCodeSchema = z.object({
+  code: z.string().min(1).max(50).transform(val => val.toUpperCase()).optional(),
+  description: z.string().max(500).optional().nullable(),
+  discountType: discountTypeEnum.optional(),
+  discountValue: z.number().positive().optional(),
+  usageLimit: z.number().int().positive().nullable().optional(),
+  ticketTypeIds: z.array(z.string().uuid()).nullable().optional(),
+  isActive: z.boolean().optional(),
+})
+
+export const validateDiscountCodeSchema = z.object({
+  code: z.string().min(1),
+  eventId: z.string().uuid(),
+  items: z.array(z.object({
+    ticketTypeId: z.string().uuid(),
+    quantity: z.number().int().positive(),
+    unitPrice: z.number().min(0),
+  })),
+})
+
+export type DiscountType = z.infer<typeof discountTypeEnum>
+export type CreateDiscountCodeInput = z.infer<typeof createDiscountCodeSchema>
+export type UpdateDiscountCodeInput = z.infer<typeof updateDiscountCodeSchema>
+export type ValidateDiscountCodeInput = z.infer<typeof validateDiscountCodeSchema>

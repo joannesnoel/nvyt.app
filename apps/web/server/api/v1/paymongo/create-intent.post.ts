@@ -1,4 +1,4 @@
-import { orders, tickets, ticketTypes, events, users, eventRequirements, ticketRegistrationFields, eventVerifications, type User } from '@nvyt/db'
+import { orders, tickets, ticketTypes, events, users, eventRequirements, ticketRegistrationFields, eventVerifications, discountCodes, type User } from '@nvyt/db'
 import { purchaseTicketsSchema } from '@nvyt/shared'
 import { eq, and, inArray, asc, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
@@ -6,6 +6,7 @@ import { createPaymentIntent, toCentavos, getPublicKey } from '~/server/utils/pa
 import { sendEmail, accountSetupEmail } from '~/server/utils/email'
 import { calculateProcessingFees, type PaymentProvider } from '~/server/utils/wallet'
 import { getActivePrice, validateTierAvailability, incrementTierQuantitySold, hasActiveTier } from '~/server/utils/pricing'
+import { calculateDiscount } from '~/server/utils/discount'
 
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -153,7 +154,7 @@ export default defineEventHandler(async (event) => {
   // Cancel any existing pending orders from this user for this event
   // This prevents orphaned orders when users retry after a failed/abandoned payment
   const existingPendingOrders = await db
-    .select({ id: orders.id, orderNumber: orders.orderNumber })
+    .select({ id: orders.id, orderNumber: orders.orderNumber, discountCodeId: orders.discountCodeId })
     .from(orders)
     .where(
       and(
@@ -192,6 +193,17 @@ export default defineEventHandler(async (event) => {
       .update(orders)
       .set({ paymentStatus: 'failed', updatedAt: new Date() })
       .where(eq(orders.id, pendingOrder.id))
+
+    // Decrement discount code usage if applicable
+    if (pendingOrder.discountCodeId) {
+      await db
+        .update(discountCodes)
+        .set({
+          usageCount: sql`GREATEST(${discountCodes.usageCount} - 1, 0)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(discountCodes.id, pendingOrder.discountCodeId))
+    }
 
     console.log(`[Create Intent] Cancelled stale pending order ${pendingOrder.orderNumber} for user ${user.id}`)
   }
@@ -425,8 +437,72 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // --- Discount code handling ---
+  let discountAmount = 0
+  let discountCodeRecord: any = null
+
+  if (data.discountCode) {
+    const [codeRecord] = await db
+      .select()
+      .from(discountCodes)
+      .where(and(
+        eq(discountCodes.eventId, data.eventId),
+        eq(discountCodes.code, data.discountCode.toUpperCase()),
+      ))
+      .limit(1)
+
+    if (!codeRecord) {
+      throw createError({ statusCode: 400, message: 'Invalid discount code' })
+    }
+    if (!codeRecord.isActive) {
+      throw createError({ statusCode: 400, message: 'This discount code is no longer active' })
+    }
+    if (codeRecord.usageLimit !== null && codeRecord.usageCount >= codeRecord.usageLimit) {
+      throw createError({ statusCode: 400, message: 'This discount code has reached its usage limit' })
+    }
+
+    const discountItems = data.items.map(item => {
+      const detail = itemDetails.find(d => d.ticketTypeId === item.ticketTypeId)
+      return {
+        ticketTypeId: item.ticketTypeId,
+        quantity: item.quantity,
+        unitPrice: detail?.unitPrice ?? 0,
+      }
+    })
+
+    discountAmount = calculateDiscount(
+      codeRecord.discountType,
+      parseFloat(codeRecord.discountValue),
+      discountItems,
+      codeRecord.ticketTypeIds as string[] | null,
+    )
+
+    // Atomically increment usage count
+    const [updated] = await db
+      .update(discountCodes)
+      .set({
+        usageCount: sql`${discountCodes.usageCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(discountCodes.id, codeRecord.id),
+        codeRecord.usageLimit !== null
+          ? sql`${discountCodes.usageCount} < ${codeRecord.usageLimit}`
+          : sql`1=1`,
+      ))
+      .returning()
+
+    if (!updated) {
+      throw createError({ statusCode: 400, message: 'This discount code has reached its usage limit' })
+    }
+
+    discountCodeRecord = codeRecord
+  }
+
+  const discountedSubtotal = Math.max(0, totalAmount - discountAmount)
+
   // Check for free tickets (no payment needed)
-  const isFreeOrder = totalAmount === 0
+  const isFreeOrder = discountedSubtotal === 0
 
   // Free orders should not use this endpoint - redirect to success immediately
   if (isFreeOrder) {
@@ -436,9 +512,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Calculate processing fees
+  // Calculate processing fees on discounted subtotal
   const paymentProvider = 'paymongo' as PaymentProvider
-  const feeBreakdown = calculateProcessingFees(totalAmount, adminFeeRate, paymentProvider)
+  const feeBreakdown = calculateProcessingFees(discountedSubtotal, adminFeeRate, paymentProvider)
 
   // Final total including fees
   const finalTotal = feeBreakdown.total
@@ -477,6 +553,12 @@ export default defineEventHandler(async (event) => {
       totalFees: String(feeBreakdown.totalFees),
       totalAmount: String(finalTotal),
       currency: 'PHP',
+      // Discount fields
+      discountCodeId: discountCodeRecord?.id ?? null,
+      discountCode: discountCodeRecord?.code ?? null,
+      discountType: discountCodeRecord?.discountType ?? null,
+      discountValue: discountCodeRecord ? discountCodeRecord.discountValue : null,
+      discountAmount: String(discountAmount),
       paymongoPaymentIntentId: paymentIntent.id,
       paymentProvider: paymentProvider,
       paymentStatus: 'pending',
@@ -561,11 +643,14 @@ export default defineEventHandler(async (event) => {
     items: itemDetails,
     feeBreakdown: {
       subtotal: totalAmount,
+      discount: discountAmount,
+      discountedSubtotal: discountedSubtotal,
       processingFee: feeBreakdown.processingFee,
       adminFee: feeBreakdown.adminFee,
       totalFees: feeBreakdown.totalFees,
       total: finalTotal,
     },
+    discountCode: discountCodeRecord?.code ?? null,
     registrationRequired: hasRegistrationFields,
     accountSetupRequired: needsAccountSetup,
     setupToken: setupToken || undefined,

@@ -128,7 +128,7 @@ export default defineEventHandler(async (event) => {
           eventId: orderResult.order.eventId,
           grossAmount,
           totalFees: Number(orderResult.order.totalFees),
-          netAmount: Number(orderResult.order.subtotalAmount),
+          netAmount: Number(orderResult.order.subtotalAmount) - Number(orderResult.order.discountAmount),
           eventTitle: orderResult.event.title,
         })
 

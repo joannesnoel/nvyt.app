@@ -12,6 +12,7 @@ export * from './eventAnnouncements'
 // Tickets & Payments
 export * from './tickets'
 export * from './ticketRegistrationFields'
+export * from './discountCodes'
 
 // Attendees (free events)
 export * from './attendees'
