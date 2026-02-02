@@ -1,9 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { wallets, transactions, type NewTransaction } from '@nvyt/db'
 
-// Platform fee percentage (3%) - deducted from organizer earnings
-const PLATFORM_FEE_PERCENTAGE = 0.03
-
 // Processing fee constants (charged to buyer)
 export const PROCESSING_FEE_RATE = 0.035 // 3.5% for PayMongo (GCash, Maya, etc.)
 export const PAYPAL_PROCESSING_FEE_RATE = 0.039 // 3.9% for PayPal
@@ -232,34 +229,19 @@ export async function processRefund(walletId: string, amount: string | number) {
 }
 
 /**
- * Calculate platform fee and net amount for a payment
- */
-export function calculateFees(grossAmount: number): {
-  grossAmount: number
-  platformFee: number
-  netAmount: number
-} {
-  const platformFee = Math.round(grossAmount * PLATFORM_FEE_PERCENTAGE * 100) / 100
-  const netAmount = grossAmount - platformFee
-
-  return {
-    grossAmount,
-    platformFee,
-    netAmount,
-  }
-}
-
-/**
  * Full payment processing: create wallet if needed, record transaction, update balance
+ * Uses the actual fee breakdown from the order rather than recalculating.
  */
 export async function processPaymentReceived(params: {
   userId: string
   orderId: string
   eventId: string
   grossAmount: number
+  totalFees: number
+  netAmount: number
   eventTitle?: string
 }) {
-  const { userId, orderId, eventId, grossAmount, eventTitle } = params
+  const { userId, orderId, eventId, grossAmount, totalFees, netAmount, eventTitle } = params
 
   // Get or create wallet for the organizer
   const wallet = await getOrCreateWallet(userId)
@@ -268,18 +250,15 @@ export async function processPaymentReceived(params: {
     throw new Error('Failed to get or create wallet')
   }
 
-  // Calculate fees
-  const { platformFee, netAmount } = calculateFees(grossAmount)
-
   // Record a single transaction for the payment
-  // - amount: gross amount received
-  // - fee: platform fee deducted
-  // - netAmount: what the organizer actually gets
+  // - amount: gross amount collected from buyer
+  // - fee: total fees (processing + service)
+  // - netAmount: what the organizer actually gets (subtotalAmount)
   await recordTransaction({
     walletId: wallet.id,
     type: 'payment_received',
     amount: grossAmount,
-    fee: platformFee,
+    fee: totalFees,
     netAmount: netAmount,
     description: eventTitle ? `Ticket sale: ${eventTitle}` : 'Payment received',
     orderId,
@@ -287,7 +266,7 @@ export async function processPaymentReceived(params: {
     status: 'completed',
   })
 
-  // Update wallet balance with net amount (after fee deduction)
+  // Update wallet balance with net amount (organizer's earnings)
   const db = useDatabase()
   await db
     .update(wallets)
@@ -301,7 +280,7 @@ export async function processPaymentReceived(params: {
   return {
     wallet,
     grossAmount,
-    platformFee,
+    totalFees,
     netAmount,
   }
 }

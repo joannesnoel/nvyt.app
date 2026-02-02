@@ -398,7 +398,7 @@ function getStatusColor(status: string) {
                   : 'bg-orange-100 dark:bg-orange-900/30'
               ]">
                 <UIcon
-                  :name="isTicketMode ? 'i-heroicons-currency-dollar' : 'i-heroicons-queue-list'"
+                  :name="isTicketMode ? 'i-heroicons-banknotes' : 'i-heroicons-queue-list'"
                   :class="[
                     'w-5 h-5',
                     isTicketMode ? 'text-emerald-600' : 'text-orange-600'
@@ -408,7 +408,7 @@ function getStatusColor(status: string) {
               <div>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white">
                   <template v-if="isTicketMode">
-                    {{ formatCurrency(orderStats?.totalRevenue ?? 0) }}
+                    {{ formatCurrency(orderStats?.netEarnings ?? 0) }}
                   </template>
                   <template v-else>
                     {{ stats?.waitlisted ?? 0 }}

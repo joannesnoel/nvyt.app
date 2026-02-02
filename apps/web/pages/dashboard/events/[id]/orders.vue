@@ -28,7 +28,7 @@ const { data: response, pending, refresh } = await useFetch(
 
 const orders = computed(() => response.value?.data?.orders ?? [])
 const stats = computed(() => response.value?.data?.stats ?? {
-  totalOrders: 0, paidOrders: 0, pendingOrders: 0, refundedOrders: 0, totalRevenue: 0
+  totalOrders: 0, paidOrders: 0, pendingOrders: 0, refundedOrders: 0, grossSales: 0, processingFees: 0, platformFees: 0, netEarnings: 0
 })
 const hasRegistrationFields = computed(() => response.value?.data?.hasRegistrationFields ?? false)
 const meta = computed(() => response.value?.meta)
@@ -113,8 +113,28 @@ function getRegistrationStatusColor(order: any) {
         </div>
       </div>
 
-      <!-- Stats -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <!-- Financial Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <UCard class="text-center">
+          <p class="text-2xl font-bold text-primary">{{ formatCurrency(stats.grossSales) }}</p>
+          <p class="text-sm text-gray-500">Gross Sales</p>
+        </UCard>
+        <UCard class="text-center">
+          <p class="text-2xl font-bold text-emerald-600">{{ formatCurrency(stats.netEarnings) }}</p>
+          <p class="text-sm text-gray-500">Net Earnings</p>
+        </UCard>
+        <UCard class="text-center">
+          <p class="text-2xl font-bold text-gray-600">{{ formatCurrency(stats.processingFees) }}</p>
+          <p class="text-sm text-gray-500">Processing Fees</p>
+        </UCard>
+        <UCard class="text-center">
+          <p class="text-2xl font-bold text-gray-600">{{ formatCurrency(stats.platformFees) }}</p>
+          <p class="text-sm text-gray-500">Service Fees</p>
+        </UCard>
+      </div>
+
+      <!-- Order Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <UCard class="text-center">
           <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalOrders }}</p>
           <p class="text-sm text-gray-500">Total Orders</p>
@@ -130,10 +150,6 @@ function getRegistrationStatusColor(order: any) {
         <UCard class="text-center">
           <p class="text-2xl font-bold text-gray-600">{{ stats.refundedOrders }}</p>
           <p class="text-sm text-gray-500">Refunded</p>
-        </UCard>
-        <UCard class="text-center">
-          <p class="text-2xl font-bold text-primary">{{ formatCurrency(stats.totalRevenue) }}</p>
-          <p class="text-sm text-gray-500">Revenue</p>
         </UCard>
       </div>
 

@@ -165,12 +165,14 @@ export default defineEventHandler(async (event) => {
           orderId: order.id,
           eventId: order.eventId,
           grossAmount,
+          totalFees: Number(order.totalFees),
+          netAmount: Number(order.subtotalAmount),
           eventTitle: eventInfo.title,
         })
 
         console.log(
           `[PayMongo] Recorded transaction for organizer ${eventInfo.organizerId}: ` +
-            `Gross=${grossAmount}, Fee=${walletResult.platformFee}, Net=${walletResult.netAmount}`
+            `Gross=${grossAmount}, Fees=${walletResult.totalFees}, Net=${walletResult.netAmount}`
         )
       }
     } catch (walletErr) {
@@ -369,12 +371,14 @@ export default defineEventHandler(async (event) => {
           orderId: order.id,
           eventId: order.eventId,
           grossAmount,
+          totalFees: Number(order.totalFees),
+          netAmount: Number(order.subtotalAmount),
           eventTitle: eventInfo.title,
         })
 
         console.log(
           `[PayMongo PI] Recorded transaction for organizer ${eventInfo.organizerId}: ` +
-            `Gross=${grossAmount}, Fee=${walletResult.platformFee}, Net=${walletResult.netAmount}`
+            `Gross=${grossAmount}, Fees=${walletResult.totalFees}, Net=${walletResult.netAmount}`
         )
       }
     } catch (walletErr) {

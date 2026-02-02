@@ -342,12 +342,14 @@ export default defineEventHandler(async (event) => {
         orderId: order.id,
         eventId: order.eventId,
         grossAmount: sessionData.total,
+        totalFees: Number(order.totalFees),
+        netAmount: Number(order.subtotalAmount),
         eventTitle: eventRecord.title,
       })
 
       console.log(
         `[PayPal Complete] Recorded transaction for organizer ${eventRecord.organizerId}: ` +
-          `Gross=${sessionData.total}, Fee=${walletResult.platformFee}, Net=${walletResult.netAmount}`
+          `Gross=${sessionData.total}, Fees=${walletResult.totalFees}, Net=${walletResult.netAmount}`
       )
     }
   } catch (walletErr) {

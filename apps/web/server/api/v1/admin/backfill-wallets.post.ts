@@ -19,6 +19,8 @@ export default defineEventHandler(async (event) => {
       id: orders.id,
       orderNumber: orders.orderNumber,
       eventId: orders.eventId,
+      subtotalAmount: orders.subtotalAmount,
+      totalFees: orders.totalFees,
       totalAmount: orders.totalAmount,
       paidAt: orders.paidAt,
       eventTitle: events.title,
@@ -65,6 +67,8 @@ export default defineEventHandler(async (event) => {
         orderId: order.id,
         eventId: order.eventId,
         grossAmount,
+        totalFees: Number(order.totalFees),
+        netAmount: Number(order.subtotalAmount),
         eventTitle: order.eventTitle,
       })
 
@@ -72,12 +76,12 @@ export default defineEventHandler(async (event) => {
       results.push({
         orderNumber: order.orderNumber,
         status: 'processed',
-        message: `Gross=${grossAmount}, Fee=${walletResult.platformFee}, Net=${walletResult.netAmount}`,
+        message: `Gross=${grossAmount}, Fees=${walletResult.totalFees}, Net=${walletResult.netAmount}`,
       })
 
       console.log(
         `[Backfill] Processed order ${order.orderNumber}: ` +
-          `Gross=${grossAmount}, Fee=${walletResult.platformFee}, Net=${walletResult.netAmount}`
+          `Gross=${grossAmount}, Fees=${walletResult.totalFees}, Net=${walletResult.netAmount}`
       )
     } catch (err) {
       errors++
