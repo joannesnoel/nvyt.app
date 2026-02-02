@@ -1,15 +1,18 @@
-import { eq, and, sql } from 'drizzle-orm'
-import { orders, transactions, wallets } from '@nvyt/db'
+import { eq, and, sql, inArray } from 'drizzle-orm'
+import { orders, events, transactions, wallets } from '@nvyt/db'
+import { processPaymentReceived, getOrCreateWallet } from '~/server/utils/wallet'
 
 /**
  * Reconcile wallet transactions and balances.
  *
- * 1. Fix payment_received transactions: update fee and netAmount
- *    using the actual order values (totalFees, subtotalAmount)
- *    instead of the old hardcoded 3% calculation.
- *
- * 2. Recompute each wallet's availableBalance and totalEarnings
+ * 1. Remove duplicate payment_received transactions (keep oldest per order).
+ * 2. Fix remaining payment_received transactions: update fee and netAmount
+ *    using the actual order values (totalFees, subtotalAmount).
+ * 3. Create missing transactions for paid orders that have none.
+ * 4. Recompute each wallet's availableBalance and totalEarnings
  *    from the corrected transaction history.
+ *
+ * Safe to run multiple times (idempotent).
  *
  * POST /api/v1/admin/reconcile-wallets
  */
@@ -17,12 +20,34 @@ export default defineEventHandler(async (event) => {
   const session = await requireAuth(event)
   const db = useDatabase()
 
+  let duplicatesRemoved = 0
   let txUpdated = 0
   let txSkipped = 0
+  let txCreated = 0
   let walletsRecalculated = 0
-  const details: Array<{ orderId: string; orderNumber: string; oldFee: string; newFee: string; oldNet: string; newNet: string }> = []
 
-  // Step 1: Fix payment_received transactions using actual order values
+  // Step 1: Remove duplicate payment_received transactions (keep the oldest per order)
+  const duplicateIds = await db.execute<{ id: string }>(sql`
+    SELECT id FROM (
+      SELECT id, row_number() OVER (PARTITION BY order_id ORDER BY created_at ASC) as rn
+      FROM transactions
+      WHERE type = 'payment_received' AND order_id IS NOT NULL
+    ) sub
+    WHERE rn > 1
+  `)
+
+  const idsToDelete = (Array.isArray(duplicateIds) ? duplicateIds : (duplicateIds as any).rows ?? []).map((r: any) => r.id)
+
+  if (idsToDelete.length > 0) {
+    await db
+      .delete(transactions)
+      .where(inArray(transactions.id, idsToDelete))
+    duplicatesRemoved = idsToDelete.length
+
+    console.log(`[Reconcile] Removed ${duplicatesRemoved} duplicate transactions`)
+  }
+
+  // Step 2: Fix remaining payment_received transactions using actual order values
   const paymentTxs = await db
     .select({
       txId: transactions.id,
@@ -42,7 +67,6 @@ export default defineEventHandler(async (event) => {
     const correctFee = tx.orderTotalFees
     const correctNet = tx.orderSubtotal
 
-    // Skip if already correct
     if (tx.txFee === correctFee && tx.txNetAmount === correctNet) {
       txSkipped++
       continue
@@ -58,22 +82,66 @@ export default defineEventHandler(async (event) => {
       .where(eq(transactions.id, tx.txId))
 
     txUpdated++
-    details.push({
-      orderId: tx.orderId!,
-      orderNumber: tx.orderNumber,
-      oldFee: tx.txFee!,
-      newFee: correctFee,
-      oldNet: tx.txNetAmount,
-      newNet: correctNet,
-    })
   }
 
-  // Step 2: Recompute wallet balances from transaction history
-  // For each wallet, recalculate based on all transactions
+  // Step 3: Create missing transactions for paid orders that have none
+  const missingOrders = await db
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      eventId: orders.eventId,
+      subtotalAmount: orders.subtotalAmount,
+      totalFees: orders.totalFees,
+      totalAmount: orders.totalAmount,
+      organizerId: events.organizerId,
+      eventTitle: events.title,
+    })
+    .from(orders)
+    .innerJoin(events, eq(orders.eventId, events.id))
+    .where(
+      and(
+        eq(orders.paymentStatus, 'paid'),
+        sql`NOT EXISTS (
+          SELECT 1 FROM transactions t
+          WHERE t.order_id = ${orders.id} AND t.type = 'payment_received'
+        )`
+      )
+    )
+
+  for (const order of missingOrders) {
+    if (!order.organizerId) continue
+
+    try {
+      const wallet = await getOrCreateWallet(order.organizerId)
+      const grossAmount = Number(order.totalAmount)
+      const totalFees = Number(order.totalFees)
+      const netAmount = Number(order.subtotalAmount)
+
+      // Record transaction only (don't update wallet balance — step 4 handles that)
+      await db.insert(transactions).values({
+        walletId: wallet.id,
+        type: 'payment_received',
+        amount: String(grossAmount),
+        fee: String(totalFees),
+        netAmount: String(netAmount),
+        currency: 'PHP',
+        status: 'completed',
+        description: order.eventTitle ? `Ticket sale: ${order.eventTitle}` : 'Payment received',
+        orderId: order.id,
+        eventId: order.eventId,
+      })
+
+      txCreated++
+      console.log(`[Reconcile] Created missing transaction for order ${order.orderNumber}`)
+    } catch (err) {
+      console.error(`[Reconcile] Failed to create transaction for order ${order.orderNumber}:`, err)
+    }
+  }
+
+  // Step 4: Recompute wallet balances from transaction history
   const allWallets = await db.select().from(wallets)
 
   for (const wallet of allWallets) {
-    // Sum net earnings from payment_received transactions
     const [earnings] = await db
       .select({
         total: sql<string>`coalesce(sum(${transactions.netAmount}::numeric), 0)`,
@@ -87,7 +155,6 @@ export default defineEventHandler(async (event) => {
         )
       )
 
-    // Sum refunds (these reduce earnings)
     const [refunds] = await db
       .select({
         total: sql<string>`coalesce(sum(abs(${transactions.netAmount}::numeric)), 0)`,
@@ -101,7 +168,6 @@ export default defineEventHandler(async (event) => {
         )
       )
 
-    // Sum completed payouts (already deducted from available)
     const [payouts] = await db
       .select({
         total: sql<string>`coalesce(sum(abs(${transactions.netAmount}::numeric)), 0)`,
@@ -140,15 +206,16 @@ export default defineEventHandler(async (event) => {
   }
 
   console.log(
-    `[Reconcile] Complete: ${txUpdated} transactions fixed, ${txSkipped} already correct, ${walletsRecalculated} wallets recalculated`
+    `[Reconcile] Complete: ${duplicatesRemoved} duplicates removed, ${txCreated} created, ${txUpdated} fixed, ${txSkipped} correct, ${walletsRecalculated} wallets recalculated`
   )
 
   return successResponse({
     summary: {
+      duplicatesRemoved,
+      transactionsCreated: txCreated,
       transactionsFixed: txUpdated,
       transactionsAlreadyCorrect: txSkipped,
       walletsRecalculated,
     },
-    details,
   })
 })

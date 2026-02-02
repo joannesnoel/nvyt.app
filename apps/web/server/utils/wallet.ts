@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { wallets, transactions, type NewTransaction } from '@nvyt/db'
 
 // Processing fee constants (charged to buyer)
@@ -243,6 +243,20 @@ export async function processPaymentReceived(params: {
 }) {
   const { userId, orderId, eventId, grossAmount, totalFees, netAmount, eventTitle } = params
 
+  // Guard against duplicate transactions for the same order
+  const db = useDatabase()
+  const [existing] = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(and(eq(transactions.orderId, orderId), eq(transactions.type, 'payment_received')))
+    .limit(1)
+
+  if (existing) {
+    console.log(`[Wallet] Skipping duplicate payment_received for order ${orderId}`)
+    const wallet = await getOrCreateWallet(userId)
+    return { wallet, grossAmount, totalFees, netAmount }
+  }
+
   // Get or create wallet for the organizer
   const wallet = await getOrCreateWallet(userId)
 
@@ -267,7 +281,6 @@ export async function processPaymentReceived(params: {
   })
 
   // Update wallet balance with net amount (organizer's earnings)
-  const db = useDatabase()
   await db
     .update(wallets)
     .set({

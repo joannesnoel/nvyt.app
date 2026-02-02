@@ -59,7 +59,7 @@ async function reconcileWallets() {
     reconcileResult.value = (result as any).data?.summary
     toast.add({
       title: 'Wallets Reconciled',
-      description: `${reconcileResult.value.transactionsFixed} transactions fixed, ${reconcileResult.value.walletsRecalculated} wallets recalculated`,
+      description: `${reconcileResult.value.duplicatesRemoved} duplicates removed, ${reconcileResult.value.transactionsCreated} created, ${reconcileResult.value.transactionsFixed} fixed, ${reconcileResult.value.walletsRecalculated} wallets recalculated`,
       color: 'green',
     })
   } catch (error: any) {
