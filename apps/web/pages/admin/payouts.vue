@@ -46,6 +46,33 @@ const rejectionReason = ref('')
 const notes = ref('')
 const processing = ref(false)
 
+// Reconcile wallets
+const toast = useToast()
+const reconciling = ref(false)
+const reconcileResult = ref<any>(null)
+
+async function reconcileWallets() {
+  reconciling.value = true
+  reconcileResult.value = null
+  try {
+    const result = await $fetch('/api/v1/admin/reconcile-wallets', { method: 'POST' })
+    reconcileResult.value = (result as any).data?.summary
+    toast.add({
+      title: 'Wallets Reconciled',
+      description: `${reconcileResult.value.transactionsFixed} transactions fixed, ${reconcileResult.value.walletsRecalculated} wallets recalculated`,
+      color: 'green',
+    })
+  } catch (error: any) {
+    toast.add({
+      title: 'Reconciliation Failed',
+      description: error.data?.message || 'Failed to reconcile wallets',
+      color: 'red',
+    })
+  } finally {
+    reconciling.value = false
+  }
+}
+
 function formatCurrency(amount: number | string | null | undefined) {
   const num = typeof amount === 'string' ? parseFloat(amount) : (amount ?? 0)
   return new Intl.NumberFormat('en-PH', {
@@ -128,13 +155,24 @@ const statusOptions = [
   <div class="py-8">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          Admin: Payout Management
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-1">
-          Review and process payout requests
-        </p>
+      <div class="flex items-start justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            Admin: Payout Management
+          </h1>
+          <p class="text-gray-600 dark:text-gray-400 mt-1">
+            Review and process payout requests
+          </p>
+        </div>
+        <UButton
+          color="gray"
+          variant="outline"
+          icon="i-heroicons-arrow-path"
+          :loading="reconciling"
+          @click="reconcileWallets"
+        >
+          Reconcile Wallets
+        </UButton>
       </div>
 
       <!-- Stats Cards -->
