@@ -14,6 +14,14 @@ const hasFiredPurchaseEvent = ref(false)
 const orderNumber = computed(() => route.params.orderNumber as string)
 const token = computed(() => route.query.token as string | undefined)
 
+// Payment status polling
+const isPolling = ref(false)
+const pollCount = ref(0)
+const POLL_INTERVAL = 5000 // 5 seconds
+const MAX_POLL_TIME = 10 * 60 * 1000 // 10 minutes
+let pollTimer: ReturnType<typeof setTimeout> | null = null
+let pollStartTime: number | null = null
+
 // Only use token if user is not logged in
 const queryToken = computed(() => user.value ? undefined : token.value)
 
@@ -263,6 +271,104 @@ const canRetryPayment = computed(() => {
     parseFloat(order.value?.totalAmount || '0') > 0
 })
 
+// Check if we should poll for payment status
+const shouldPoll = computed(() => {
+  return order.value?.paymentStatus === 'pending' &&
+    parseFloat(order.value?.totalAmount || '0') > 0
+})
+
+// Poll payment status
+async function pollPaymentStatus() {
+  if (!shouldPoll.value) {
+    stopPolling()
+    return
+  }
+
+  // Check if we've exceeded max poll time
+  if (pollStartTime && Date.now() - pollStartTime > MAX_POLL_TIME) {
+    stopPolling()
+    toast.add({
+      title: 'Payment check timed out',
+      description: 'We stopped checking for your payment. Click "Complete Payment" to retry.',
+      color: 'yellow',
+      icon: 'i-heroicons-clock',
+    })
+    return
+  }
+
+  try {
+    pollCount.value++
+    const response = await $fetch(`/api/v1/orders/${orderNumber.value}`, {
+      query: { token: queryToken.value },
+    }) as any
+
+    if (response.data) {
+      const newStatus = response.data.paymentStatus
+
+      // Update order data if status changed
+      if (orderResponse.value?.data && newStatus !== orderResponse.value.data.paymentStatus) {
+        orderResponse.value.data.paymentStatus = newStatus
+        orderResponse.value.data.tickets = response.data.tickets
+
+        if (newStatus === 'paid') {
+          stopPolling()
+          toast.add({
+            title: 'Payment Confirmed!',
+            description: 'Your payment has been received. Your tickets are ready.',
+            color: 'green',
+            icon: 'i-heroicons-check-circle',
+          })
+        } else if (newStatus === 'failed') {
+          stopPolling()
+          toast.add({
+            title: 'Payment Failed',
+            description: 'Your payment was not successful. Please retry.',
+            color: 'red',
+            icon: 'i-heroicons-x-circle',
+          })
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[Success] Failed to poll payment status:', e)
+  }
+
+  // Schedule next poll if still needed
+  if (shouldPoll.value) {
+    pollTimer = setTimeout(pollPaymentStatus, POLL_INTERVAL)
+  }
+}
+
+function startPolling() {
+  if (isPolling.value) return
+  isPolling.value = true
+  pollStartTime = Date.now()
+  pollCount.value = 0
+  pollPaymentStatus()
+}
+
+function stopPolling() {
+  isPolling.value = false
+  if (pollTimer) {
+    clearTimeout(pollTimer)
+    pollTimer = null
+  }
+}
+
+// Start polling when order is pending
+watch(shouldPoll, (should) => {
+  if (should) {
+    startPolling()
+  } else {
+    stopPolling()
+  }
+}, { immediate: true })
+
+// Cleanup on unmount
+onUnmounted(() => {
+  stopPolling()
+})
+
 // Retry payment
 const retryingPayment = ref(false)
 
@@ -460,9 +566,24 @@ async function retryPayment() {
           </div>
         </UCard>
 
+        <!-- Payment Polling Indicator -->
+        <UAlert
+          v-if="isPolling"
+          color="blue"
+          class="mb-6"
+        >
+          <template #icon>
+            <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin" />
+          </template>
+          <template #title>Checking payment status...</template>
+          <template #description>
+            We're automatically checking for your payment. This page will update once payment is confirmed.
+          </template>
+        </UAlert>
+
         <!-- Payment Pending Alert -->
         <UAlert
-          v-if="canRetryPayment"
+          v-else-if="canRetryPayment"
           :color="order.paymentStatus === 'failed' ? 'red' : 'yellow'"
           :icon="order.paymentStatus === 'failed' ? 'i-heroicons-x-circle' : 'i-heroicons-exclamation-triangle'"
           :title="order.paymentStatus === 'failed' ? 'Payment was not completed' : 'Payment not yet received'"

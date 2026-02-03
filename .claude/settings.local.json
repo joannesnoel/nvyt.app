@@ -130,7 +130,8 @@
       "Bash(gh run:*)",
       "WebFetch(domain:github.com)",
       "Bash(gh cache list:*)",
-      "Bash(gh cache delete:*)"
+      "Bash(gh cache delete:*)",
+      "Bash(gh repo view:*)"
     ]
   },
   "hooks": {
