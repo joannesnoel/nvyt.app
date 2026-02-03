@@ -309,34 +309,19 @@ async function pollPaymentStatus() {
     const paymentStatus = verifyResponse.data?.status
 
     if (paymentStatus === 'succeeded') {
-      // Payment confirmed - fetch updated order data
-      const orderRes = await $fetch(`/api/v1/orders/${orderNumber.value}`, {
-        query: { token: queryToken.value },
-      }) as any
-
-      if (orderResponse.value?.data && orderRes.data) {
-        orderResponse.value.data.paymentStatus = 'paid'
-        orderResponse.value.data.tickets = orderRes.data.tickets
-      }
-
+      // Payment confirmed - reload to show updated status
       stopPolling()
       toast.add({
         title: 'Payment Confirmed!',
-        description: 'Your payment has been received. Your tickets are ready.',
+        description: 'Your payment has been received. Refreshing...',
         color: 'green',
         icon: 'i-heroicons-check-circle',
       })
+      // Reload the page to show the updated paid status
+      window.location.reload()
+      return
     } else if (paymentStatus === 'failed') {
-      // Payment failed - fetch updated order data
-      const orderRes = await $fetch(`/api/v1/orders/${orderNumber.value}`, {
-        query: { token: queryToken.value },
-      }) as any
-
-      if (orderResponse.value?.data && orderRes.data) {
-        orderResponse.value.data.paymentStatus = 'failed'
-        orderResponse.value.data.tickets = orderRes.data.tickets
-      }
-
+      // Payment failed - reload to show updated status
       stopPolling()
       toast.add({
         title: 'Payment Failed',
@@ -344,6 +329,8 @@ async function pollPaymentStatus() {
         color: 'red',
         icon: 'i-heroicons-x-circle',
       })
+      window.location.reload()
+      return
     }
     // For 'processing' or 'pending' status, continue polling
   } catch (e: any) {
@@ -359,18 +346,17 @@ async function pollPaymentStatus() {
       if (response.data) {
         const newStatus = response.data.paymentStatus
 
-        if (orderResponse.value?.data && newStatus !== orderResponse.value.data.paymentStatus) {
-          orderResponse.value.data.paymentStatus = newStatus
-          orderResponse.value.data.tickets = response.data.tickets
-
+        if (response.data && newStatus !== orderResponse.value?.data?.paymentStatus) {
           if (newStatus === 'paid') {
             stopPolling()
             toast.add({
               title: 'Payment Confirmed!',
-              description: 'Your payment has been received. Your tickets are ready.',
+              description: 'Your payment has been received. Refreshing...',
               color: 'green',
               icon: 'i-heroicons-check-circle',
             })
+            window.location.reload()
+            return
           } else if (newStatus === 'failed') {
             stopPolling()
             toast.add({
@@ -379,6 +365,8 @@ async function pollPaymentStatus() {
               color: 'red',
               icon: 'i-heroicons-x-circle',
             })
+            window.location.reload()
+            return
           }
         }
       }
