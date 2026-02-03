@@ -232,8 +232,8 @@ async function attachPaymentMethod(paymentMethodId?: string) {
     // QR PH - redirect to QR code page
     const qrUrl = encodeURIComponent(response.data.nextAction.qrCodeUrl)
     const returnUrl = setupToken.value
-      ? `/orders/${orderData.value.orderNumber}?token=${setupToken.value}`
-      : `/orders/${orderData.value.orderNumber}`
+      ? `/orders/${orderData.value.orderNumber}/success?token=${setupToken.value}`
+      : `/orders/${orderData.value.orderNumber}/success`
     await router.push(`/checkout/qr?url=${qrUrl}&order=${orderData.value.orderNumber}&return=${encodeURIComponent(returnUrl)}`)
   } else if (status === 'processing') {
     // Payment is processing (e.g., QR Ph)
