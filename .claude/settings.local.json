@@ -126,7 +126,11 @@
       "WebSearch",
       "Bash(pnpm dev)",
       "mcp__ide__getDiagnostics",
-      "Bash(npx nuxi build:*)"
+      "Bash(npx nuxi build:*)",
+      "Bash(gh run:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh cache list:*)",
+      "Bash(gh cache delete:*)"
     ]
   },
   "hooks": {
