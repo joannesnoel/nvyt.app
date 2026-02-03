@@ -1,5 +1,5 @@
-import { events, ticketTypes, eventVerifications } from '@nvyt/db'
-import { eq, and, inArray } from 'drizzle-orm'
+import { events, ticketTypes, eventVerifications, orders, tickets, discountCodes } from '@nvyt/db'
+import { eq, and, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { createPayPalOrder, toCents } from '~/server/utils/paypal'
 import { calculateProcessingFees } from '~/server/utils/wallet'
@@ -71,6 +71,64 @@ export default defineEventHandler(async (event) => {
     .limit(1)
 
   const adminFeeRate = verification?.adminFeeRate ? parseFloat(verification.adminFeeRate) : 0
+
+  // Cancel any existing pending orders from this user for this event
+  // This prevents orphaned orders when users switch from PayMongo to PayPal
+  if (user) {
+    const existingPendingOrders = await db
+      .select({ id: orders.id, orderNumber: orders.orderNumber, discountCodeId: orders.discountCodeId })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.userId, user.id),
+          eq(orders.eventId, data.eventId),
+          eq(orders.paymentStatus, 'pending')
+        )
+      )
+
+    for (const pendingOrder of existingPendingOrders) {
+      const pendingTickets = await db
+        .select({ ticketTypeId: tickets.ticketTypeId })
+        .from(tickets)
+        .where(eq(tickets.orderId, pendingOrder.id))
+
+      const ticketTypeCountMap = new Map<string, number>()
+      for (const t of pendingTickets) {
+        ticketTypeCountMap.set(t.ticketTypeId, (ticketTypeCountMap.get(t.ticketTypeId) || 0) + 1)
+      }
+      for (const [ttId, count] of ticketTypeCountMap) {
+        await db
+          .update(ticketTypes)
+          .set({
+            quantitySold: sql`GREATEST(${ticketTypes.quantitySold} - ${count}, 0)`,
+            updatedAt: new Date(),
+          })
+          .where(eq(ticketTypes.id, ttId))
+      }
+
+      await db
+        .update(tickets)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(eq(tickets.orderId, pendingOrder.id))
+
+      await db
+        .update(orders)
+        .set({ paymentStatus: 'failed', updatedAt: new Date() })
+        .where(eq(orders.id, pendingOrder.id))
+
+      if (pendingOrder.discountCodeId) {
+        await db
+          .update(discountCodes)
+          .set({
+            usageCount: sql`GREATEST(${discountCodes.usageCount} - 1, 0)`,
+            updatedAt: new Date(),
+          })
+          .where(eq(discountCodes.id, pendingOrder.discountCodeId))
+      }
+
+      console.log(`[PayPal] Cancelled stale pending order ${pendingOrder.orderNumber} for user ${user.id}`)
+    }
+  }
 
   // Get ticket types
   const ticketTypeIds = data.items.map((item) => item.ticketTypeId)
