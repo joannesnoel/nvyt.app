@@ -277,7 +277,7 @@ const shouldPoll = computed(() => {
     parseFloat(order.value?.totalAmount || '0') > 0
 })
 
-// Poll payment status
+// Poll payment status by checking with PayMongo directly
 async function pollPaymentStatus() {
   if (!shouldPoll.value) {
     stopPolling()
@@ -298,39 +298,93 @@ async function pollPaymentStatus() {
 
   try {
     pollCount.value++
-    const response = await $fetch(`/api/v1/orders/${orderNumber.value}`, {
-      query: { token: queryToken.value },
+
+    // Call verify-payment endpoint which checks with PayMongo directly
+    // This updates the database if payment succeeded
+    const verifyResponse = await $fetch('/api/v1/paymongo/verify-payment', {
+      method: 'POST',
+      body: { orderNumber: orderNumber.value },
     }) as any
 
-    if (response.data) {
-      const newStatus = response.data.paymentStatus
+    const paymentStatus = verifyResponse.data?.status
 
-      // Update order data if status changed
-      if (orderResponse.value?.data && newStatus !== orderResponse.value.data.paymentStatus) {
-        orderResponse.value.data.paymentStatus = newStatus
-        orderResponse.value.data.tickets = response.data.tickets
+    if (paymentStatus === 'succeeded') {
+      // Payment confirmed - fetch updated order data
+      const orderRes = await $fetch(`/api/v1/orders/${orderNumber.value}`, {
+        query: { token: queryToken.value },
+      }) as any
 
-        if (newStatus === 'paid') {
-          stopPolling()
-          toast.add({
-            title: 'Payment Confirmed!',
-            description: 'Your payment has been received. Your tickets are ready.',
-            color: 'green',
-            icon: 'i-heroicons-check-circle',
-          })
-        } else if (newStatus === 'failed') {
-          stopPolling()
-          toast.add({
-            title: 'Payment Failed',
-            description: 'Your payment was not successful. Please retry.',
-            color: 'red',
-            icon: 'i-heroicons-x-circle',
-          })
+      if (orderResponse.value?.data && orderRes.data) {
+        orderResponse.value.data.paymentStatus = 'paid'
+        orderResponse.value.data.tickets = orderRes.data.tickets
+      }
+
+      stopPolling()
+      toast.add({
+        title: 'Payment Confirmed!',
+        description: 'Your payment has been received. Your tickets are ready.',
+        color: 'green',
+        icon: 'i-heroicons-check-circle',
+      })
+    } else if (paymentStatus === 'failed') {
+      // Payment failed - fetch updated order data
+      const orderRes = await $fetch(`/api/v1/orders/${orderNumber.value}`, {
+        query: { token: queryToken.value },
+      }) as any
+
+      if (orderResponse.value?.data && orderRes.data) {
+        orderResponse.value.data.paymentStatus = 'failed'
+        orderResponse.value.data.tickets = orderRes.data.tickets
+      }
+
+      stopPolling()
+      toast.add({
+        title: 'Payment Failed',
+        description: 'Your payment was not successful. Please retry.',
+        color: 'red',
+        icon: 'i-heroicons-x-circle',
+      })
+    }
+    // For 'processing' or 'pending' status, continue polling
+  } catch (e: any) {
+    // If verify-payment fails (e.g., no payment intent), fall back to checking order status
+    console.error('[Success] Failed to verify payment with PayMongo:', e.data?.message || e.message)
+
+    // Still fetch order status in case webhook updated it
+    try {
+      const response = await $fetch(`/api/v1/orders/${orderNumber.value}`, {
+        query: { token: queryToken.value },
+      }) as any
+
+      if (response.data) {
+        const newStatus = response.data.paymentStatus
+
+        if (orderResponse.value?.data && newStatus !== orderResponse.value.data.paymentStatus) {
+          orderResponse.value.data.paymentStatus = newStatus
+          orderResponse.value.data.tickets = response.data.tickets
+
+          if (newStatus === 'paid') {
+            stopPolling()
+            toast.add({
+              title: 'Payment Confirmed!',
+              description: 'Your payment has been received. Your tickets are ready.',
+              color: 'green',
+              icon: 'i-heroicons-check-circle',
+            })
+          } else if (newStatus === 'failed') {
+            stopPolling()
+            toast.add({
+              title: 'Payment Failed',
+              description: 'Your payment was not successful. Please retry.',
+              color: 'red',
+              icon: 'i-heroicons-x-circle',
+            })
+          }
         }
       }
+    } catch (orderError) {
+      console.error('[Success] Failed to fetch order status:', orderError)
     }
-  } catch (e) {
-    console.error('[Success] Failed to poll payment status:', e)
   }
 
   // Schedule next poll if still needed
