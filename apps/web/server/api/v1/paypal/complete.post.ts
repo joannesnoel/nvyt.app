@@ -1,4 +1,4 @@
-import { orders, tickets, ticketTypes, events, users, ticketRegistrationFields } from '@nvyt/db'
+import { orders, tickets, ticketTypes, events, users, ticketRegistrationFields, discountCodes } from '@nvyt/db'
 import { eq, and, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
@@ -177,6 +177,62 @@ export default defineEventHandler(async (event) => {
       isNewGuestUser = true
       needsAccountSetup = true
     }
+  }
+
+  // Cancel any existing pending orders from this user for this event
+  // This prevents orphaned orders when users switch from PayMongo to PayPal
+  const existingPendingOrders = await db
+    .select({ id: orders.id, orderNumber: orders.orderNumber, discountCodeId: orders.discountCodeId })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.userId, user.id),
+        eq(orders.eventId, sessionData.eventId),
+        eq(orders.paymentStatus, 'pending')
+      )
+    )
+
+  for (const pendingOrder of existingPendingOrders) {
+    const pendingTickets = await db
+      .select({ ticketTypeId: tickets.ticketTypeId })
+      .from(tickets)
+      .where(eq(tickets.orderId, pendingOrder.id))
+
+    const ticketTypeCountMap = new Map<string, number>()
+    for (const t of pendingTickets) {
+      ticketTypeCountMap.set(t.ticketTypeId, (ticketTypeCountMap.get(t.ticketTypeId) || 0) + 1)
+    }
+    for (const [ttId, count] of ticketTypeCountMap) {
+      await db
+        .update(ticketTypes)
+        .set({
+          quantitySold: sql`GREATEST(${ticketTypes.quantitySold} - ${count}, 0)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(ticketTypes.id, ttId))
+    }
+
+    await db
+      .update(tickets)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(eq(tickets.orderId, pendingOrder.id))
+
+    await db
+      .update(orders)
+      .set({ paymentStatus: 'failed', updatedAt: new Date() })
+      .where(eq(orders.id, pendingOrder.id))
+
+    if (pendingOrder.discountCodeId) {
+      await db
+        .update(discountCodes)
+        .set({
+          usageCount: sql`GREATEST(${discountCodes.usageCount} - 1, 0)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(discountCodes.id, pendingOrder.discountCodeId))
+    }
+
+    console.log(`[PayPal Complete] Cancelled stale pending order ${pendingOrder.orderNumber} for user ${user.id}`)
   }
 
   // Get ticket types and validate availability
