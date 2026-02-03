@@ -550,10 +550,16 @@ export interface AttachPaymentMethodResponse {
       }
     }>
     next_action?: {
-      type: 'redirect'
-      redirect: {
+      type: 'redirect' | 'consume_qr'
+      redirect?: {
         url: string
         return_url: string
+      }
+      code?: {
+        id: string
+        amount: number
+        label: string
+        image_url: string
       }
     }
     metadata?: Record<string, string>

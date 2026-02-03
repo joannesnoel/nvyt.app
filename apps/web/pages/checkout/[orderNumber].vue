@@ -225,9 +225,16 @@ async function attachPaymentMethod(paymentMethodId?: string) {
   if (status === 'succeeded') {
     // Payment completed immediately
     await handlePaymentSuccess()
-  } else if (status === 'awaiting_next_action' && response.data?.nextAction?.redirectUrl) {
+  } else if (status === 'awaiting_next_action' && response.data?.nextAction?.type === 'redirect') {
     // Redirect to 3DS or e-wallet authorization
     window.location.href = response.data.nextAction.redirectUrl
+  } else if (status === 'awaiting_next_action' && response.data?.nextAction?.type === 'consume_qr') {
+    // QR PH - redirect to QR code page
+    const qrUrl = encodeURIComponent(response.data.nextAction.qrCodeUrl)
+    const returnUrl = setupToken.value
+      ? `/orders/${orderData.value.orderNumber}?token=${setupToken.value}`
+      : `/orders/${orderData.value.orderNumber}`
+    await router.push(`/checkout/qr?url=${qrUrl}&order=${orderData.value.orderNumber}&return=${encodeURIComponent(returnUrl)}`)
   } else if (status === 'processing') {
     // Payment is processing (e.g., QR Ph)
     toast.add({

@@ -189,6 +189,9 @@ export default defineEventHandler(async (event) => {
   // Check the result status
   const status = attachResult.attributes.status
 
+  // Debug: log the full response to see what PayMongo returns
+  console.log('[attach-method] PayMongo response:', JSON.stringify(attachResult, null, 2))
+
   if (status === 'succeeded') {
     // Payment completed immediately (rare, but possible for some cards)
     return successResponse({
@@ -197,15 +200,33 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (status === 'awaiting_next_action' && attachResult.attributes.next_action?.redirect) {
-    // Needs redirect (3DS for cards, or e-wallet authorization)
-    return successResponse({
-      status: 'awaiting_next_action',
-      nextAction: {
-        type: 'redirect',
-        redirectUrl: attachResult.attributes.next_action.redirect.url,
-      },
-    })
+  if (status === 'awaiting_next_action' && attachResult.attributes.next_action) {
+    const nextAction = attachResult.attributes.next_action
+
+    if (nextAction.type === 'redirect' && nextAction.redirect) {
+      // Needs redirect (3DS for cards, or e-wallet authorization)
+      return successResponse({
+        status: 'awaiting_next_action',
+        nextAction: {
+          type: 'redirect',
+          redirectUrl: nextAction.redirect.url,
+        },
+      })
+    }
+
+    if (nextAction.type === 'consume_qr' && nextAction.code) {
+      // QR PH - return QR code image URL for display
+      return successResponse({
+        status: 'awaiting_next_action',
+        nextAction: {
+          type: 'consume_qr',
+          qrCodeUrl: nextAction.code.image_url,
+          qrCodeId: nextAction.code.id,
+          amount: nextAction.code.amount,
+          label: nextAction.code.label,
+        },
+      })
+    }
   }
 
   if (status === 'processing') {
