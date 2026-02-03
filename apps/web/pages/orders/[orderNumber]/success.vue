@@ -16,6 +16,7 @@ const token = computed(() => route.query.token as string | undefined)
 
 // Payment status polling
 const isPolling = ref(false)
+const isPaymentConfirmed = ref(false)
 const pollCount = ref(0)
 const POLL_INTERVAL = 5000 // 5 seconds
 const MAX_POLL_TIME = 10 * 60 * 1000 // 10 minutes
@@ -310,14 +311,14 @@ async function pollPaymentStatus() {
 
     if (paymentStatus === 'succeeded') {
       // Payment confirmed - reload to show updated status
+      isPaymentConfirmed.value = true
       stopPolling()
       toast.add({
         title: 'Payment Confirmed!',
-        description: 'Your payment has been received. Refreshing...',
+        description: 'Your payment has been received.',
         color: 'green',
         icon: 'i-heroicons-check-circle',
       })
-      // Reload the page to show the updated paid status
       window.location.reload()
       return
     } else if (paymentStatus === 'failed') {
@@ -348,10 +349,11 @@ async function pollPaymentStatus() {
 
         if (response.data && newStatus !== orderResponse.value?.data?.paymentStatus) {
           if (newStatus === 'paid') {
+            isPaymentConfirmed.value = true
             stopPolling()
             toast.add({
               title: 'Payment Confirmed!',
-              description: 'Your payment has been received. Refreshing...',
+              description: 'Your payment has been received.',
               color: 'green',
               icon: 'i-heroicons-check-circle',
             })
@@ -625,7 +627,7 @@ async function retryPayment() {
 
         <!-- Payment Pending Alert -->
         <UAlert
-          v-else-if="canRetryPayment"
+          v-else-if="canRetryPayment && !isPaymentConfirmed"
           :color="order.paymentStatus === 'failed' ? 'red' : 'yellow'"
           :icon="order.paymentStatus === 'failed' ? 'i-heroicons-x-circle' : 'i-heroicons-exclamation-triangle'"
           :title="order.paymentStatus === 'failed' ? 'Payment was not completed' : 'Payment not yet received'"
