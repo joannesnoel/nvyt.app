@@ -77,7 +77,6 @@ const statusOptions = [
   { label: 'All', value: undefined },
   { label: 'Paid', value: 'paid' },
   { label: 'Pending', value: 'pending' },
-  { label: 'Failed', value: 'failed' },
   { label: 'Refunded', value: 'refunded' },
 ]
 

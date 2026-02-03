@@ -29,6 +29,9 @@ export default defineEventHandler(async (event) => {
 
   if (status) {
     conditions.push(eq(orders.paymentStatus, status as any))
+  } else {
+    // By default, exclude failed orders
+    conditions.push(inArray(orders.paymentStatus, ['paid', 'pending', 'refunded']))
   }
 
   // Get orders with customer info
@@ -122,10 +125,10 @@ export default defineEventHandler(async (event) => {
     .where(and(...conditions))
   const total = countResult[0]?.count ?? 0
 
-  // Calculate stats
+  // Calculate stats (excluding failed orders)
   const [stats] = await db
     .select({
-      totalOrders: sql<number>`count(*)::int`,
+      totalOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} in ('paid', 'pending', 'refunded'))::int`,
       paidOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} = 'paid')::int`,
       pendingOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} = 'pending')::int`,
       refundedOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} = 'refunded')::int`,

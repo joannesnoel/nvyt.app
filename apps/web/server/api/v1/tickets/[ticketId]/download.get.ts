@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
     attendeeName: ticket.attendeeName,
     attendeeEmail,
     ticketTypeName: ticketType.name,
-    ticketTypePrice: ticketType.price,
+    ticketTypePrice: ticket.pricePaid ?? ticketType.price,
     eventTitle: eventData.title,
     eventDate: eventData.startDate,
     eventEndDate: eventData.endDate,
