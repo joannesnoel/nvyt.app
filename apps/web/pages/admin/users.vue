@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'admin',
   middleware: ['admin'],
 })
 
@@ -102,41 +102,38 @@ const emailVerifiedOptions = [
 </script>
 
 <template>
-  <div class="py-8">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          Admin: Users
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-1">
-          View and manage all registered users
-        </p>
-      </div>
+  <div>
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+        Users
+      </h1>
+      <p class="text-gray-600 dark:text-gray-400 mt-1">
+        View and manage all registered users
+      </p>
+    </div>
 
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <UCard>
-          <div>
-            <p class="text-xs text-gray-600 font-medium mb-1">Total Users</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
-          </div>
-        </UCard>
-
-        <UCard>
-          <div>
-            <p class="text-xs text-green-600 font-medium mb-1">Verified</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.verified }}</p>
-          </div>
-        </UCard>
-
-        <UCard>
-          <div>
-            <p class="text-xs text-yellow-600 font-medium mb-1">Unverified</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.unverified }}</p>
-          </div>
-        </UCard>
-      </div>
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <AdminStatCard
+        title="Total Users"
+        :value="stats.total"
+        icon="i-heroicons-users"
+        color="indigo"
+      />
+      <AdminStatCard
+        title="Verified"
+        :value="stats.verified"
+        icon="i-heroicons-check-badge"
+        color="green"
+      />
+      <AdminStatCard
+        title="Unverified"
+        :value="stats.unverified"
+        icon="i-heroicons-exclamation-circle"
+        color="yellow"
+      />
+    </div>
 
       <!-- Filters -->
       <UCard class="mb-6">
@@ -295,6 +292,5 @@ const emailVerifiedOptions = [
           </div>
         </div>
       </UCard>
-    </div>
   </div>
 </template>

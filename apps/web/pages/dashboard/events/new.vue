@@ -2,7 +2,7 @@
 import { createEventSchema, type CreateEventInput, type LocationDetails } from '@nvyt/shared'
 
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const form = reactive<Partial<CreateEventInput>>({

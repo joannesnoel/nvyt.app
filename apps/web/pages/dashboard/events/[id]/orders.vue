@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const route = useRoute()
@@ -73,6 +73,21 @@ function formatDate(date: string) {
   })
 }
 
+function formatPaymentMethod(order: any) {
+  if (order.paymentProvider === 'paypal') return 'PayPal'
+  if (!order.paymentMethod) return '-'
+  const methods: Record<string, string> = {
+    gcash: 'GCash',
+    maya: 'Maya',
+    paymaya: 'Maya',
+    card: 'Card',
+    grab_pay: 'GrabPay',
+    qrph: 'QRPh',
+    shopee_pay: 'ShopeePay',
+  }
+  return methods[order.paymentMethod] || order.paymentMethod
+}
+
 const statusOptions = [
   { label: 'All', value: undefined },
   { label: 'Paid', value: 'paid' },
@@ -97,17 +112,10 @@ function getRegistrationStatusColor(order: any) {
 
 <template>
   <div class="py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="flex items-center justify-between mb-8">
         <div>
-          <NuxtLink
-            :to="`/dashboard/events/${eventId}`"
-            class="text-gray-600 dark:text-gray-400 hover:text-primary flex items-center gap-1 mb-2"
-          >
-            <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
-            Back to Event
-          </NuxtLink>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Orders</h1>
         </div>
       </div>
@@ -221,6 +229,10 @@ function getRegistrationStatusColor(order: any) {
                 </UBadge>
               </div>
               <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Payment</span>
+                <span class="text-sm text-gray-900 dark:text-white">{{ formatPaymentMethod(order) }}</span>
+              </div>
+              <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Amount</span>
                 <span class="text-sm font-medium text-primary">{{ formatCurrency(order.totalAmount) }}</span>
               </div>
@@ -249,6 +261,7 @@ function getRegistrationStatusColor(order: any) {
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Tickets</th>
                 <th v-if="hasRegistrationFields" class="py-3 px-4 text-left text-sm font-medium text-gray-500">Registration</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Amount</th>
+                <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Payment</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Status</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Date</th>
                 <th class="py-3 px-4 text-right text-sm font-medium text-gray-500">Actions</th>
@@ -288,6 +301,9 @@ function getRegistrationStatusColor(order: any) {
                   <span class="font-medium text-gray-900 dark:text-white">
                     {{ formatCurrency(order.totalAmount) }}
                   </span>
+                </td>
+                <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                  {{ formatPaymentMethod(order) }}
                 </td>
                 <td class="py-3 px-4">
                   <UBadge :color="getStatusColor(order.paymentStatus)" variant="soft">

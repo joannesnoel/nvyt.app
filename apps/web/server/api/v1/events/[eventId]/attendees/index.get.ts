@@ -325,6 +325,10 @@ async function getTicketStats(
         email: attendeeUser?.email || t.customer?.email || t.purchaser?.email || null,
         avatarUrl: attendeeUser?.avatarUrl ?? t.purchaser?.avatarUrl ?? null,
       },
+      purchasedBy: {
+        name: t.customer?.name || t.purchaser?.name || null,
+        email: t.customer?.email || t.purchaser?.email || null,
+      },
     }
   })
 

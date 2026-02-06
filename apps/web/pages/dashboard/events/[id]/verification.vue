@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const route = useRoute()
@@ -354,7 +354,7 @@ function isDocTypeUploaded(type: string) {
 
 <template>
   <div class="py-8">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="mb-8">
         <NuxtLink

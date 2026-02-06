@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const route = useRoute()
@@ -543,7 +543,7 @@ function getTierTypeColor(tierType: string) {
 
 <template>
   <div class="py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <!-- Loading -->
       <div v-if="eventPending" class="space-y-4">
         <USkeleton class="h-8 w-1/3" />
@@ -555,13 +555,6 @@ function getTierTypeColor(tierType: string) {
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
-            <NuxtLink
-              :to="`/dashboard/events/${eventId}`"
-              class="text-gray-600 dark:text-gray-400 hover:text-primary flex items-center gap-1 mb-2"
-            >
-              <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
-              Back to Event
-            </NuxtLink>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
               Ticket Types
             </h1>

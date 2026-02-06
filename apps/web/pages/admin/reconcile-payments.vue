@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'admin',
   middleware: ['admin'],
 })
 
@@ -43,17 +43,16 @@ function formatCurrency(amount: number) {
 </script>
 
 <template>
-  <div class="py-8">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          Admin: Reconcile Payments
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-1">
-          Check pending orders against PayMongo and reconcile payment statuses
-        </p>
-      </div>
+  <div class="max-w-4xl">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+        Reconcile Payments
+      </h1>
+      <p class="text-gray-600 dark:text-gray-400 mt-1">
+        Check pending orders against PayMongo and reconcile payment statuses
+      </p>
+    </div>
 
       <!-- Action Card -->
       <UCard class="mb-6">
@@ -84,30 +83,30 @@ function formatCurrency(amount: number) {
       <template v-if="result">
         <!-- Summary Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <UCard>
-            <div>
-              <p class="text-xs text-gray-500 font-medium mb-1">Total Checked</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ result.total }}</p>
-            </div>
-          </UCard>
-          <UCard>
-            <div>
-              <p class="text-xs text-green-600 font-medium mb-1">Paid</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ result.reconciled.paid }}</p>
-            </div>
-          </UCard>
-          <UCard>
-            <div>
-              <p class="text-xs text-red-600 font-medium mb-1">Failed</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ result.reconciled.failed }}</p>
-            </div>
-          </UCard>
-          <UCard>
-            <div>
-              <p class="text-xs text-gray-500 font-medium mb-1">Skipped</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ result.reconciled.skipped }}</p>
-            </div>
-          </UCard>
+          <AdminStatCard
+            title="Total Checked"
+            :value="result.total"
+            icon="i-heroicons-document-magnifying-glass"
+            color="gray"
+          />
+          <AdminStatCard
+            title="Paid"
+            :value="result.reconciled.paid"
+            icon="i-heroicons-check-circle"
+            color="green"
+          />
+          <AdminStatCard
+            title="Failed"
+            :value="result.reconciled.failed"
+            icon="i-heroicons-x-circle"
+            color="red"
+          />
+          <AdminStatCard
+            title="Skipped"
+            :value="result.reconciled.skipped"
+            icon="i-heroicons-minus-circle"
+            color="gray"
+          />
         </div>
 
         <!-- Errors -->
@@ -152,6 +151,5 @@ function formatCurrency(amount: number) {
           </div>
         </UCard>
       </template>
-    </div>
   </div>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const route = useRoute()
@@ -152,17 +152,10 @@ function handleBlur() {
 
 <template>
   <div class="py-8">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
-          <NuxtLink
-            :to="`/dashboard/events/${eventId}/attendees`"
-            class="text-gray-600 dark:text-gray-400 hover:text-primary flex items-center gap-1 mb-2"
-          >
-            <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
-            Back to Attendees
-          </NuxtLink>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Check-in Scanner</h1>
         </div>
       </div>
