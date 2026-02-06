@@ -79,8 +79,8 @@ export default defineEventHandler(async (event) => {
       .where(eq(ticketTypes.eventId, eventId))
       .orderBy(ticketTypes.sortOrder)
 
-    // Color palette for ticket types
-    const colors = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e']
+    // Color palette for ticket types — bold distinct hues for stacked bar readability
+    const colors = ['#6366f1', '#10b981', '#f97316', '#ec4899', '#06b6d4', '#a855f7']
 
     // Get period totals (only paid tickets)
     const [totalStats] = await db

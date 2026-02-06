@@ -151,10 +151,10 @@ const paymentMethodLabels: Record<string, string> = {
 const paymentMethodColors: Record<string, string> = {
   gcash: '#007DFE',
   paymaya: '#2FB572',
-  grab_pay: '#00B14F',
-  qrph: '#1A6DFF',
+  grab_pay: '#14b8a6',
+  qrph: '#f59e0b',
   shopee_pay: '#EE4D2D',
-  paypal: '#003087',
+  paypal: '#ec4899',
   paymongo: '#6366f1',
   unknown: '#9ca3af',
 }
@@ -178,11 +178,7 @@ const revenueChartOptions = computed(() => {
       },
     },
     dataLabels: {
-      enabled: true,
-      formatter: (_val: number, opts: { seriesIndex: number; w: { config: { series: number[] } } }) => {
-        return formatCurrency(opts.w.config.series[opts.seriesIndex])
-      },
-      style: { fontSize: '10px' },
+      enabled: false,
     },
     tooltip: {
       cssClass: 'apexcharts-donut-tooltip',
