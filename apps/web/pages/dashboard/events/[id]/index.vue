@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import QRCode from 'qrcode'
 
+// Lazy load ApexCharts only on client-side
+const ApexChart = defineAsyncComponent(() => import('vue3-apexcharts'))
+
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const route = useRoute()
 const eventId = computed(() => route.params.id as string)
 const toast = useToast()
+const colorMode = useColorMode()
 
 // Fetch event by ID (not slug)
 const { data: eventResponse, pending, refresh } = await useFetch(
@@ -37,6 +41,209 @@ const { data: ordersData } = await useFetch(
 )
 const orderStats = computed(() => ordersData.value?.data?.stats)
 const recentOrders = computed(() => ordersData.value?.data?.orders ?? [])
+
+// Chart period selector
+const chartPeriod = ref(7)
+const periodOptions = [7, 14, 30, 90] as const
+
+// Fetch analytics data
+const { data: analyticsResponse, error: analyticsError } = await useFetch(
+  () => `/api/v1/events/${eventId.value}/analytics`,
+  {
+    query: { days: chartPeriod },
+    watch: [eventId, chartPeriod],
+  }
+)
+const analytics = computed(() => analyticsResponse.value?.data)
+
+// Chart options
+const isDark = computed(() => colorMode.value === 'dark')
+
+// Format date labels for x-axis categories
+const dateCategories = computed(() => {
+  const useShortFormat = chartPeriod.value >= 30
+  return (analytics.value?.dateLabels || []).map((d: string) => {
+    const date = new Date(d + 'T00:00:00')
+    if (useShortFormat) {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+    return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
+  })
+})
+
+// Get ticket type colors from API or use defaults
+const ticketTypeColors = computed(() => {
+  const byTicketType = analytics.value?.registrations?.byTicketType
+  if (byTicketType && byTicketType.length > 0) {
+    return byTicketType.map((tt: { color: string }) => tt.color)
+  }
+  return ['#6366f1']
+})
+
+const registrationChartOptions = computed(() => {
+  const hasTicketTypes = isTicketMode.value && analytics.value?.registrations?.byTicketType?.length > 0
+
+  return {
+    chart: {
+      type: 'bar',
+      height: 200,
+      toolbar: { show: false },
+      zoom: { enabled: false },
+      background: 'transparent',
+      stacked: hasTicketTypes,
+    },
+    colors: ticketTypeColors.value,
+    plotOptions: {
+      bar: {
+        borderRadius: hasTicketTypes ? 2 : 3,
+        columnWidth: '70%',
+      },
+    },
+    dataLabels: { enabled: false },
+    legend: {
+      show: hasTicketTypes,
+      position: 'top',
+      horizontalAlign: 'left',
+      fontSize: '11px',
+      labels: {
+        colors: isDark.value ? '#9ca3af' : '#6b7280',
+      },
+      markers: {
+        size: 8,
+        shape: 'circle',
+      },
+    },
+    xaxis: {
+      categories: dateCategories.value,
+      labels: {
+        show: true,
+        style: { colors: isDark.value ? '#9ca3af' : '#6b7280', fontSize: '10px' },
+      },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    yaxis: {
+      show: false,
+    },
+    grid: {
+      show: false,
+    },
+    tooltip: {
+      shared: true,
+      intersect: false,
+      theme: isDark.value ? 'dark' : 'light',
+    },
+  }
+})
+
+// Payment method display names and colors
+const paymentMethodLabels: Record<string, string> = {
+  gcash: 'GCash',
+  paymaya: 'Maya',
+  grab_pay: 'GrabPay',
+  qrph: 'QR Ph',
+  shopee_pay: 'ShopeePay',
+  paypal: 'PayPal',
+  paymongo: 'PayMongo',
+  unknown: 'Other',
+}
+
+const paymentMethodColors: Record<string, string> = {
+  gcash: '#007DFE',
+  paymaya: '#2FB572',
+  grab_pay: '#00B14F',
+  qrph: '#1A6DFF',
+  shopee_pay: '#EE4D2D',
+  paypal: '#003087',
+  paymongo: '#6366f1',
+  unknown: '#9ca3af',
+}
+
+const revenueByMethod = computed(() => analytics.value?.revenue?.byMethod ?? [])
+
+const revenueChartOptions = computed(() => {
+  const methods = revenueByMethod.value
+  return {
+    chart: {
+      type: 'donut',
+      background: 'transparent',
+    },
+    labels: methods.map((m: { method: string }) => paymentMethodLabels[m.method] || m.method),
+    colors: methods.map((m: { method: string }) => paymentMethodColors[m.method] || '#9ca3af'),
+    legend: {
+      position: 'bottom' as const,
+      fontSize: '11px',
+      labels: {
+        colors: isDark.value ? '#9ca3af' : '#6b7280',
+      },
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (_val: number, opts: { seriesIndex: number; w: { config: { series: number[] } } }) => {
+        return formatCurrency(opts.w.config.series[opts.seriesIndex])
+      },
+      style: { fontSize: '10px' },
+    },
+    tooltip: {
+      cssClass: 'apexcharts-donut-tooltip',
+      custom: ({ series, seriesIndex, w }: { series: number[]; seriesIndex: number; w: { config: { labels: string[]; colors: string[] } } }) => {
+        const label = w.config.labels[seriesIndex]
+        const value = formatCurrency(series[seriesIndex])
+        const color = w.config.colors[seriesIndex]
+        const bg = isDark.value ? '#1f2937' : '#ffffff'
+        const text = isDark.value ? '#f3f4f6' : '#111827'
+        const border = isDark.value ? '#374151' : '#e5e7eb'
+        return `<div style="background:${bg};color:${text};border:1px solid ${border};padding:6px 10px;border-radius:6px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;"></span>
+          <strong>${label}</strong>: ${value}
+        </div>`
+      },
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '55%',
+        },
+      },
+    },
+    stroke: {
+      width: 0,
+    },
+  }
+})
+
+const registrationChartSeries = computed(() => {
+  // For ticket mode with multiple ticket types, show stacked bars
+  const byTicketType = analytics.value?.registrations?.byTicketType
+  if (isTicketMode.value && byTicketType && byTicketType.length > 0) {
+    return byTicketType.map((tt: { name: string; data: { date: string; count: number }[] }) => ({
+      name: tt.name,
+      data: tt.data.map((r: { date: string; count: number }) => r.count),
+    }))
+  }
+
+  // Fallback to single series for RSVP mode or if no ticket types
+  return [{
+    name: isTicketMode.value ? 'Tickets' : 'RSVPs',
+    data: analytics.value?.registrations?.daily?.map((r: { date: string; count: number }) => r.count) || [],
+  }]
+})
+
+const revenueChartSeries = computed(() =>
+  revenueByMethod.value.map((r: { amount: number }) => r.amount)
+)
+
+// Check if registration chart has any data to display
+const hasRegistrationData = computed(() => {
+  return registrationChartSeries.value.some(series =>
+    series.data.some((val: number) => val > 0)
+  )
+})
+
+// Check if revenue chart has any data to display
+const hasRevenueData = computed(() => {
+  return revenueChartSeries.value.some((val: number) => val > 0)
+})
 
 // Fetch verification status for ticket-mode events
 const { data: verificationResponse } = await useFetch(
@@ -272,8 +479,8 @@ function getStatusColor(status: string) {
 </script>
 
 <template>
-  <div class="py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="sm:py-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <!-- Loading -->
       <div v-if="pending" class="space-y-4">
         <USkeleton class="h-8 w-1/3" />
@@ -288,13 +495,6 @@ function getStatusColor(status: string) {
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
-            <NuxtLink
-              to="/dashboard"
-              class="text-gray-600 dark:text-gray-400 hover:text-primary flex items-center gap-1 mb-2"
-            >
-              <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
-              Back to Dashboard
-            </NuxtLink>
             <div class="flex items-center gap-3">
               <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
                 {{ event.title }}
@@ -359,223 +559,135 @@ function getStatusColor(status: string) {
           </div>
         </div>
 
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <UCard>
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <UIcon name="i-heroicons-users" class="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                  {{ stats?.confirmed ?? 0 }}
-                </p>
-                <p class="text-sm text-gray-500">{{ isTicketMode ? 'Confirmed Tickets' : 'Confirmed RSVPs' }}</p>
-              </div>
-            </div>
-          </UCard>
-
-          <UCard>
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                <UIcon name="i-heroicons-clock" class="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                  {{ stats?.pending ?? 0 }}
-                </p>
-                <p class="text-sm text-gray-500">{{ isTicketMode ? 'Pending Tickets' : 'Pending RSVPs' }}</p>
-              </div>
-            </div>
-          </UCard>
-
-          <UCard>
-            <div class="flex items-center gap-3">
-              <div :class="[
-                'p-2 rounded-lg',
-                isTicketMode
-                  ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                  : 'bg-orange-100 dark:bg-orange-900/30'
-              ]">
-                <UIcon
-                  :name="isTicketMode ? 'i-heroicons-banknotes' : 'i-heroicons-queue-list'"
-                  :class="[
-                    'w-5 h-5',
-                    isTicketMode ? 'text-emerald-600' : 'text-orange-600'
-                  ]"
-                />
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                  <template v-if="isTicketMode">
-                    {{ formatCurrency(orderStats?.netEarnings ?? 0) }}
-                  </template>
-                  <template v-else>
-                    {{ stats?.waitlisted ?? 0 }}
-                  </template>
-                </p>
-                <p class="text-sm text-gray-500">
-                  {{ isTicketMode ? 'Revenue' : 'Waitlisted' }}
-                </p>
-              </div>
-            </div>
-          </UCard>
-
-          <UCard>
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-                <UIcon name="i-heroicons-check-badge" class="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                  {{ stats?.checkedIn ?? 0 }}
-                </p>
-                <p class="text-sm text-gray-500">Checked In</p>
-              </div>
-            </div>
-          </UCard>
-        </div>
-
         <!-- Main Content -->
-        <div class="grid md:grid-cols-3 gap-8">
-          <!-- Actions -->
-          <div class="md:col-span-2 space-y-6">
-            <!-- Quick Actions -->
-            <UCard>
-              <template #header>
-                <h2 class="font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
-              </template>
+        <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Analytics & Activity -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Period Selector -->
+            <div class="flex gap-1">
+              <UButton
+                v-for="period in periodOptions"
+                :key="period"
+                size="xs"
+                :variant="chartPeriod === period ? 'soft' : 'ghost'"
+                :color="chartPeriod === period ? 'primary' : 'gray'"
+                @click="chartPeriod = period"
+              >
+                {{ period }}d
+              </UButton>
+            </div>
 
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <!-- Primary: Most used -->
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/attendees`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-users" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Attendees</p>
-                  <p class="text-sm text-gray-500">Manage guests</p>
-                </NuxtLink>
+            <!-- Analytics Charts -->
+            <div class="grid sm:grid-cols-2 gap-6">
+              <!-- Registrations Chart -->
+              <UCard>
+                <template #header>
+                  <div class="flex items-center justify-between">
+                    <h2 class="font-semibold text-gray-900 dark:text-white">
+                      {{ isTicketMode ? 'Ticket Sales' : 'RSVPs' }}
+                    </h2>
+                    <div class="text-right">
+                      <p class="text-2xl font-bold text-indigo-600">
+                        {{ analytics?.registrations?.periodTotal ?? 0 }}
+                      </p>
+                      <p class="text-xs text-gray-500">Last {{ chartPeriod }}d</p>
+                    </div>
+                  </div>
+                </template>
 
-                <NuxtLink
-                  v-if="event.registrationMode === 'tickets'"
-                  :to="`/dashboard/events/${eventId}/orders`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-shopping-cart" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Orders</p>
-                  <p class="text-sm text-gray-500">Sales & refunds</p>
-                </NuxtLink>
+                <div class="h-[200px] w-full">
+                  <ClientOnly>
+                    <template #fallback>
+                      <div class="h-full flex items-center justify-center">
+                        <p class="text-sm text-gray-500">Loading...</p>
+                      </div>
+                    </template>
+                    <ApexChart
+                      v-if="hasRegistrationData"
+                      type="bar"
+                      width="100%"
+                      :height="180"
+                      :options="registrationChartOptions"
+                      :series="registrationChartSeries"
+                    />
+                    <div v-else class="h-full flex items-center justify-center">
+                      <div class="text-center">
+                        <UIcon name="i-heroicons-chart-bar" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                        <p class="text-sm text-gray-500">No activity in last {{ chartPeriod }} days</p>
+                      </div>
+                    </div>
+                  </ClientOnly>
+                </div>
+                <p class="text-xs text-gray-400 text-center mt-2">Last {{ chartPeriod }} days</p>
+              </UCard>
 
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/check-in`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-qr-code" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Check-in</p>
-                  <p class="text-sm text-gray-500">Scan QR codes</p>
-                </NuxtLink>
+              <!-- Revenue Chart (for ticket events) or Check-ins -->
+              <UCard>
+                <template #header>
+                  <div class="flex items-center justify-between">
+                    <h2 class="font-semibold text-gray-900 dark:text-white">
+                      {{ isTicketMode ? 'Revenue' : 'Check-ins' }}
+                    </h2>
+                    <div class="text-right">
+                      <p class="text-2xl font-bold text-emerald-600">
+                        <template v-if="isTicketMode">
+                          {{ formatCurrency(analytics?.revenue?.periodTotal ?? 0) }}
+                        </template>
+                        <template v-else>
+                          {{ stats?.checkedIn ?? 0 }}
+                        </template>
+                      </p>
+                      <p class="text-xs text-gray-500">{{ isTicketMode ? `Last ${chartPeriod}d` : `of ${stats?.confirmed ?? 0} confirmed` }}</p>
+                    </div>
+                  </div>
+                </template>
 
-                <!-- Ticket Configuration -->
-                <NuxtLink
-                  v-if="event.registrationMode === 'tickets'"
-                  :to="`/dashboard/events/${eventId}/tickets`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-ticket" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Tickets</p>
-                  <p class="text-sm text-gray-500">Manage pricing</p>
-                </NuxtLink>
-
-                <NuxtLink
-                  v-if="event.registrationMode === 'tickets'"
-                  :to="`/dashboard/events/${eventId}/discounts`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-tag" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Discounts</p>
-                  <p class="text-sm text-gray-500">Promo codes</p>
-                </NuxtLink>
-
-                <NuxtLink
-                  v-if="event.registrationMode === 'tickets'"
-                  :to="`/dashboard/events/${eventId}/registration`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-clipboard-document-list" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Registration Form</p>
-                  <p class="text-sm text-gray-500">Post-purchase fields</p>
-                </NuxtLink>
-
-                <!-- Event Setup -->
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/edit`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-pencil-square" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Edit</p>
-                  <p class="text-sm text-gray-500">Update details</p>
-                </NuxtLink>
-
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/preview`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-paint-brush" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Customize</p>
-                  <p class="text-sm text-gray-500">Edit appearance</p>
-                </NuxtLink>
-
-                <!-- Collaboration & Outreach -->
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/team`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-user-group" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Team</p>
-                  <p class="text-sm text-gray-500">Manage members</p>
-                </NuxtLink>
-
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/invite`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-envelope" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Invite</p>
-                  <p class="text-sm text-gray-500">Send invitations</p>
-                </NuxtLink>
-
-                <!-- Content -->
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/announcements`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-megaphone" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Announcements</p>
-                  <p class="text-sm text-gray-500">News & updates</p>
-                </NuxtLink>
-
-                <NuxtLink
-                  :to="`/dashboard/events/${eventId}/faqs`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-question-mark-circle" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">FAQs</p>
-                  <p class="text-sm text-gray-500">Q&A section</p>
-                </NuxtLink>
-
-                <!-- Optional -->
-                <NuxtLink
-                  v-if="event.contributionsEnabled"
-                  :to="`/dashboard/events/${eventId}/contributions`"
-                  class="p-4 text-center rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary transition-colors"
-                >
-                  <UIcon name="i-heroicons-gift" class="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p class="font-medium text-gray-900 dark:text-white">Contributions</p>
-                  <p class="text-sm text-gray-500">Manage list</p>
-                </NuxtLink>
-              </div>
-            </UCard>
+                <div class="h-[200px] w-full">
+                  <ClientOnly>
+                    <template #fallback>
+                      <div class="h-full flex items-center justify-center">
+                        <p class="text-sm text-gray-500">Loading...</p>
+                      </div>
+                    </template>
+                    <template v-if="isTicketMode">
+                      <ApexChart
+                        v-if="hasRevenueData"
+                        type="donut"
+                        width="100%"
+                        :height="200"
+                        :options="revenueChartOptions"
+                        :series="revenueChartSeries"
+                      />
+                      <div v-else class="h-full flex items-center justify-center">
+                        <div class="text-center">
+                          <UIcon name="i-heroicons-banknotes" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p class="text-sm text-gray-500">No revenue yet</p>
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div class="h-full flex items-center justify-center">
+                        <div class="text-center">
+                          <p class="text-5xl font-bold text-emerald-600 mb-2">
+                            {{ stats?.checkedIn ?? 0 }}
+                          </p>
+                          <p class="text-sm text-gray-500">
+                            {{ stats?.confirmed ? Math.round(((stats.checkedIn ?? 0) / stats.confirmed) * 100) : 0 }}% check-in rate
+                          </p>
+                          <div v-if="stats?.confirmed" class="mt-3 w-48 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              class="bg-emerald-600 h-2 rounded-full transition-all"
+                              :style="{ width: `${Math.min(100, ((stats?.checkedIn ?? 0) / stats.confirmed) * 100)}%` }"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                  </ClientOnly>
+                </div>
+                <p v-if="isTicketMode" class="text-xs text-gray-400 text-center mt-2">Last {{ chartPeriod }} days by payment method</p>
+              </UCard>
+            </div>
 
             <!-- Recent Attendees/Orders -->
             <UCard>
@@ -1012,3 +1124,11 @@ function getStatusColor(status: string) {
 
   </div>
 </template>
+
+<style>
+.apexcharts-donut-tooltip.apexcharts-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+</style>

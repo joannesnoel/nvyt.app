@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: false,
 })
 
 const route = useRoute()
@@ -93,19 +93,8 @@ function confirmUnpublish() {
   updateEventStatus('draft')
 }
 
-// Panel state for mobile
-const panelExpanded = ref(false)
-const isMobile = ref(false)
-
-// Check if mobile on mount
-onMounted(() => {
-  const checkMobile = () => {
-    isMobile.value = window.innerWidth < 640
-  }
-  checkMobile()
-  window.addEventListener('resize', checkMobile)
-  onBeforeUnmount(() => window.removeEventListener('resize', checkMobile))
-})
+// Mobile sidebar state
+const sidebarOpen = ref(false)
 
 // Theme management
 const selectedTheme = ref<'light' | 'dark' | null>(null) // null = Auto
@@ -657,76 +646,293 @@ function getCategoryColor(category: string) {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <!-- Backdrop for dismissing panel (mobile only) -->
-    <div
-      v-if="panelExpanded && isMobile"
-      class="fixed inset-0 z-40"
-      @click="panelExpanded = false"
-    />
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <!-- Mobile Sidebar Toggle -->
+    <div class="lg:hidden fixed top-4 left-4 z-50">
+      <UButton
+        color="white"
+        variant="solid"
+        icon="i-heroicons-paint-brush"
+        class="shadow-lg"
+        @click="sidebarOpen = true"
+      />
+    </div>
 
-    <!-- Floating Control Panel -->
-    <div class="fixed bottom-4 right-4 sm:top-20 sm:bottom-auto z-50 flex flex-col items-end gap-3">
-      <!-- Collapsed state (mobile) -->
-      <div v-if="!panelExpanded" class="sm:hidden flex flex-col items-end gap-3">
-        <UButton
-          color="primary"
-          size="xl"
-          icon="i-heroicons-paint-brush"
-          class="shadow-xl rounded-full !p-4"
-          @click="panelExpanded = true"
-        />
-        <UButton
+    <!-- Mobile Sidebar -->
+    <USlideover v-model="sidebarOpen" side="left" :ui="{ width: 'max-w-xs' }">
+      <div class="flex flex-col h-full bg-white dark:bg-gray-900">
+      <!-- Header -->
+      <div class="px-4 py-4 border-b border-gray-200 dark:border-gray-800">
+        <NuxtLink
           :to="`/dashboard/events/${eventId}`"
-          color="green"
-          size="xl"
-          icon="i-heroicons-check"
-          class="shadow-xl rounded-full !p-4"
-        />
+          class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-3"
+        >
+          <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
+          <span>Back to Event</span>
+        </NuxtLink>
+        <h2 class="font-semibold text-gray-900 dark:text-white">
+          Customize
+        </h2>
+        <p class="text-sm text-gray-500 mt-1">{{ event?.title }}</p>
       </div>
 
-      <!-- Expanded panel -->
-      <UCard v-show="panelExpanded || !isMobile" class="w-56 sm:w-64 shadow-xl max-h-[80vh] overflow-y-auto">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold text-gray-900 dark:text-white text-sm">Customize</h3>
+      <!-- Customize Controls -->
+      <div class="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+        <!-- Event Media Section -->
+        <div>
+          <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Event Media</p>
+          <!-- Media Type Toggle -->
+          <div class="flex gap-2 mb-3">
             <UButton
-              class="sm:hidden"
-              color="gray"
-              variant="ghost"
-              size="xs"
-              icon="i-heroicons-minus"
-              @click="panelExpanded = false"
+              :color="mediaType === 'image' ? 'primary' : 'gray'"
+              :variant="mediaType === 'image' ? 'solid' : 'ghost'"
+              size="sm"
+              @click="mediaType = 'image'"
+            >
+              <UIcon name="i-heroicons-photo" class="w-4 h-4" />
+              <span class="ml-1">Image</span>
+            </UButton>
+            <UButton
+              :color="mediaType === 'video' ? 'primary' : 'gray'"
+              :variant="mediaType === 'video' ? 'solid' : 'ghost'"
+              size="sm"
+              @click="mediaType = 'video'"
+            >
+              <UIcon name="i-heroicons-play-circle" class="w-4 h-4" />
+              <span class="ml-1">Video</span>
+            </UButton>
+          </div>
+          <!-- Cover Image Upload -->
+          <div v-if="mediaType === 'image'">
+            <ImageUpload
+              v-model="coverImage"
+              folder="events"
+              placeholder="Upload cover image"
+              :compact="true"
+              cropper-title="Adjust Cover Image"
+              :aspect-ratio="16 / 9"
             />
           </div>
-        </template>
+          <!-- YouTube Video URL -->
+          <div v-else>
+            <UInput
+              v-model="promoVideoUrl"
+              placeholder="YouTube URL..."
+              size="sm"
+              icon="i-heroicons-play-circle"
+            />
+            <p class="text-xs text-gray-400 mt-1">Paste YouTube URL</p>
+          </div>
+        </div>
 
-        <div class="space-y-3">
+        <!-- Theme Selector -->
+        <div>
+          <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Theme</p>
+          <div class="flex gap-2">
+            <UButton
+              :color="selectedTheme === 'light' ? 'primary' : 'gray'"
+              :variant="selectedTheme === 'light' ? 'solid' : 'ghost'"
+              size="sm"
+              @click="selectedTheme = 'light'"
+            >
+              <UIcon name="i-heroicons-sun" class="w-4 h-4" />
+              <span class="ml-1">Light</span>
+            </UButton>
+            <UButton
+              :color="selectedTheme === 'dark' ? 'primary' : 'gray'"
+              :variant="selectedTheme === 'dark' ? 'solid' : 'ghost'"
+              size="sm"
+              @click="selectedTheme = 'dark'"
+            >
+              <UIcon name="i-heroicons-moon" class="w-4 h-4" />
+              <span class="ml-1">Dark</span>
+            </UButton>
+          </div>
+        </div>
+
+        <!-- Color Selector -->
+        <div>
+          <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Accent Color</p>
+          <div class="grid grid-cols-6 gap-2">
+            <button
+              v-for="color in colorPalette"
+              :key="color.name"
+              :class="[
+                'w-8 h-8 rounded-full transition-all overflow-hidden relative',
+                selectedColor === color.name
+                  ? 'ring-2 ring-offset-2 ring-gray-900 dark:ring-white dark:ring-offset-gray-800'
+                  : 'hover:scale-110'
+              ]"
+              :title="color.label"
+              @click="selectedColor = color.name"
+            >
+              <!-- Light mode half (top-left) -->
+              <span
+                :class="['absolute inset-0', color.light]"
+                style="clip-path: polygon(0 0, 100% 0, 0 100%);"
+              />
+              <!-- Dark mode half (bottom-right) -->
+              <span
+                :class="['absolute inset-0', color.dark]"
+                style="clip-path: polygon(100% 0, 100% 100%, 0 100%);"
+              />
+            </button>
+          </div>
+        </div>
+
+        <!-- Font Selectors -->
+        <div class="space-y-4">
+          <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fonts</p>
+          <!-- Title Font (Script fonts) -->
+          <div>
+            <p class="text-xs text-gray-500 mb-1">Title Font</p>
+            <USelectMenu
+              v-model="selectedTitleFont"
+              :options="titleFontPalette"
+              value-attribute="name"
+              option-attribute="label"
+              size="sm"
+              class="w-full"
+            >
+              <template #label>
+                <span :style="{ fontFamily: fontPalette.find(f => f.name === selectedTitleFont)?.family }">
+                  {{ fontPalette.find(f => f.name === selectedTitleFont)?.label }}
+                </span>
+              </template>
+              <template #option="{ option }">
+                <span :style="{ fontFamily: option.family }">{{ option.label }}</span>
+                <UBadge v-if="option.category === 'script'" size="xs" color="pink" variant="soft" class="ml-2">Script</UBadge>
+              </template>
+            </USelectMenu>
+          </div>
+          <!-- Heading Font (Display fonts) -->
+          <div>
+            <p class="text-xs text-gray-500 mb-1">Headings Font</p>
+            <USelectMenu
+              v-model="selectedHeadingFont"
+              :options="headingFontPalette"
+              value-attribute="name"
+              option-attribute="label"
+              size="sm"
+              class="w-full"
+            >
+              <template #label>
+                <span :style="{ fontFamily: fontPalette.find(f => f.name === selectedHeadingFont)?.family }">
+                  {{ fontPalette.find(f => f.name === selectedHeadingFont)?.label }}
+                </span>
+              </template>
+              <template #option="{ option }">
+                <span :style="{ fontFamily: option.family }">{{ option.label }}</span>
+                <UBadge v-if="option.category === 'display'" size="xs" color="primary" variant="soft" class="ml-2">Display</UBadge>
+              </template>
+            </USelectMenu>
+          </div>
+          <!-- Body Font (Sans-serif & Serif) -->
+          <div>
+            <p class="text-xs text-gray-500 mb-1">Body Font</p>
+            <USelectMenu
+              v-model="selectedBodyFont"
+              :options="bodyFontPalette"
+              value-attribute="name"
+              option-attribute="label"
+              size="sm"
+              class="w-full"
+            >
+              <template #label>
+                <span :style="{ fontFamily: fontPalette.find(f => f.name === selectedBodyFont)?.family }">
+                  {{ fontPalette.find(f => f.name === selectedBodyFont)?.label }}
+                </span>
+              </template>
+              <template #option="{ option }">
+                <span :style="{ fontFamily: option.family }">{{ option.label }}</span>
+                <UBadge v-if="option.category === 'serif'" size="xs" color="gray" variant="soft" class="ml-2">Serif</UBadge>
+              </template>
+            </USelectMenu>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+        <!-- Publish/Unpublish -->
+        <UButton
+          v-if="event?.status === 'draft'"
+          color="green"
+          block
+          icon="i-heroicons-rocket-launch"
+          :loading="isUpdating"
+          @click="showPublishModal = true"
+        >
+          Go Live
+        </UButton>
+        <UButton
+          v-else-if="event?.status === 'published'"
+          color="yellow"
+          variant="outline"
+          block
+          icon="i-heroicons-pause"
+          :loading="isUpdating"
+          @click="showUnpublishModal = true"
+        >
+          Take Offline
+        </UButton>
+        <!-- Done button -->
+        <UButton
+          :to="`/dashboard/events/${eventId}`"
+          color="primary"
+          variant="outline"
+          block
+          icon="i-heroicons-check"
+        >
+          Done
+        </UButton>
+      </div>
+    </div>
+    </USlideover>
+
+    <!-- Desktop Sidebar -->
+    <aside class="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col z-40">
+      <div class="flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+        <!-- Header -->
+        <div class="px-4 py-4 border-b border-gray-200 dark:border-gray-800">
+          <NuxtLink
+            :to="`/dashboard/events/${eventId}`"
+            class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-3"
+          >
+            <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
+            <span>Back to Event</span>
+          </NuxtLink>
+          <h2 class="font-semibold text-gray-900 dark:text-white">
+            Customize
+          </h2>
+          <p class="text-sm text-gray-500 mt-1">{{ event?.title }}</p>
+        </div>
+
+        <!-- Customize Controls -->
+        <div class="flex-1 overflow-y-auto px-4 py-4 space-y-6">
           <!-- Event Media Section -->
           <div>
-            <p class="text-xs text-gray-500 mb-2">Event Media</p>
-            <!-- Media Type Toggle -->
-            <div class="flex gap-1 mb-2">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Event Media</p>
+            <div class="flex gap-2 mb-3">
               <UButton
                 :color="mediaType === 'image' ? 'primary' : 'gray'"
                 :variant="mediaType === 'image' ? 'solid' : 'ghost'"
-                size="xs"
+                size="sm"
                 @click="mediaType = 'image'"
               >
-                <UIcon name="i-heroicons-photo" class="w-3 h-3" />
+                <UIcon name="i-heroicons-photo" class="w-4 h-4" />
                 <span class="ml-1">Image</span>
               </UButton>
               <UButton
                 :color="mediaType === 'video' ? 'primary' : 'gray'"
                 :variant="mediaType === 'video' ? 'solid' : 'ghost'"
-                size="xs"
+                size="sm"
                 @click="mediaType = 'video'"
               >
-                <UIcon name="i-heroicons-play-circle" class="w-3 h-3" />
+                <UIcon name="i-heroicons-play-circle" class="w-4 h-4" />
                 <span class="ml-1">Video</span>
               </UButton>
             </div>
-            <!-- Cover Image Upload -->
             <div v-if="mediaType === 'image'">
               <ImageUpload
                 v-model="coverImage"
@@ -737,12 +943,11 @@ function getCategoryColor(category: string) {
                 :aspect-ratio="16 / 9"
               />
             </div>
-            <!-- YouTube Video URL -->
             <div v-else>
               <UInput
                 v-model="promoVideoUrl"
                 placeholder="YouTube URL..."
-                size="xs"
+                size="sm"
                 icon="i-heroicons-play-circle"
               />
               <p class="text-xs text-gray-400 mt-1">Paste YouTube URL</p>
@@ -751,24 +956,24 @@ function getCategoryColor(category: string) {
 
           <!-- Theme Selector -->
           <div>
-            <p class="text-xs text-gray-500 mb-2">Theme</p>
-            <div class="flex gap-1">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Theme</p>
+            <div class="flex gap-2">
               <UButton
                 :color="selectedTheme === 'light' ? 'primary' : 'gray'"
                 :variant="selectedTheme === 'light' ? 'solid' : 'ghost'"
-                size="xs"
+                size="sm"
                 @click="selectedTheme = 'light'"
               >
-                <UIcon name="i-heroicons-sun" class="w-3 h-3" />
+                <UIcon name="i-heroicons-sun" class="w-4 h-4" />
                 <span class="ml-1">Light</span>
               </UButton>
               <UButton
                 :color="selectedTheme === 'dark' ? 'primary' : 'gray'"
                 :variant="selectedTheme === 'dark' ? 'solid' : 'ghost'"
-                size="xs"
+                size="sm"
                 @click="selectedTheme = 'dark'"
               >
-                <UIcon name="i-heroicons-moon" class="w-3 h-3" />
+                <UIcon name="i-heroicons-moon" class="w-4 h-4" />
                 <span class="ml-1">Dark</span>
               </UButton>
             </div>
@@ -776,13 +981,13 @@ function getCategoryColor(category: string) {
 
           <!-- Color Selector -->
           <div>
-            <p class="text-xs text-gray-500 mb-2">Accent Color</p>
-            <div class="grid grid-cols-7 sm:grid-cols-7 gap-1.5">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Accent Color</p>
+            <div class="grid grid-cols-6 gap-2">
               <button
                 v-for="color in colorPalette"
                 :key="color.name"
                 :class="[
-                  'w-6 h-6 rounded-full transition-all overflow-hidden relative',
+                  'w-8 h-8 rounded-full transition-all overflow-hidden relative',
                   selectedColor === color.name
                     ? 'ring-2 ring-offset-2 ring-gray-900 dark:ring-white dark:ring-offset-gray-800'
                     : 'hover:scale-110'
@@ -790,12 +995,10 @@ function getCategoryColor(category: string) {
                 :title="color.label"
                 @click="selectedColor = color.name"
               >
-                <!-- Light mode half (top-left) -->
                 <span
                   :class="['absolute inset-0', color.light]"
                   style="clip-path: polygon(0 0, 100% 0, 0 100%);"
                 />
-                <!-- Dark mode half (bottom-right) -->
                 <span
                   :class="['absolute inset-0', color.dark]"
                   style="clip-path: polygon(100% 0, 100% 100%, 0 100%);"
@@ -805,17 +1008,16 @@ function getCategoryColor(category: string) {
           </div>
 
           <!-- Font Selectors -->
-          <div class="space-y-2">
-            <p class="text-xs text-gray-500">Fonts</p>
-            <!-- Title Font (Script fonts) -->
+          <div class="space-y-4">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fonts</p>
             <div>
-              <p class="text-xs text-gray-400 mb-1">Title</p>
+              <p class="text-xs text-gray-500 mb-1">Title Font</p>
               <USelectMenu
                 v-model="selectedTitleFont"
                 :options="titleFontPalette"
                 value-attribute="name"
                 option-attribute="label"
-                size="xs"
+                size="sm"
                 class="w-full"
               >
                 <template #label>
@@ -829,15 +1031,14 @@ function getCategoryColor(category: string) {
                 </template>
               </USelectMenu>
             </div>
-            <!-- Heading Font (Display fonts) -->
             <div>
-              <p class="text-xs text-gray-400 mb-1">Headings</p>
+              <p class="text-xs text-gray-500 mb-1">Headings Font</p>
               <USelectMenu
                 v-model="selectedHeadingFont"
                 :options="headingFontPalette"
                 value-attribute="name"
                 option-attribute="label"
-                size="xs"
+                size="sm"
                 class="w-full"
               >
                 <template #label>
@@ -851,15 +1052,14 @@ function getCategoryColor(category: string) {
                 </template>
               </USelectMenu>
             </div>
-            <!-- Body Font (Sans-serif & Serif) -->
             <div>
-              <p class="text-xs text-gray-400 mb-1">Body</p>
+              <p class="text-xs text-gray-500 mb-1">Body Font</p>
               <USelectMenu
                 v-model="selectedBodyFont"
                 :options="bodyFontPalette"
                 value-attribute="name"
                 option-attribute="label"
-                size="xs"
+                size="sm"
                 class="w-full"
               >
                 <template #label>
@@ -875,48 +1075,45 @@ function getCategoryColor(category: string) {
             </div>
           </div>
         </div>
-      </UCard>
 
-      <!-- Action buttons (below panel when expanded or on desktop) -->
-      <div v-show="panelExpanded || !isMobile" class="flex flex-col gap-2">
-        <!-- Publish/Unpublish -->
-        <UButton
-          v-if="event?.status === 'draft'"
-          color="green"
-          size="lg"
-          icon="i-heroicons-rocket-launch"
-          class="shadow-xl"
-          :loading="isUpdating"
-          @click="showPublishModal = true"
-        >
-          Go Live
-        </UButton>
-        <UButton
-          v-else-if="event?.status === 'published'"
-          color="yellow"
-          variant="outline"
-          size="lg"
-          icon="i-heroicons-pause"
-          class="shadow-xl"
-          :loading="isUpdating"
-          @click="showUnpublishModal = true"
-        >
-          Take Offline
-        </UButton>
-        <!-- Done button -->
-        <UButton
-          :to="`/dashboard/events/${eventId}`"
-          color="primary"
-          variant="outline"
-          size="lg"
-          icon="i-heroicons-check"
-          class="shadow-xl"
-        >
-          Done
-        </UButton>
+        <!-- Footer Actions -->
+        <div class="px-4 py-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+          <UButton
+            v-if="event?.status === 'draft'"
+            color="green"
+            block
+            icon="i-heroicons-rocket-launch"
+            :loading="isUpdating"
+            @click="showPublishModal = true"
+          >
+            Go Live
+          </UButton>
+          <UButton
+            v-else-if="event?.status === 'published'"
+            color="yellow"
+            variant="outline"
+            block
+            icon="i-heroicons-pause"
+            :loading="isUpdating"
+            @click="showUnpublishModal = true"
+          >
+            Take Offline
+          </UButton>
+          <UButton
+            :to="`/dashboard/events/${eventId}`"
+            color="primary"
+            variant="outline"
+            block
+            icon="i-heroicons-check"
+          >
+            Done
+          </UButton>
+        </div>
       </div>
-    </div>
+    </aside>
 
+    <!-- Main Content Area -->
+    <div class="lg:pl-72">
     <!-- Loading -->
     <div v-if="pending" class="py-20 text-center">
       <USkeleton class="h-64 w-full max-w-4xl mx-auto mb-8" />
@@ -1045,10 +1242,8 @@ function getCategoryColor(category: string) {
                   <template #header>
                     <h2 class="font-semibold text-gray-900 dark:text-white">About this Event</h2>
                   </template>
-                  <div class="prose dark:prose-invert max-w-none">
-                    <p v-if="event.description" class="whitespace-pre-wrap">{{ event.description }}</p>
-                    <p v-else class="text-gray-500">No description provided.</p>
-                  </div>
+                  <div v-if="event.description" class="rich-text-display" v-html="sanitizeHtml(event.description)" />
+                  <p v-else class="text-gray-500">No description provided.</p>
                 </UCard>
 
                 <!-- Contribution List -->
@@ -1418,6 +1613,7 @@ function getCategoryColor(category: string) {
         This event doesn't exist or you don't have access to it.
       </p>
       <UButton to="/dashboard" color="primary">Back to Dashboard</UButton>
+    </div>
     </div>
 
     <!-- Publish Confirmation Modal -->

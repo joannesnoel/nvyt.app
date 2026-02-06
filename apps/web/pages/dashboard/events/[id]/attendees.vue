@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const route = useRoute()
@@ -164,18 +164,11 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
 </script>
 
 <template>
-  <div class="py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="sm:py-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <NuxtLink
-            :to="`/dashboard/events/${eventId}`"
-            class="text-gray-600 dark:text-gray-400 hover:text-primary flex items-center gap-1 mb-2"
-          >
-            <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
-            Back to Event
-          </NuxtLink>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Attendees</h1>
         </div>
 
@@ -336,6 +329,10 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
             </div>
 
             <div class="space-y-2 mb-3 pl-9">
+              <div v-if="isTicketMode && attendee.purchasedBy?.name" class="flex justify-between">
+                <span class="text-sm text-gray-500">Purchased By</span>
+                <span class="text-sm text-gray-900 dark:text-white">{{ attendee.purchasedBy.name }}</span>
+              </div>
               <div class="flex justify-between">
                 <span class="text-sm text-gray-500">{{ dateColumnLabel }}</span>
                 <span class="text-sm text-gray-900 dark:text-white">
@@ -396,6 +393,7 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
                   <UCheckbox :model-value="allSelected" @change="toggleAll" />
                 </th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Attendee</th>
+                <th v-if="isTicketMode" class="py-3 px-4 text-left text-sm font-medium text-gray-500">Purchased By</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Status</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">{{ dateColumnLabel }}</th>
                 <th class="py-3 px-4 text-left text-sm font-medium text-gray-500">Checked In</th>
@@ -430,6 +428,13 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
                       <p class="text-sm text-gray-500">{{ attendee.user?.email }}</p>
                     </div>
                   </div>
+                </td>
+                <td v-if="isTicketMode" class="py-3 px-4">
+                  <div v-if="attendee.purchasedBy?.name">
+                    <p class="text-sm text-gray-900 dark:text-white">{{ attendee.purchasedBy.name }}</p>
+                    <p class="text-xs text-gray-500">{{ attendee.purchasedBy.email }}</p>
+                  </div>
+                  <span v-else class="text-sm text-gray-400">-</span>
                 </td>
                 <td class="py-3 px-4">
                   <UBadge :color="getStatusColor(attendee.status)" variant="soft">

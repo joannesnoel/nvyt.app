@@ -2,7 +2,7 @@
 import { updateEventSchema, type UpdateEventInput, type LocationDetails } from '@nvyt/shared'
 
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const route = useRoute()
@@ -258,8 +258,8 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="py-12">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="sm:py-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <!-- Loading -->
       <div v-if="loading" class="space-y-4">
         <USkeleton class="h-8 w-1/3" />
@@ -280,349 +280,366 @@ async function handleSubmit() {
       <!-- Edit Form -->
       <div v-else>
         <div class="mb-8">
-          <NuxtLink
-            :to="`/dashboard/events/${eventId}`"
-            class="text-gray-600 dark:text-gray-400 hover:text-primary flex items-center gap-1 mb-4"
-          >
-            <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
-            Back to Event
-          </NuxtLink>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-            Edit Event
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            Event Info
           </h1>
           <p class="text-gray-600 dark:text-gray-400 mt-1">
-            {{ event.title }}
+            Update your event details
           </p>
         </div>
 
-        <UCard>
-          <form @submit.prevent="handleSubmit" class="space-y-6">
-            <div v-if="error" ref="errorAlert">
-              <UAlert color="red" :title="error" />
-            </div>
+        <form @submit.prevent="handleSubmit">
+          <div v-if="error" ref="errorAlert" class="mb-6">
+            <UAlert color="red" :title="error" />
+          </div>
 
-            <!-- Basic Info -->
-            <div class="space-y-4">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                Basic Information
-              </h3>
+          <!-- 2-Column Layout -->
+          <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Left Column - Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+              <!-- Basic Info -->
+              <UCard>
+                <template #header>
+                  <h3 class="font-semibold text-gray-900 dark:text-white">
+                    Basic Information
+                  </h3>
+                </template>
 
-              <UFormGroup label="Event Title" name="title" required>
-                <UInput
-                  v-model="form.title"
-                  placeholder="Give your event a name"
-                  size="lg"
-                />
-              </UFormGroup>
+                <div class="space-y-4">
+                  <UFormGroup label="Event Title" name="title" required>
+                    <UInput
+                      v-model="form.title"
+                      placeholder="Give your event a name"
+                      size="lg"
+                    />
+                  </UFormGroup>
 
-              <UFormGroup label="Description" name="description">
-                <UTextarea
-                  v-model="form.description"
-                  placeholder="Tell people about your event..."
-                  :rows="4"
-                />
-              </UFormGroup>
+                  <UFormGroup label="Description" name="description">
+                    <RichTextEditor
+                      v-model="form.description"
+                      placeholder="Tell people about your event..."
+                      :max-length="5000"
+                    />
+                  </UFormGroup>
 
-              <UFormGroup label="Visibility" name="visibility">
-                <URadioGroup
-                  v-model="form.visibility"
-                  :options="[
-                    { value: 'public', label: 'Public - Anyone can find and join' },
-                    { value: 'private', label: 'Private - Invite only' },
-                  ]"
-                />
-              </UFormGroup>
+                  <UFormGroup label="Organization Name" name="organizationName" hint="Optional - overrides your name as organizer">
+                    <UInput
+                      v-model="form.organizationName"
+                      placeholder="e.g., Tech Meetup PH, Company Name"
+                      icon="i-heroicons-building-office"
+                    />
+                  </UFormGroup>
+                </div>
+              </UCard>
 
-              <UFormGroup label="Thumbnail Image" name="thumbnailImage" hint="Optional - displayed on event cards">
-                <ImageUpload
-                  v-model="form.thumbnailImage"
-                  folder="events"
-                  placeholder="Click or drag to upload a thumbnail image"
-                  cropper-title="Adjust Thumbnail"
-                  :aspect-ratio="16 / 9"
-                  :max-width="737"
-                  :max-height="414"
-                />
-              </UFormGroup>
+              <!-- Date, Time & Location -->
+              <UCard>
+                <template #header>
+                  <h3 class="font-semibold text-gray-900 dark:text-white">
+                    Date, Time & Location
+                  </h3>
+                </template>
 
-              <UFormGroup label="Organization Name" name="organizationName" hint="Optional - overrides your name as organizer">
-                <UInput
-                  v-model="form.organizationName"
-                  placeholder="e.g., Tech Meetup PH, Company Name"
-                  icon="i-heroicons-building-office"
-                />
-              </UFormGroup>
-            </div>
+                <div class="space-y-4">
+                  <div class="grid sm:grid-cols-2 gap-4">
+                    <UFormGroup label="Start Date & Time" name="startDate" required>
+                      <UInput
+                        v-model="form.startDate"
+                        type="datetime-local"
+                      />
+                    </UFormGroup>
 
-            <UDivider />
+                    <UFormGroup label="End Date & Time" name="endDate">
+                      <UInput
+                        v-model="form.endDate"
+                        type="datetime-local"
+                      />
+                    </UFormGroup>
+                  </div>
 
-            <!-- Date & Time -->
-            <div class="space-y-4">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                Date & Time
-              </h3>
+                  <UFormGroup label="Location" name="location">
+                    <LocationAutocomplete
+                      v-model="form.location"
+                      :location-details="form.locationDetails"
+                      placeholder="Search for a venue or address..."
+                      @update:location-details="updateLocationDetails"
+                    />
+                  </UFormGroup>
+                </div>
+              </UCard>
 
-              <div class="grid md:grid-cols-2 gap-4">
-                <UFormGroup label="Start Date & Time" name="startDate" required>
-                  <UInput
-                    v-model="form.startDate"
-                    type="datetime-local"
-                  />
-                </UFormGroup>
+              <!-- Contact & Social -->
+              <UCard>
+                <template #header>
+                  <h3 class="font-semibold text-gray-900 dark:text-white">
+                    Contact & Social
+                  </h3>
+                </template>
 
-                <UFormGroup label="End Date & Time" name="endDate">
-                  <UInput
-                    v-model="form.endDate"
-                    type="datetime-local"
-                  />
-                </UFormGroup>
-              </div>
-            </div>
+                <div class="space-y-4">
+                  <div class="grid sm:grid-cols-2 gap-4">
+                    <UFormGroup label="Phone" name="phone" required>
+                      <UInput
+                        v-model="form.phone"
+                        placeholder="e.g., +63 912 345 6789"
+                        icon="i-heroicons-phone"
+                      />
+                    </UFormGroup>
 
-            <UDivider />
+                    <UFormGroup label="Email" name="email" required>
+                      <UInput
+                        v-model="form.email"
+                        type="email"
+                        placeholder="e.g., hello@example.com"
+                        icon="i-heroicons-envelope"
+                      />
+                    </UFormGroup>
+                  </div>
 
-            <!-- Location -->
-            <div class="space-y-4">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                Location
-              </h3>
+                  <UFormGroup label="Website" name="website" hint="Optional">
+                    <UInput
+                      v-model="form.website"
+                      type="url"
+                      placeholder="https://example.com"
+                      icon="i-heroicons-globe-alt"
+                    />
+                  </UFormGroup>
 
-              <UFormGroup label="Location" name="location">
-                <LocationAutocomplete
-                  v-model="form.location"
-                  :location-details="form.locationDetails"
-                  placeholder="Search for a venue or address..."
-                  @update:location-details="updateLocationDetails"
-                />
-              </UFormGroup>
-            </div>
+                  <div class="grid sm:grid-cols-3 gap-4">
+                    <UFormGroup label="Facebook" name="facebookUrl">
+                      <UInput
+                        v-model="form.facebookUrl"
+                        placeholder="URL or username"
+                      />
+                    </UFormGroup>
 
-            <UDivider />
+                    <UFormGroup label="Instagram" name="instagramUrl">
+                      <UInput
+                        v-model="form.instagramUrl"
+                        placeholder="URL or username"
+                      />
+                    </UFormGroup>
 
-            <!-- Contact & Social -->
-            <div class="space-y-4">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                Contact & Social
-              </h3>
-
-              <div class="grid md:grid-cols-2 gap-4">
-                <UFormGroup label="Phone" name="phone" required>
-                  <UInput
-                    v-model="form.phone"
-                    placeholder="e.g., +63 912 345 6789"
-                    icon="i-heroicons-phone"
-                  />
-                </UFormGroup>
-
-                <UFormGroup label="Email" name="email" required>
-                  <UInput
-                    v-model="form.email"
-                    type="email"
-                    placeholder="e.g., hello@example.com"
-                    icon="i-heroicons-envelope"
-                  />
-                </UFormGroup>
-              </div>
-
-              <UFormGroup label="Website" name="website" hint="Optional">
-                <UInput
-                  v-model="form.website"
-                  type="url"
-                  placeholder="https://example.com"
-                  icon="i-heroicons-globe-alt"
-                />
-              </UFormGroup>
-
-              <div class="grid md:grid-cols-3 gap-4">
-                <UFormGroup label="Facebook" name="facebookUrl" hint="Optional">
-                  <UInput
-                    v-model="form.facebookUrl"
-                    placeholder="Facebook URL or username"
-                  />
-                </UFormGroup>
-
-                <UFormGroup label="Instagram" name="instagramUrl" hint="Optional">
-                  <UInput
-                    v-model="form.instagramUrl"
-                    placeholder="Instagram URL or username"
-                  />
-                </UFormGroup>
-
-                <UFormGroup label="X.com" name="xUrl" hint="Optional">
-                  <UInput
-                    v-model="form.xUrl"
-                    placeholder="X URL or username"
-                  />
-                </UFormGroup>
-              </div>
-            </div>
-
-            <UDivider />
-
-            <!-- Settings -->
-            <div class="space-y-4">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                Settings
-              </h3>
-
-              <UFormGroup label="Registration Mode" name="registrationMode">
-                <div class="space-y-3">
-                  <div
-                    v-for="option in registrationModeOptions"
-                    :key="option.value"
-                    class="relative flex items-start p-4 border rounded-lg cursor-pointer transition-colors"
-                    :class="form.registrationMode === option.value
-                      ? 'border-primary bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
-                    @click="form.registrationMode = option.value as 'rsvp' | 'tickets' | 'open'"
-                  >
-                    <div class="flex items-center h-5">
-                      <input
-                        type="radio"
-                        :checked="form.registrationMode === option.value"
-                        class="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
-                      >
-                    </div>
-                    <div class="ml-3">
-                      <span class="block text-sm font-medium text-gray-900 dark:text-white">
-                        {{ option.label }}
-                      </span>
-                      <span class="block text-sm text-gray-500">
-                        {{ option.description }}
-                      </span>
-                    </div>
+                    <UFormGroup label="X.com" name="xUrl">
+                      <UInput
+                        v-model="form.xUrl"
+                        placeholder="URL or username"
+                      />
+                    </UFormGroup>
                   </div>
                 </div>
-              </UFormGroup>
+              </UCard>
 
-              <!-- Capacity (for RSVP and Tickets modes) -->
-              <template v-if="form.registrationMode === 'rsvp' || form.registrationMode === 'tickets'">
-                <UFormGroup label="Capacity" name="maxAttendees" hint="Leave empty for unlimited">
-                  <UInput
-                    v-model.number="form.maxAttendees"
-                    type="number"
-                    placeholder="Maximum attendees"
-                    min="1"
-                  />
-                </UFormGroup>
-              </template>
+              <!-- Settings -->
+              <UCard>
+                <template #header>
+                  <h3 class="font-semibold text-gray-900 dark:text-white">
+                    Registration Settings
+                  </h3>
+                </template>
 
-              <!-- RSVP-specific options -->
-              <template v-if="form.registrationMode === 'rsvp'">
-                <UCheckbox
-                  v-model="form.requiresApproval"
-                  label="Require approval"
-                  help="Manually approve each RSVP before confirming"
-                />
-              </template>
-
-              <!-- Tickets-specific options -->
-              <template v-if="form.registrationMode === 'tickets'">
-                <UAlert
-                  color="blue"
-                  icon="i-heroicons-information-circle"
-                  title="Manage ticket types"
-                  description="Go to the Tickets tab to add or edit ticket types for this event."
-                />
-
-                <!-- Purchase Requirements -->
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <h4 class="text-sm font-medium text-gray-900 dark:text-white">Purchase Requirements</h4>
-                      <p class="text-xs text-gray-500">Terms attendees must agree to before checkout</p>
+                <div class="space-y-4">
+                  <UFormGroup label="Registration Mode" name="registrationMode">
+                    <div class="grid sm:grid-cols-3 gap-3">
+                      <div
+                        v-for="option in registrationModeOptions"
+                        :key="option.value"
+                        class="relative flex flex-col p-4 border rounded-lg cursor-pointer transition-colors"
+                        :class="form.registrationMode === option.value
+                          ? 'border-primary bg-primary-50 dark:bg-primary-900/20'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
+                        @click="form.registrationMode = option.value as 'rsvp' | 'tickets' | 'open'"
+                      >
+                        <div class="flex items-center gap-2 mb-1">
+                          <input
+                            type="radio"
+                            :checked="form.registrationMode === option.value"
+                            class="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
+                          >
+                          <span class="text-sm font-medium text-gray-900 dark:text-white">
+                            {{ option.label }}
+                          </span>
+                        </div>
+                        <span class="text-xs text-gray-500 leading-tight">
+                          {{ option.description }}
+                        </span>
+                      </div>
                     </div>
-                    <UButton
-                      size="xs"
-                      color="gray"
-                      variant="outline"
-                      icon="i-heroicons-plus"
-                      @click="openAddRequirementModal"
-                    >
-                      Add
-                    </UButton>
+                  </UFormGroup>
+
+                  <!-- Capacity (for RSVP and Tickets modes) -->
+                  <div v-if="form.registrationMode === 'rsvp' || form.registrationMode === 'tickets'" class="grid sm:grid-cols-2 gap-4">
+                    <UFormGroup label="Capacity" name="maxAttendees" hint="Leave empty for unlimited">
+                      <UInput
+                        v-model.number="form.maxAttendees"
+                        type="number"
+                        placeholder="Maximum attendees"
+                        min="1"
+                      />
+                    </UFormGroup>
                   </div>
 
-                  <div v-if="requirements.length > 0" class="space-y-2">
-                    <div
-                      v-for="requirement in requirements"
-                      :key="requirement.id"
-                      class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                      :class="{ 'opacity-50': !requirement.isActive }"
-                    >
-                      <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-primary flex-shrink-0" />
-                      <p class="flex-1 text-sm text-gray-900 dark:text-white">
-                        {{ requirement.text }}
-                      </p>
-                      <div class="flex items-center gap-1">
-                        <UToggle
-                          :model-value="requirement.isActive"
-                          size="xs"
-                          @update:model-value="toggleRequirementActive(requirement)"
-                        />
+                  <!-- RSVP-specific options -->
+                  <template v-if="form.registrationMode === 'rsvp'">
+                    <div class="flex flex-wrap gap-6">
+                      <UCheckbox
+                        v-model="form.requiresApproval"
+                        label="Require approval"
+                        help="Manually approve each RSVP before confirming"
+                      />
+                      <UCheckbox
+                        v-model="form.contributionsEnabled"
+                        label="Enable contribution list"
+                        help="Let attendees sign up to bring items"
+                      />
+                    </div>
+                  </template>
+
+                  <!-- Tickets-specific options -->
+                  <template v-if="form.registrationMode === 'tickets'">
+                    <UAlert
+                      color="blue"
+                      icon="i-heroicons-information-circle"
+                      title="Manage ticket types"
+                      description="Go to the Tickets tab to add or edit ticket types for this event."
+                    />
+
+                    <!-- Purchase Requirements -->
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <h4 class="text-sm font-medium text-gray-900 dark:text-white">Purchase Requirements</h4>
+                          <p class="text-xs text-gray-500">Terms attendees must agree to before checkout</p>
+                        </div>
                         <UButton
                           size="xs"
                           color="gray"
-                          variant="ghost"
-                          icon="i-heroicons-pencil"
-                          @click="openEditRequirementModal(requirement)"
-                        />
-                        <UButton
-                          size="xs"
-                          color="red"
-                          variant="ghost"
-                          icon="i-heroicons-trash"
-                          @click="deleteRequirement(requirement)"
-                        />
+                          variant="outline"
+                          icon="i-heroicons-plus"
+                          @click="openAddRequirementModal"
+                        >
+                          Add
+                        </UButton>
                       </div>
+
+                      <div v-if="requirements.length > 0" class="space-y-2">
+                        <div
+                          v-for="requirement in requirements"
+                          :key="requirement.id"
+                          class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                          :class="{ 'opacity-50': !requirement.isActive }"
+                        >
+                          <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-primary flex-shrink-0" />
+                          <p class="flex-1 text-sm text-gray-900 dark:text-white">
+                            {{ requirement.text }}
+                          </p>
+                          <div class="flex items-center gap-1">
+                            <UToggle
+                              :model-value="requirement.isActive"
+                              size="xs"
+                              @update:model-value="toggleRequirementActive(requirement)"
+                            />
+                            <UButton
+                              size="xs"
+                              color="gray"
+                              variant="ghost"
+                              icon="i-heroicons-pencil"
+                              @click="openEditRequirementModal(requirement)"
+                            />
+                            <UButton
+                              size="xs"
+                              color="red"
+                              variant="ghost"
+                              icon="i-heroicons-trash"
+                              @click="deleteRequirement(requirement)"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <p v-else class="text-sm text-gray-500 italic">
+                        No requirements yet. Add terms or agreements that buyers must accept.
+                      </p>
                     </div>
-                  </div>
+                  </template>
 
-                  <p v-else class="text-sm text-gray-500 italic">
-                    No requirements yet. Add terms or agreements that buyers must accept.
-                  </p>
+                  <!-- Open mode info -->
+                  <template v-if="form.registrationMode === 'open'">
+                    <UAlert
+                      color="yellow"
+                      icon="i-heroicons-exclamation-triangle"
+                      title="No registration"
+                      description="Attendees won't need to register. You won't be able to track who's coming or send them notifications."
+                    />
+                  </template>
                 </div>
-              </template>
+              </UCard>
+            </div>
 
-              <!-- Open mode info -->
-              <template v-if="form.registrationMode === 'open'">
-                <UAlert
-                  color="yellow"
-                  icon="i-heroicons-exclamation-triangle"
-                  title="No registration"
-                  description="Attendees won't need to register. You won't be able to track who's coming or send them notifications."
+            <!-- Right Column - Sidebar (Sticky) -->
+            <div class="space-y-6 lg:sticky lg:top-20 lg:self-start">
+              <!-- Thumbnail -->
+              <UCard>
+                <template #header>
+                  <h3 class="font-semibold text-gray-900 dark:text-white">
+                    Thumbnail
+                  </h3>
+                </template>
+
+                <UFormGroup name="thumbnailImage" hint="Displayed on event cards">
+                  <ImageUpload
+                    v-model="form.thumbnailImage"
+                    folder="events"
+                    placeholder="Click or drag to upload"
+                    cropper-title="Adjust Thumbnail"
+                    :aspect-ratio="16 / 9"
+                    :max-width="737"
+                    :max-height="414"
+                  />
+                </UFormGroup>
+              </UCard>
+
+              <!-- Visibility -->
+              <UCard>
+                <template #header>
+                  <h3 class="font-semibold text-gray-900 dark:text-white">
+                    Visibility
+                  </h3>
+                </template>
+
+                <URadioGroup
+                  v-model="form.visibility"
+                  :options="[
+                    { value: 'public', label: 'Public', description: 'Anyone can find and join' },
+                    { value: 'private', label: 'Private', description: 'Invite only' },
+                  ]"
                 />
-              </template>
+              </UCard>
 
-              <UCheckbox
-                v-if="form.registrationMode === 'rsvp'"
-                v-model="form.contributionsEnabled"
-                label="Enable contribution list"
-                help="Let attendees sign up to bring items"
-              />
-
+              <!-- Actions -->
+              <UCard>
+                <div class="flex flex-col gap-3">
+                  <UButton
+                    type="submit"
+                    color="primary"
+                    :loading="saving"
+                    block
+                  >
+                    Save Changes
+                  </UButton>
+                  <UButton
+                    :to="`/dashboard/events/${eventId}`"
+                    color="gray"
+                    variant="ghost"
+                    block
+                  >
+                    Cancel
+                  </UButton>
+                </div>
+              </UCard>
             </div>
-
-            <UDivider />
-
-            <div class="flex justify-end gap-3">
-              <UButton
-                :to="`/dashboard/events/${eventId}`"
-                color="gray"
-                variant="ghost"
-              >
-                Cancel
-              </UButton>
-              <UButton
-                type="submit"
-                color="primary"
-                :loading="saving"
-              >
-                Save Changes
-              </UButton>
-            </div>
-          </form>
-        </UCard>
+          </div>
+        </form>
       </div>
     </div>
 

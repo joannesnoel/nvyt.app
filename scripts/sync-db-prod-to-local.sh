@@ -35,7 +35,7 @@ AWS_REGION="ap-southeast-1"
 SECRETS_NAME="nvyt-production/app-secrets"
 
 # Local Database Configuration
-LOCAL_DB_HOST="192.168.0.250"
+LOCAL_DB_HOST="192.168.0.30"
 LOCAL_DB_PORT="5432"
 LOCAL_DB_NAME="nvyt"
 LOCAL_DB_USER="nvyt"

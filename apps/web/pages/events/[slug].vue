@@ -254,7 +254,9 @@ const config = useRuntimeConfig()
 const { getThumbnailUrl } = useYoutubeThumbnail()
 const ogTitle = computed(() => event.value?.title || 'Event')
 const ogDescription = computed(() => {
-  const desc = event.value?.description || 'Join this event on nvyt'
+  const raw = event.value?.description || 'Join this event on nvyt'
+  // Strip HTML tags for social preview
+  const desc = raw.replace(/<[^>]*>/g, '')
   // Truncate to 160 characters for optimal social preview
   return desc.length > 160 ? desc.substring(0, 157) + '...' : desc
 })
@@ -1474,10 +1476,8 @@ onBeforeUnmount(() => {
               <template #header>
                 <h2 class="font-semibold text-gray-900 dark:text-white">About this Event</h2>
               </template>
-              <div class="prose dark:prose-invert max-w-none break-words">
-                <p v-if="event.description" class="whitespace-pre-wrap break-words">{{ event.description }}</p>
-                <p v-else class="text-gray-500">No description provided.</p>
-              </div>
+              <div v-if="event.description" class="rich-text-display break-words" v-html="sanitizeHtml(event.description)" />
+              <p v-else class="text-gray-500">No description provided.</p>
             </UCard>
 
             <!-- Contribution List -->
@@ -1715,10 +1715,8 @@ onBeforeUnmount(() => {
               <template #header>
                 <h2 class="font-semibold text-gray-900 dark:text-white">About this Event</h2>
               </template>
-              <div class="prose dark:prose-invert max-w-none break-words">
-                <p v-if="event.description" class="whitespace-pre-wrap break-words">{{ event.description }}</p>
-                <p v-else class="text-gray-500">No description provided.</p>
-              </div>
+              <div v-if="event.description" class="rich-text-display break-words" v-html="sanitizeHtml(event.description)" />
+              <p v-else class="text-gray-500">No description provided.</p>
             </UCard>
 
             <!-- Announcements (mobile only - shown after About) -->
@@ -2041,7 +2039,7 @@ onBeforeUnmount(() => {
                     {{ getTicketSalesStatus(tt).upcomingTier }}
                   </UBadge>
                 </div>
-                <p v-if="tt.description" class="text-sm text-gray-500 mt-1">{{ tt.description }}</p>
+                <div v-if="tt.description" class="text-sm text-gray-500 mt-1 rich-text-display" v-html="sanitizeHtml(tt.description)" />
               </div>
               <p class="font-semibold text-primary text-lg">
                 {{ Number(getDisplayPrice(tt)) === 0 ? 'Free' : formatCurrency(Number(getDisplayPrice(tt))) }}

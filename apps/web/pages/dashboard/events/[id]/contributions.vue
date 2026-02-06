@@ -2,7 +2,7 @@
 import type { ContributionCategory } from '@nvyt/shared'
 
 definePageMeta({
-  layout: 'default',
+  layout: 'dashboard',
 })
 
 const route = useRoute()
@@ -202,8 +202,8 @@ const sortedCategories = computed(() => {
 </script>
 
 <template>
-  <div class="py-8">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="sm:py-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <!-- Loading -->
       <div v-if="eventPending || contributionsPending" class="space-y-4">
         <USkeleton class="h-8 w-1/3" />

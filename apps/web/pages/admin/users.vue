@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: 'admin',
   middleware: ['admin'],
 })
 
@@ -94,6 +94,36 @@ async function loginAs(userId: string) {
   }
 }
 
+// Custom email modal
+const emailModalOpen = ref(false)
+const emailTarget = ref<{ id: string; name: string; email: string } | null>(null)
+const emailForm = reactive({ subject: '', body: '' })
+const sendingEmail = ref(false)
+
+function openEmailModal(user: { id: string; name: string; email: string }) {
+  emailTarget.value = user
+  emailForm.subject = ''
+  emailForm.body = ''
+  emailModalOpen.value = true
+}
+
+async function sendCustomEmail() {
+  if (!emailTarget.value) return
+  sendingEmail.value = true
+  try {
+    await $fetch(`/api/v1/admin/users/${emailTarget.value.id}/send-email`, {
+      method: 'POST',
+      body: { subject: emailForm.subject, body: emailForm.body },
+    })
+    toast.add({ title: 'Email sent successfully', color: 'green' })
+    emailModalOpen.value = false
+  } catch (e: any) {
+    toast.add({ title: e?.data?.message || 'Failed to send email', color: 'red' })
+  } finally {
+    sendingEmail.value = false
+  }
+}
+
 const emailVerifiedOptions = [
   { label: 'All', value: '' },
   { label: 'Verified', value: 'true' },
@@ -102,41 +132,38 @@ const emailVerifiedOptions = [
 </script>
 
 <template>
-  <div class="py-8">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          Admin: Users
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-1">
-          View and manage all registered users
-        </p>
-      </div>
+  <div>
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+        Users
+      </h1>
+      <p class="text-gray-600 dark:text-gray-400 mt-1">
+        View and manage all registered users
+      </p>
+    </div>
 
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <UCard>
-          <div>
-            <p class="text-xs text-gray-600 font-medium mb-1">Total Users</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
-          </div>
-        </UCard>
-
-        <UCard>
-          <div>
-            <p class="text-xs text-green-600 font-medium mb-1">Verified</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.verified }}</p>
-          </div>
-        </UCard>
-
-        <UCard>
-          <div>
-            <p class="text-xs text-yellow-600 font-medium mb-1">Unverified</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.unverified }}</p>
-          </div>
-        </UCard>
-      </div>
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <AdminStatCard
+        title="Total Users"
+        :value="stats.total"
+        icon="i-heroicons-users"
+        color="indigo"
+      />
+      <AdminStatCard
+        title="Verified"
+        :value="stats.verified"
+        icon="i-heroicons-check-badge"
+        color="green"
+      />
+      <AdminStatCard
+        title="Unverified"
+        :value="stats.unverified"
+        icon="i-heroicons-exclamation-circle"
+        color="yellow"
+      />
+    </div>
 
       <!-- Filters -->
       <UCard class="mb-6">
@@ -243,6 +270,14 @@ const emailVerifiedOptions = [
                       :loading="impersonatingId === u.id"
                       @click="loginAs(u.id)"
                     />
+                    <UButton
+                      icon="i-heroicons-envelope"
+                      size="xs"
+                      color="gray"
+                      variant="ghost"
+                      title="Send email"
+                      @click="openEmailModal(u)"
+                    />
                   <UIcon
                     v-if="resentFor.has(u.id)"
                     name="i-heroicons-check-circle"
@@ -295,6 +330,56 @@ const emailVerifiedOptions = [
           </div>
         </div>
       </UCard>
-    </div>
+
+    <!-- Send Email Modal -->
+    <UModal v-model="emailModalOpen">
+      <UCard>
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Send Email</h3>
+            <UButton icon="i-heroicons-x-mark" color="gray" variant="ghost" size="xs" @click="emailModalOpen = false" />
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <!-- Recipient -->
+          <div class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <UIcon name="i-heroicons-user" class="w-4 h-4 text-gray-400" />
+            <div class="text-sm">
+              <span class="font-medium text-gray-900 dark:text-white">{{ emailTarget?.name }}</span>
+              <span class="text-gray-500 ml-1">&lt;{{ emailTarget?.email }}&gt;</span>
+            </div>
+          </div>
+
+          <!-- Subject -->
+          <UFormGroup label="Subject">
+            <UInput v-model="emailForm.subject" placeholder="Email subject..." />
+          </UFormGroup>
+
+          <!-- Body -->
+          <UFormGroup label="Body">
+            <RichTextEditor
+              v-model="emailForm.body"
+              :max-length="2000"
+              placeholder="Compose your message..."
+            />
+          </UFormGroup>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-2">
+            <UButton color="gray" variant="ghost" @click="emailModalOpen = false">Cancel</UButton>
+            <UButton
+              color="primary"
+              :loading="sendingEmail"
+              :disabled="!emailForm.subject.trim() || !emailForm.body.trim()"
+              @click="sendCustomEmail"
+            >
+              Send Email
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
   </div>
 </template>

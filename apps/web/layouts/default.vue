@@ -136,12 +136,14 @@ const userMenuItems = computed(() => {
           <!-- Actions -->
           <div class="flex items-center gap-3">
             <!-- Dark mode toggle -->
-            <UButton
-              :icon="colorMode.value === 'dark' ? 'i-heroicons-sun' : 'i-heroicons-moon'"
-              color="gray"
-              variant="ghost"
-              @click="toggleColorMode"
-            />
+            <ClientOnly>
+              <UButton
+                :icon="colorMode.value === 'dark' ? 'i-heroicons-sun' : 'i-heroicons-moon'"
+                color="gray"
+                variant="ghost"
+                @click="toggleColorMode"
+              />
+            </ClientOnly>
 
             <!-- Loading state -->
             <template v-if="isLoading">

@@ -422,4 +422,103 @@
     background: rgba(255, 255, 255, 0.35) !important;
     backdrop-filter: blur(8px);
   }
+
+  /* Admin & Dashboard Sidebar Gradient Background */
+  .admin-sidebar-bg,
+  .dashboard-sidebar-bg {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 1) 0%,
+      rgba(249, 250, 251, 1) 100%
+    );
+  }
+
+  .dark .admin-sidebar-bg,
+  .dark .dashboard-sidebar-bg {
+    background: linear-gradient(
+      180deg,
+      rgba(17, 24, 39, 1) 0%,
+      rgba(15, 23, 42, 1) 100%
+    );
+  }
+
+  /* Admin & Dashboard Nav Active State */
+  .admin-nav-active,
+  .dashboard-nav-active {
+    position: relative;
+  }
+
+  .admin-nav-active::before,
+  .dashboard-nav-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(
+      180deg,
+      #818cf8 0%,
+      #6366f1 50%,
+      #4f46e5 100%
+    );
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Admin Table Header */
+  .admin-table thead {
+    background-color: rgb(249 250 251);
+  }
+
+  .dark .admin-table thead {
+    background-color: rgb(31 41 55 / 0.5);
+  }
+
+  /* Admin Table Row Hover */
+  .admin-table tbody tr:hover {
+    background-color: rgb(238 242 255 / 0.5);
+  }
+
+  .dark .admin-table tbody tr:hover {
+    background-color: rgb(79 70 229 / 0.1);
+  }
+
+  /* Admin Card Enhancement */
+  .admin-card {
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .admin-card:hover {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+  }
+
+  .dark .admin-card:hover {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  }
+
+  /* Rich text display styles (for rendered HTML from TipTap editor) */
+  .rich-text-display ul {
+    list-style-type: disc;
+    padding-left: 1.25rem;
+  }
+  .rich-text-display ol {
+    list-style-type: decimal;
+    padding-left: 1.25rem;
+  }
+  .rich-text-display li {
+    margin: 0.125rem 0;
+  }
+  .rich-text-display a {
+    color: rgb(var(--color-primary-500));
+    text-decoration: underline;
+  }
+  .rich-text-display strong {
+    font-weight: 700;
+  }
+  .rich-text-display em {
+    font-style: italic;
+  }
+  .rich-text-display s {
+    text-decoration: line-through;
+  }
 }
