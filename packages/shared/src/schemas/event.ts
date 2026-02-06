@@ -95,7 +95,11 @@ const youtubeUrlSchema = z.union([
 // Base event fields (shared between create and update)
 const baseEventFields = {
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
-  description: z.string().max(5000).optional(),
+  description: z.string().max(10000).optional()
+    .refine((val) => {
+      if (!val) return true
+      return val.replace(/<[^>]*>/g, '').length <= 5000
+    }, { message: 'Description text must be 5000 characters or fewer' }),
   thumbnailImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || null),
   coverImage: z.union([z.literal(''), z.string().url()]).optional().transform(val => val || null),
   promoVideoUrl: youtubeUrlSchema.optional(),

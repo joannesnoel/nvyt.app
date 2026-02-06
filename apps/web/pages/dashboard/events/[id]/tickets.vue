@@ -542,7 +542,7 @@ function getTierTypeColor(tierType: string) {
 </script>
 
 <template>
-  <div class="py-8">
+  <div class="sm:py-8">
     <div class="px-4 sm:px-6 lg:px-8">
       <!-- Loading -->
       <div v-if="eventPending" class="space-y-4">
@@ -629,9 +629,7 @@ function getTierTypeColor(tierType: string) {
                     Sold Out
                   </UBadge>
                 </div>
-                <p v-if="tt.description" class="text-gray-600 dark:text-gray-400 mb-2">
-                  {{ tt.description }}
-                </p>
+                <div v-if="tt.description" class="text-gray-600 dark:text-gray-400 mb-2 rich-text-display" v-html="sanitizeHtml(tt.description)" />
                 <div class="flex flex-wrap gap-4 text-sm text-gray-500">
                   <span class="font-medium text-primary text-lg">
                     {{ formatCurrency(tt.price) }}
@@ -880,10 +878,10 @@ function getTierTypeColor(tierType: string) {
           </UFormGroup>
 
           <UFormGroup label="Description">
-            <UTextarea
+            <RichTextEditor
               v-model="formData.description"
               placeholder="What's included with this ticket?"
-              :rows="2"
+              :max-length="500"
             />
           </UFormGroup>
 

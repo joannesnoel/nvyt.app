@@ -151,7 +151,7 @@ function handleBlur() {
 </script>
 
 <template>
-  <div class="py-8">
+  <div class="sm:py-8">
     <div class="px-4 sm:px-6 lg:px-8">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">

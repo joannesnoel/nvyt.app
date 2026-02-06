@@ -216,7 +216,7 @@ function formatDate(date: string) {
 </script>
 
 <template>
-  <div class="px-4 sm:px-6 lg:px-8 py-8">
+  <div class="px-4 sm:px-6 lg:px-8 sm:py-8">
     <h1 class="text-2xl font-bold mb-1">Send Invitations</h1>
     <p class="text-gray-500 mb-8">{{ event?.title }}</p>
 

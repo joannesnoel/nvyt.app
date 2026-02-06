@@ -258,7 +258,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="py-8">
+  <div class="sm:py-8">
     <div class="px-4 sm:px-6 lg:px-8">
       <!-- Loading -->
       <div v-if="loading" class="space-y-4">
@@ -315,10 +315,10 @@ async function handleSubmit() {
                   </UFormGroup>
 
                   <UFormGroup label="Description" name="description">
-                    <UTextarea
+                    <RichTextEditor
                       v-model="form.description"
                       placeholder="Tell people about your event..."
-                      :rows="4"
+                      :max-length="5000"
                     />
                   </UFormGroup>
 

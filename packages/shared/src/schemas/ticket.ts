@@ -18,10 +18,22 @@ const optionalDatetime = z.union([
   z.literal(''),
 ]).optional().transform(val => (val === '' || val === undefined) ? undefined : val)
 
+// Reusable HTML description validator: allows up to 2000 chars raw (HTML overhead),
+// but text content (tags stripped) must be ≤ 500 chars.
+function stripHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, '')
+}
+
+export const htmlDescription = z.string().max(2000).optional()
+  .refine((val) => {
+    if (!val) return true
+    return stripHtmlTags(val).length <= 500
+  }, { message: 'Description text must be 500 characters or fewer' })
+
 export const createTicketTypeSchema = z.object({
   eventId: z.string().uuid(),
   name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
+  description: htmlDescription,
   price: z.number().min(0),
   quantity: z.number().int().positive().nullable().optional().transform(val => val ?? undefined), // null = unlimited
   salesStart: optionalDatetime,

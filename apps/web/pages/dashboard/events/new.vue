@@ -157,10 +157,10 @@ async function handleSubmit() {
             </UFormGroup>
 
             <UFormGroup label="Description" name="description">
-              <UTextarea
+              <RichTextEditor
                 v-model="form.description"
                 placeholder="Tell people about your event..."
-                :rows="4"
+                :max-length="5000"
               />
             </UFormGroup>
 

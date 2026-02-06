@@ -418,7 +418,7 @@ function supportsValidation(type: string) {
 </script>
 
 <template>
-  <div class="py-8">
+  <div class="sm:py-8">
     <div class="px-4 sm:px-6 lg:px-8">
       <!-- Loading -->
       <div v-if="eventPending || fieldsPending" class="space-y-4">

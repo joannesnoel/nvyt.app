@@ -1242,10 +1242,8 @@ function getCategoryColor(category: string) {
                   <template #header>
                     <h2 class="font-semibold text-gray-900 dark:text-white">About this Event</h2>
                   </template>
-                  <div class="prose dark:prose-invert max-w-none">
-                    <p v-if="event.description" class="whitespace-pre-wrap">{{ event.description }}</p>
-                    <p v-else class="text-gray-500">No description provided.</p>
-                  </div>
+                  <div v-if="event.description" class="rich-text-display" v-html="sanitizeHtml(event.description)" />
+                  <p v-else class="text-gray-500">No description provided.</p>
                 </UCard>
 
                 <!-- Contribution List -->

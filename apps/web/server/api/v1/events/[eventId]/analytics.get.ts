@@ -41,14 +41,20 @@ export default defineEventHandler(async (event) => {
 
   const isTicketMode = eventRecord.registrationMode === 'tickets'
 
-  // Get date range (last 7 days for chart)
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-  sevenDaysAgo.setHours(0, 0, 0, 0)
+  // Read period from query params, default to 7, clamp to allowed values
+  const query = getQuery(event)
+  const allowedDays = [7, 14, 30, 90]
+  const requestedDays = Number(query.days) || 7
+  const days = allowedDays.includes(requestedDays) ? requestedDays : 7
+
+  // Get date range for chart
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - (days - 1))
+  startDate.setHours(0, 0, 0, 0)
 
   // Generate all dates in range for consistent x-axis
   const dateLabels: string[] = []
-  const currentDate = new Date(sevenDaysAgo)
+  const currentDate = new Date(startDate)
   const today = new Date()
   today.setHours(23, 59, 59, 999)
   while (currentDate <= today) {
@@ -57,9 +63,9 @@ export default defineEventHandler(async (event) => {
   }
 
   let registrationsByDay: { date: string; count: number }[] = []
-  let revenueByDay: { date: string; amount: number }[] = []
-  let allTimeTotal = 0
-  let allTimeRevenue = 0
+  let periodTotal = 0
+  let periodRevenue = 0
+  let revenueByMethod: { method: string; amount: number }[] = []
   let ticketTypesSeries: { id: string; name: string; color: string; data: { date: string; count: number }[] }[] = []
 
   if (isTicketMode) {
@@ -76,7 +82,7 @@ export default defineEventHandler(async (event) => {
     // Color palette for ticket types
     const colors = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e']
 
-    // Get all-time totals (only paid tickets)
+    // Get period totals (only paid tickets)
     const [totalStats] = await db
       .select({
         count: sql<number>`COUNT(*)`.as('count'),
@@ -86,7 +92,8 @@ export default defineEventHandler(async (event) => {
       .where(
         and(
           eq(tickets.eventId, eventId),
-          eq(orders.paymentStatus, 'paid')
+          eq(orders.paymentStatus, 'paid'),
+          gte(tickets.createdAt, startDate)
         )
       )
 
@@ -98,12 +105,13 @@ export default defineEventHandler(async (event) => {
       .where(
         and(
           eq(orders.eventId, eventId),
-          eq(orders.paymentStatus, 'paid')
+          eq(orders.paymentStatus, 'paid'),
+          gte(orders.createdAt, startDate)
         )
       )
 
-    allTimeTotal = Number(totalStats?.count || 0)
-    allTimeRevenue = Number(revenueTotal?.amount || 0)
+    periodTotal = Number(totalStats?.count || 0)
+    periodRevenue = Number(revenueTotal?.amount || 0)
 
     // Get daily ticket sales grouped by ticket type (only paid)
     const ticketStatsByType = await db
@@ -118,7 +126,7 @@ export default defineEventHandler(async (event) => {
         and(
           eq(tickets.eventId, eventId),
           eq(orders.paymentStatus, 'paid'),
-          gte(tickets.createdAt, sevenDaysAgo)
+          gte(tickets.createdAt, startDate)
         )
       )
       .groupBy(sql`DATE(${tickets.createdAt})`, tickets.ticketTypeId)
@@ -152,16 +160,16 @@ export default defineEventHandler(async (event) => {
         and(
           eq(tickets.eventId, eventId),
           eq(orders.paymentStatus, 'paid'),
-          gte(tickets.createdAt, sevenDaysAgo)
+          gte(tickets.createdAt, startDate)
         )
       )
       .groupBy(sql`DATE(${tickets.createdAt})`)
       .orderBy(sql`DATE(${tickets.createdAt})`)
 
-    // Get daily revenue from paid orders
-    const revenueStats = await db
+    // Get revenue grouped by payment method (scoped to period)
+    const revenueByMethodStats = await db
       .select({
-        date: sql<string>`DATE(${orders.createdAt})`.as('date'),
+        method: sql<string>`COALESCE(${orders.paymentMethod}, ${orders.paymentProvider}, 'unknown')`.as('method'),
         amount: sql<number>`COALESCE(SUM(${orders.subtotalAmount}::numeric - ${orders.discountAmount}::numeric), 0)`.as('amount'),
       })
       .from(orders)
@@ -169,24 +177,29 @@ export default defineEventHandler(async (event) => {
         and(
           eq(orders.eventId, eventId),
           eq(orders.paymentStatus, 'paid'),
-          gte(orders.createdAt, sevenDaysAgo)
+          gte(orders.createdAt, startDate)
         )
       )
-      .groupBy(sql`DATE(${orders.createdAt})`)
-      .orderBy(sql`DATE(${orders.createdAt})`)
+      .groupBy(sql`COALESCE(${orders.paymentMethod}, ${orders.paymentProvider}, 'unknown')`)
+      .orderBy(sql`amount DESC`)
 
     registrationsByDay = ticketStats.map(r => ({ date: r.date, count: Number(r.count) }))
-    revenueByDay = revenueStats.map(r => ({ date: r.date, amount: Number(r.amount) }))
+    revenueByMethod = revenueByMethodStats.map(r => ({ method: r.method, amount: Number(r.amount) }))
   } else {
-    // Get all-time totals for RSVPs
+    // Get period totals for RSVPs
     const [totalStats] = await db
       .select({
         count: sql<number>`COUNT(*)`.as('count'),
       })
       .from(attendees)
-      .where(eq(attendees.eventId, eventId))
+      .where(
+        and(
+          eq(attendees.eventId, eventId),
+          gte(attendees.createdAt, startDate)
+        )
+      )
 
-    allTimeTotal = Number(totalStats?.count || 0)
+    periodTotal = Number(totalStats?.count || 0)
 
     // RSVP: Get daily RSVPs for chart
     const rsvpStats = await db
@@ -198,7 +211,7 @@ export default defineEventHandler(async (event) => {
       .where(
         and(
           eq(attendees.eventId, eventId),
-          gte(attendees.createdAt, sevenDaysAgo)
+          gte(attendees.createdAt, startDate)
         )
       )
       .groupBy(sql`DATE(${attendees.createdAt})`)
@@ -209,21 +222,11 @@ export default defineEventHandler(async (event) => {
 
   // Fill in missing dates with zeros
   const registrationsMap = new Map(registrationsByDay.map(r => [r.date, r.count]))
-  const revenueMap = new Map(revenueByDay.map(r => [r.date, r.amount]))
 
   const filledRegistrations = dateLabels.map(date => ({
     date,
     count: registrationsMap.get(date) || 0,
   }))
-
-  const filledRevenue = dateLabels.map(date => ({
-    date,
-    amount: revenueMap.get(date) || 0,
-  }))
-
-  // Calculate period totals (last 14 days)
-  const periodRegistrations = filledRegistrations.reduce((sum, r) => sum + r.count, 0)
-  const periodRevenue = filledRevenue.reduce((sum, r) => sum + r.amount, 0)
 
   return {
     data: {
@@ -231,14 +234,12 @@ export default defineEventHandler(async (event) => {
       dateLabels,
       registrations: {
         daily: filledRegistrations,
-        periodTotal: periodRegistrations,
-        allTimeTotal,
+        periodTotal,
         byTicketType: isTicketMode ? ticketTypesSeries : null,
       },
       revenue: isTicketMode ? {
-        daily: filledRevenue,
         periodTotal: periodRevenue,
-        allTimeTotal: allTimeRevenue,
+        byMethod: revenueByMethod,
       } : null,
     },
   }

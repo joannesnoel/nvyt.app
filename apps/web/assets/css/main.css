@@ -495,4 +495,30 @@
   .dark .admin-card:hover {
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
   }
+
+  /* Rich text display styles (for rendered HTML from TipTap editor) */
+  .rich-text-display ul {
+    list-style-type: disc;
+    padding-left: 1.25rem;
+  }
+  .rich-text-display ol {
+    list-style-type: decimal;
+    padding-left: 1.25rem;
+  }
+  .rich-text-display li {
+    margin: 0.125rem 0;
+  }
+  .rich-text-display a {
+    color: rgb(var(--color-primary-500));
+    text-decoration: underline;
+  }
+  .rich-text-display strong {
+    font-weight: 700;
+  }
+  .rich-text-display em {
+    font-style: italic;
+  }
+  .rich-text-display s {
+    text-decoration: line-through;
+  }
 }
