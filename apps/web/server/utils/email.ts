@@ -1496,6 +1496,144 @@ export function ticketRegisteredNotificationEmail(data: {
   }
 }
 
+export function paymentReminderEmail(data: {
+  customerName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  orderNumber: string
+  totalAmount: string
+  orderUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `Complete your order for ${data.eventTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
+        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+          </div>
+
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: #fef3c7; border-radius: 50%; padding: 16px;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Complete Your Order</h2>
+
+          <p style="text-align: center;">Hi ${data.customerName},</p>
+
+          <p style="text-align: center;">You have a pending order for <strong>${data.eventTitle}</strong>. Complete your payment to secure your spot!</p>
+
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Order Number:</strong> ${data.orderNumber}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+            ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+            <p style="margin: 0; font-size: 18px;"><strong>Total:</strong> ${data.totalAmount}</p>
+          </div>
+
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${data.orderUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Complete Payment</a>
+          </p>
+
+          <p style="color: #999; font-size: 13px; text-align: center; font-style: italic;">If you've already completed payment, please disregard this email.</p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+          <p style="color: #666; font-size: 14px; text-align: center;">
+            The NVYT&trade; Team
+          </p>
+        </div>
+      </body>
+      </html>
+    `,
+  }
+}
+
+export function paymentReminderSetupEmail(data: {
+  customerName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  orderNumber: string
+  totalAmount: string
+  setupUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `Complete your order for ${data.eventTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f3f4f6;">
+        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+          </div>
+
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: #fef3c7; border-radius: 50%; padding: 16px;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <h2 style="color: #111; margin-bottom: 10px; text-align: center;">Complete Your Order</h2>
+
+          <p style="text-align: center;">Hi ${data.customerName},</p>
+
+          <p style="text-align: center;">You have a pending order for <strong>${data.eventTitle}</strong>. To complete your payment, you'll first need to set up your account password.</p>
+
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Order Number:</strong> ${data.orderNumber}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+            ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+            <p style="margin: 0; font-size: 18px;"><strong>Total:</strong> ${data.totalAmount}</p>
+          </div>
+
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0 0 8px 0; font-weight: 600; color: #1e40af;">Quick steps to complete your order:</p>
+            <ol style="margin: 0; padding-left: 20px; color: #1e40af;">
+              <li>Set up your account password (click the button below)</li>
+              <li>Once logged in, go to your order to complete payment</li>
+            </ol>
+          </div>
+
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${data.setupUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Set Up Account & Complete Order</a>
+          </p>
+
+          <p style="color: #999; font-size: 13px; text-align: center; font-style: italic;">If you've already completed payment, please disregard this email.</p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+          <p style="color: #666; font-size: 14px; text-align: center;">
+            The NVYT&trade; Team
+          </p>
+        </div>
+      </body>
+      </html>
+    `,
+  }
+}
+
 export function ticketRegisteredSetupEmail(data: {
   attendeeName: string
   eventTitle: string

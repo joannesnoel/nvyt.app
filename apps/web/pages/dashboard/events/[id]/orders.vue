@@ -108,6 +108,46 @@ function getRegistrationStatusColor(order: any) {
   if (!status) return 'gray'
   return status.isComplete ? 'green' : 'yellow'
 }
+
+// Payment reminders
+const showReminderModal = ref(false)
+const reminderPreview = ref<{ count: number; orders: Array<{ orderNumber: string; customerName: string; customerEmail: string; totalAmount: string }> } | null>(null)
+const loadingPreview = ref(false)
+const sendingReminders = ref(false)
+
+async function openReminderModal() {
+  showReminderModal.value = true
+  loadingPreview.value = true
+  reminderPreview.value = null
+
+  try {
+    const res = await $fetch<any>(`/api/v1/events/${eventId.value}/orders/payment-reminders`)
+    reminderPreview.value = res.data
+  } catch (e: any) {
+    toast.add({ title: 'Failed to load preview', description: e.data?.message || 'Something went wrong', color: 'red' })
+    showReminderModal.value = false
+  } finally {
+    loadingPreview.value = false
+  }
+}
+
+async function sendPaymentReminders() {
+  sendingReminders.value = true
+  try {
+    const res = await $fetch<any>(`/api/v1/events/${eventId.value}/orders/payment-reminders`, { method: 'POST' })
+    const { sent, failed } = res.data
+    if (failed > 0) {
+      toast.add({ title: 'Reminders partially sent', description: `${sent} sent, ${failed} failed`, color: 'yellow' })
+    } else {
+      toast.add({ title: 'Reminders sent', description: `${sent} payment reminder${sent !== 1 ? 's' : ''} sent successfully`, color: 'green' })
+    }
+    showReminderModal.value = false
+  } catch (e: any) {
+    toast.add({ title: 'Failed to send reminders', description: e.data?.message || 'Something went wrong', color: 'red' })
+  } finally {
+    sendingReminders.value = false
+  }
+}
 </script>
 
 <template>
@@ -177,6 +217,18 @@ function getRegistrationStatusColor(order: any) {
           placeholder="Filter by status"
           class="w-40"
         />
+
+        <div class="md:ml-auto">
+          <UButton
+            v-if="stats.pendingOrders > 0"
+            color="yellow"
+            variant="soft"
+            icon="i-heroicons-bell-alert"
+            @click="openReminderModal"
+          >
+            Send Payment Reminders
+          </UButton>
+        </div>
       </div>
 
       <!-- Orders Table -->
@@ -337,5 +389,71 @@ function getRegistrationStatusColor(order: any) {
       </UCard>
     </div>
 
+    <!-- Payment Reminder Modal -->
+    <UModal v-model="showReminderModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2">
+            <UIcon name="i-heroicons-bell-alert" class="text-yellow-500 w-5 h-5" />
+            <h3 class="text-lg font-semibold">Send Payment Reminders</h3>
+          </div>
+        </template>
+
+        <!-- Loading -->
+        <div v-if="loadingPreview" class="space-y-3 py-4">
+          <USkeleton class="h-4 w-3/4" />
+          <USkeleton class="h-12 w-full" />
+          <USkeleton class="h-12 w-full" />
+          <USkeleton class="h-12 w-full" />
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="reminderPreview && reminderPreview.count === 0" class="text-center py-8">
+          <UIcon name="i-heroicons-check-circle" class="w-12 h-12 text-green-400 mx-auto mb-3" />
+          <p class="text-gray-600 dark:text-gray-400">No eligible pending orders</p>
+          <p class="text-sm text-gray-500 mt-1">All pending orders already have a paid order from the same user.</p>
+        </div>
+
+        <!-- Order list -->
+        <div v-else-if="reminderPreview" class="space-y-4">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            {{ reminderPreview.count }} pending order{{ reminderPreview.count !== 1 ? 's' : '' }} eligible for a payment reminder:
+          </p>
+
+          <div class="max-h-64 overflow-y-auto space-y-2">
+            <div
+              v-for="order in reminderPreview.orders"
+              :key="order.orderNumber"
+              class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+            >
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900 dark:text-white text-sm truncate">{{ order.customerName }}</p>
+                <p class="text-xs text-gray-500 truncate">{{ order.customerEmail }}</p>
+              </div>
+              <div class="text-right flex-shrink-0 ml-3">
+                <p class="font-mono text-xs text-gray-500">{{ order.orderNumber }}</p>
+                <p class="text-sm font-medium text-primary">{{ formatCurrency(order.totalAmount) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton color="gray" variant="ghost" @click="showReminderModal = false" :disabled="sendingReminders">
+              Cancel
+            </UButton>
+            <UButton
+              v-if="reminderPreview && reminderPreview.count > 0"
+              color="primary"
+              :loading="sendingReminders"
+              @click="sendPaymentReminders"
+            >
+              Send {{ reminderPreview.count }} Reminder{{ reminderPreview.count !== 1 ? 's' : '' }}
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
   </div>
 </template>

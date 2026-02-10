@@ -201,6 +201,39 @@ const canRetryPayment = computed(() => {
     parseFloat(order.value?.totalAmount || '0') > 0
 })
 
+// Cancel order
+const cancellingOrder = ref(false)
+const showCancelConfirm = ref(false)
+
+async function cancelOrder() {
+  if (!order.value) return
+
+  cancellingOrder.value = true
+  try {
+    await $fetch(`/api/v1/orders/${order.value.orderNumber}/cancel`, {
+      method: 'POST',
+    })
+
+    toast.add({
+      title: 'Order Cancelled',
+      description: 'Your order has been cancelled and reserved tickets have been released.',
+      color: 'green',
+      icon: 'i-heroicons-check-circle',
+    })
+
+    showCancelConfirm.value = false
+    navigateTo('/tickets')
+  } catch (e: any) {
+    toast.add({
+      title: 'Cancellation failed',
+      description: e.data?.message || 'Failed to cancel order. Please try again.',
+      color: 'red',
+    })
+  } finally {
+    cancellingOrder.value = false
+  }
+}
+
 // Retry payment
 const retryingPayment = ref(false)
 
@@ -495,6 +528,17 @@ async function retryPayment() {
               {{ order.paymentStatus === 'failed' ? 'Retry Payment' : 'Complete Payment' }}
             </UButton>
             <UButton
+              v-if="canRetryPayment && order.paymentStatus === 'pending'"
+              color="red"
+              variant="outline"
+              block
+              size="lg"
+              icon="i-heroicons-x-mark"
+              @click="showCancelConfirm = true"
+            >
+              Cancel Order
+            </UButton>
+            <UButton
               v-if="canDownload"
               color="primary"
               block
@@ -528,6 +572,41 @@ async function retryPayment() {
           </UButton>
         </div>
       </div>
+
+      <!-- Cancel Order Confirmation Modal -->
+      <UModal v-model="showCancelConfirm">
+        <UCard>
+          <template #header>
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500" />
+              <h3 class="font-semibold text-gray-900 dark:text-white">Cancel Order</h3>
+            </div>
+          </template>
+
+          <p class="text-gray-600 dark:text-gray-400">
+            Are you sure you want to cancel this order? Your reserved tickets will be released and this action cannot be undone.
+          </p>
+
+          <template #footer>
+            <div class="flex justify-end gap-3">
+              <UButton
+                color="gray"
+                variant="outline"
+                @click="showCancelConfirm = false"
+              >
+                Keep Order
+              </UButton>
+              <UButton
+                color="red"
+                :loading="cancellingOrder"
+                @click="cancelOrder"
+              >
+                Cancel Order
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </UModal>
     </div>
   </div>
 </template>

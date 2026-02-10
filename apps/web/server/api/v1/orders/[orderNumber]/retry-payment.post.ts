@@ -203,51 +203,50 @@ export default defineEventHandler(async (event) => {
   // Check PayMongo payment status if we have a payment intent
   // This prevents retry if payment is actually processing or already succeeded
   if (result.order.paymongoPaymentIntentId) {
+    let piStatus: string | null = null
+
     try {
       const paymentIntent = await getPaymentIntent(result.order.paymongoPaymentIntentId)
-      const piStatus = paymentIntent.attributes.status
-
-      if (piStatus === 'succeeded') {
-        // Payment actually succeeded - update our database and inform user
-        await db
-          .update(orders)
-          .set({
-            paymentStatus: 'paid',
-            paidAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(orders.id, result.order.id))
-
-        await db
-          .update(tickets)
-          .set({
-            status: 'confirmed',
-            updatedAt: new Date(),
-          })
-          .where(eq(tickets.orderId, result.order.id))
-
-        return successResponse({
-          alreadyPaid: true,
-          message: 'Good news! Your payment has been confirmed.',
-        })
-      }
-
-      if (piStatus === 'processing') {
-        // Only block if payment is actively being processed by the payment provider
-        throw createError({
-          statusCode: 400,
-          message: 'Your payment is still being processed. Please wait a few minutes and refresh the page.',
-        })
-      }
-
-      // For 'awaiting_next_action' (e.g., user selected GCash but didn't complete OTP),
-      // allow retry since they can't complete the old session after closing the browser
+      piStatus = paymentIntent.attributes.status
     } catch (e: any) {
-      // If it's our own error, re-throw it
-      if (e.statusCode) throw e
-      // Otherwise, PayMongo API error - proceed with retry (session may have expired)
+      // PayMongo API error (e.g., payment intent not found, session expired) - proceed with retry
       console.log('[Retry Payment] Could not check payment intent status, proceeding with retry:', e.message)
     }
+
+    if (piStatus === 'succeeded') {
+      // Payment actually succeeded - update our database and inform user
+      await db
+        .update(orders)
+        .set({
+          paymentStatus: 'paid',
+          paidAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, result.order.id))
+
+      await db
+        .update(tickets)
+        .set({
+          status: 'confirmed',
+          updatedAt: new Date(),
+        })
+        .where(eq(tickets.orderId, result.order.id))
+
+      return successResponse({
+        alreadyPaid: true,
+        message: 'Good news! Your payment has been confirmed.',
+      })
+    }
+
+    if (piStatus === 'processing') {
+      // Only block if payment is actively being processed by the payment provider
+      throw createError({
+        statusCode: 400,
+        message: 'Your payment is still being processed. Please wait a few minutes and refresh the page.',
+      })
+    }
+
+    // For null (API error), 'awaiting_next_action', etc. - fall through to create new payment intent
   }
 
   // Check if this is a free order (shouldn't happen, but be safe)
