@@ -29,7 +29,7 @@ spec:
                 - |
                   curl -sf -X POST \
                     -H "Authorization: Bearer $CRON_SECRET" \
-                    http://nvyt-web-service.nvyt-staging.svc.cluster.local:3000/api/v1/cron/expire-orders
+                    http://nvyt-web-service.nvyt-staging.svc.cluster.local/api/v1/cron/expire-orders
               env:
                 - name: CRON_SECRET
                   valueFrom:
