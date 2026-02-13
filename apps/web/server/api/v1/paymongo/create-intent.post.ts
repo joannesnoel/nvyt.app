@@ -1,6 +1,7 @@
 import { orders, tickets, ticketTypes, events, users, eventRequirements, ticketRegistrationFields, eventVerifications, discountCodes, type User } from '@nvyt/db'
 import { purchaseTicketsSchema } from '@nvyt/shared'
 import { eq, and, inArray, asc, sql } from 'drizzle-orm'
+import { cancelPendingOrder } from '~/server/utils/orderCleanup'
 import { nanoid } from 'nanoid'
 import { createPaymentIntent, toCentavos, getPublicKey } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail } from '~/server/utils/email'
@@ -165,46 +166,7 @@ export default defineEventHandler(async (event) => {
     )
 
   for (const pendingOrder of existingPendingOrders) {
-    const pendingTickets = await db
-      .select({ ticketTypeId: tickets.ticketTypeId })
-      .from(tickets)
-      .where(eq(tickets.orderId, pendingOrder.id))
-
-    const ticketTypeCountMap = new Map<string, number>()
-    for (const t of pendingTickets) {
-      ticketTypeCountMap.set(t.ticketTypeId, (ticketTypeCountMap.get(t.ticketTypeId) || 0) + 1)
-    }
-    for (const [ttId, count] of ticketTypeCountMap) {
-      await db
-        .update(ticketTypes)
-        .set({
-          quantitySold: sql`GREATEST(${ticketTypes.quantitySold} - ${count}, 0)`,
-          updatedAt: new Date(),
-        })
-        .where(eq(ticketTypes.id, ttId))
-    }
-
-    await db
-      .update(tickets)
-      .set({ status: 'cancelled', updatedAt: new Date() })
-      .where(eq(tickets.orderId, pendingOrder.id))
-
-    await db
-      .update(orders)
-      .set({ paymentStatus: 'failed', updatedAt: new Date() })
-      .where(eq(orders.id, pendingOrder.id))
-
-    // Decrement discount code usage if applicable
-    if (pendingOrder.discountCodeId) {
-      await db
-        .update(discountCodes)
-        .set({
-          usageCount: sql`GREATEST(${discountCodes.usageCount} - 1, 0)`,
-          updatedAt: new Date(),
-        })
-        .where(eq(discountCodes.id, pendingOrder.discountCodeId))
-    }
-
+    await cancelPendingOrder(pendingOrder)
     console.log(`[Create Intent] Cancelled stale pending order ${pendingOrder.orderNumber} for user ${user.id}`)
   }
 
@@ -592,7 +554,7 @@ export default defineEventHandler(async (event) => {
     await db
       .update(ticketTypes)
       .set({
-        quantitySold: ticketTypeMap.get(item.ticketTypeId)!.quantitySold + item.quantity,
+        quantitySold: sql`${ticketTypes.quantitySold} + ${item.quantity}`,
         updatedAt: new Date(),
       })
       .where(eq(ticketTypes.id, item.ticketTypeId))

@@ -105,6 +105,9 @@ resource "aws_ecs_task_definition" "main" {
         { name = "NUXT_S3_BUCKET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_S3_BUCKET::" },
         { name = "S3_PUBLIC_URL", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_S3_PUBLIC_URL::" },
         { name = "NUXT_PUBLIC_S3_PUBLIC_URL", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_S3_PUBLIC_URL::" },
+        # Cron
+        { name = "NUXT_CRON_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_CRON_SECRET::" },
+        { name = "CRON_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:CRON_SECRET::" },
       ]
 
       logConfiguration = {

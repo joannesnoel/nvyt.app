@@ -1,5 +1,6 @@
 import { orders, tickets, ticketTypes, events, users, ticketRegistrationFields, discountCodes } from '@nvyt/db'
 import { eq, and, inArray, sql } from 'drizzle-orm'
+import { cancelPendingOrder } from '~/server/utils/orderCleanup'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
 import {
@@ -193,45 +194,7 @@ export default defineEventHandler(async (event) => {
     )
 
   for (const pendingOrder of existingPendingOrders) {
-    const pendingTickets = await db
-      .select({ ticketTypeId: tickets.ticketTypeId })
-      .from(tickets)
-      .where(eq(tickets.orderId, pendingOrder.id))
-
-    const ticketTypeCountMap = new Map<string, number>()
-    for (const t of pendingTickets) {
-      ticketTypeCountMap.set(t.ticketTypeId, (ticketTypeCountMap.get(t.ticketTypeId) || 0) + 1)
-    }
-    for (const [ttId, count] of ticketTypeCountMap) {
-      await db
-        .update(ticketTypes)
-        .set({
-          quantitySold: sql`GREATEST(${ticketTypes.quantitySold} - ${count}, 0)`,
-          updatedAt: new Date(),
-        })
-        .where(eq(ticketTypes.id, ttId))
-    }
-
-    await db
-      .update(tickets)
-      .set({ status: 'cancelled', updatedAt: new Date() })
-      .where(eq(tickets.orderId, pendingOrder.id))
-
-    await db
-      .update(orders)
-      .set({ paymentStatus: 'failed', updatedAt: new Date() })
-      .where(eq(orders.id, pendingOrder.id))
-
-    if (pendingOrder.discountCodeId) {
-      await db
-        .update(discountCodes)
-        .set({
-          usageCount: sql`GREATEST(${discountCodes.usageCount} - 1, 0)`,
-          updatedAt: new Date(),
-        })
-        .where(eq(discountCodes.id, pendingOrder.discountCodeId))
-    }
-
+    await cancelPendingOrder(pendingOrder)
     console.log(`[PayPal Complete] Cancelled stale pending order ${pendingOrder.orderNumber} for user ${user.id}`)
   }
 
@@ -375,7 +338,7 @@ export default defineEventHandler(async (event) => {
       await db
         .update(ticketTypes)
         .set({
-          quantitySold: ticketType.quantitySold + item.quantity,
+          quantitySold: sql`${ticketTypes.quantitySold} + ${item.quantity}`,
           updatedAt: new Date(),
         })
         .where(eq(ticketTypes.id, item.ticketTypeId))

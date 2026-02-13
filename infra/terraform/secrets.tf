@@ -61,6 +61,10 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
 
     # Note: S3 access key/secret not needed when using IAM role
     # The ECS task role has S3 permissions
+
+    # Cron
+    NUXT_CRON_SECRET = var.cron_secret
+    CRON_SECRET      = var.cron_secret
   })
 }
 

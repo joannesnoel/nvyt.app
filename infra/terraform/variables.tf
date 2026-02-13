@@ -243,3 +243,10 @@ variable "sentry_dsn" {
   type        = string
   default     = ""
 }
+
+variable "cron_secret" {
+  description = "Secret token for authenticating cron job requests"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

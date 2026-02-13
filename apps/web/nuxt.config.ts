@@ -62,6 +62,8 @@ export default defineNuxtConfig({
     paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET,
     paypalMode: process.env.PAYPAL_MODE || 'sandbox',
     paypalWebhookId: process.env.PAYPAL_WEBHOOK_ID,
+    // Cron job authentication
+    cronSecret: process.env.CRON_SECRET || '',
 
     // Public keys (exposed to client)
     public: {
