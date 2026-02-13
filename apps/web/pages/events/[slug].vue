@@ -2219,11 +2219,27 @@ onBeforeUnmount(() => {
                 <span class="text-green-600 dark:text-green-400">-{{ formatCurrency(feeBreakdown.discount) }}</span>
               </div>
               <div v-if="feeBreakdown.adminFee > 0" class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Platform Fee</span>
+                <span class="text-gray-600 dark:text-gray-400 inline-flex items-center gap-1">
+                  Platform Fee
+                  <UPopover :ui="{ width: 'max-w-[250px]' }">
+                    <UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-gray-400 cursor-pointer" />
+                    <template #panel>
+                      <p class="p-2 text-xs text-gray-600 dark:text-gray-300">A service fee for event hosting, ticketing, and order management.</p>
+                    </template>
+                  </UPopover>
+                </span>
                 <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.adminFee) }}</span>
               </div>
               <div v-if="feeBreakdown.discountedSubtotal > 0" class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Payment Fee</span>
+                <span class="text-gray-600 dark:text-gray-400 inline-flex items-center gap-1">
+                  Payment Fee
+                  <UPopover :ui="{ width: 'max-w-[250px]' }">
+                    <UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-gray-400 cursor-pointer" />
+                    <template #panel>
+                      <p class="p-2 text-xs text-gray-600 dark:text-gray-300">A fee charged by the payment provider to process your payment.</p>
+                    </template>
+                  </UPopover>
+                </span>
                 <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.processingFee) }}</span>
               </div>
               <div class="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between font-semibold">
