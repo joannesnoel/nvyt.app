@@ -89,13 +89,13 @@ useSeoMeta({
         </div>
       </div>
 
-      <!-- Payment Processing Fees -->
+      <!-- Payment Fees -->
       <div class="mb-12">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">
-          Payment Processing Fees
+          Payment Fees
         </h2>
         <p class="text-gray-500 dark:text-gray-400 text-center mb-6">
-          Payment processing fees are charged by our payment provider and vary by payment method.
+          Payment fees are charged by our payment provider and vary by payment method.
         </p>
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
           <table class="w-full">
@@ -105,7 +105,7 @@ useSeoMeta({
                   Payment Method
                 </th>
                 <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                  Processing Fee
+                  Payment Fee
                 </th>
               </tr>
             </thead>

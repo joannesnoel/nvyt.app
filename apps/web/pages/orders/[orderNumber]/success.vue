@@ -583,13 +583,13 @@ async function retryPayment() {
               <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
               <span class="text-gray-900 dark:text-white">{{ formatCurrency(order.subtotalAmount) }}</span>
             </div>
-            <div v-if="order.processingFee && parseFloat(order.processingFee) > 0" class="flex items-center justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400">Transaction Fee</span>
-              <span class="text-gray-900 dark:text-white">{{ formatCurrency(order.processingFee) }}</span>
-            </div>
             <div v-if="order.adminFee && parseFloat(order.adminFee) > 0" class="flex items-center justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400">Booking Fee</span>
+              <span class="text-gray-600 dark:text-gray-400">Platform Fee</span>
               <span class="text-gray-900 dark:text-white">{{ formatCurrency(order.adminFee) }}</span>
+            </div>
+            <div v-if="order.processingFee && parseFloat(order.processingFee) > 0" class="flex items-center justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400">Payment Fee</span>
+              <span class="text-gray-900 dark:text-white">{{ formatCurrency(order.processingFee) }}</span>
             </div>
             <div class="flex items-center justify-between font-semibold pt-2 border-t border-gray-200 dark:border-gray-700">
               <span class="text-gray-900 dark:text-white">Total Due</span>

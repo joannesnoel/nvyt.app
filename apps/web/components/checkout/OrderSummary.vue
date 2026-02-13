@@ -85,22 +85,22 @@ function formatCurrency(amount: number): string {
       </span>
     </div>
 
-    <!-- Processing fee -->
-    <div class="flex justify-between text-sm">
-      <span class="text-gray-600 dark:text-gray-400">Processing Fee</span>
-      <span class="text-gray-900 dark:text-white">
-        {{ formatCurrency(feeBreakdown.processingFee) }}
-      </span>
-    </div>
-
-    <!-- Admin fee (if present) -->
+    <!-- Platform fee (if present) -->
     <div
       v-if="feeBreakdown.adminFee > 0"
       class="flex justify-between text-sm"
     >
-      <span class="text-gray-600 dark:text-gray-400">Service Fee</span>
+      <span class="text-gray-600 dark:text-gray-400">Platform Fee</span>
       <span class="text-gray-900 dark:text-white">
         {{ formatCurrency(feeBreakdown.adminFee) }}
+      </span>
+    </div>
+
+    <!-- Payment fee -->
+    <div class="flex justify-between text-sm">
+      <span class="text-gray-600 dark:text-gray-400">Payment Fee</span>
+      <span class="text-gray-900 dark:text-white">
+        {{ formatCurrency(feeBreakdown.processingFee) }}
       </span>
     </div>
 

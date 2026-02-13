@@ -2218,13 +2218,13 @@ onBeforeUnmount(() => {
                 <span class="text-green-600 dark:text-green-400">Discount ({{ appliedDiscount?.code }})</span>
                 <span class="text-green-600 dark:text-green-400">-{{ formatCurrency(feeBreakdown.discount) }}</span>
               </div>
-              <div v-if="feeBreakdown.discountedSubtotal > 0" class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Transaction Fee</span>
-                <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.processingFee) }}</span>
-              </div>
               <div v-if="feeBreakdown.adminFee > 0" class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Booking Fee</span>
+                <span class="text-gray-600 dark:text-gray-400">Platform Fee</span>
                 <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.adminFee) }}</span>
+              </div>
+              <div v-if="feeBreakdown.discountedSubtotal > 0" class="flex justify-between text-sm">
+                <span class="text-gray-600 dark:text-gray-400">Payment Fee</span>
+                <span class="text-gray-900 dark:text-white">{{ formatCurrency(feeBreakdown.processingFee) }}</span>
               </div>
               <div class="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between font-semibold">
                 <span class="text-gray-900 dark:text-white">Total</span>

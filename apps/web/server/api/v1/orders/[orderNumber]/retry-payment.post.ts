@@ -138,7 +138,7 @@ export default defineEventHandler(async (event) => {
 
     if (processingFee > 0) {
       lineItems.push({
-        name: 'Processing Fee',
+        name: 'Payment Fee',
         quantity: 1,
         amount: toCents(processingFee),
         currency: result.order.currency,
@@ -148,11 +148,11 @@ export default defineEventHandler(async (event) => {
 
     if (adminFee > 0) {
       lineItems.push({
-        name: 'Service Fee',
+        name: 'Platform Fee',
         quantity: 1,
         amount: toCents(adminFee),
         currency: result.order.currency,
-        description: 'Booking service fee',
+        description: 'Platform fee',
       })
     }
 

@@ -172,11 +172,11 @@ async function sendPaymentReminders() {
         </UCard>
         <UCard class="text-center">
           <p class="text-2xl font-bold text-gray-600">{{ formatCurrency(stats.processingFees) }}</p>
-          <p class="text-sm text-gray-500">Processing Fees</p>
+          <p class="text-sm text-gray-500">Payment Fees</p>
         </UCard>
         <UCard class="text-center">
           <p class="text-2xl font-bold text-gray-600">{{ formatCurrency(stats.platformFees) }}</p>
-          <p class="text-sm text-gray-500">Service Fees</p>
+          <p class="text-sm text-gray-500">Platform Fees</p>
         </UCard>
       </div>
 

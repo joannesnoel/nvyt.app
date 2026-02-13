@@ -595,8 +595,8 @@ const statusOptions = [
                 <strong>Fee Structure:</strong>
               </p>
               <ul class="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
-                <li>Transaction Fee: 3.5% (always applied)</li>
-                <li>Booking Fee: {{ adminFeeRate }}% (set above)</li>
+                <li>Platform Fee: {{ adminFeeRate }}% (set above)</li>
+                <li>Payment Fee: 3.5% (always applied)</li>
               </ul>
             </div>
 
