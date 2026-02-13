@@ -515,7 +515,7 @@ const cartTotal = computed(() => {
 
 // Processing fee constants (same as backend)
 const PROCESSING_FEE_RATE = 0.035 // 3.5% for PayMongo (GCash, Maya, etc.)
-const PAYPAL_PROCESSING_FEE_RATE = 0.039 // 3.9% for PayPal
+const PAYPAL_PROCESSING_FEE_RATE = 0.055 // 5.5% for PayPal
 const PAYPAL_FIXED_FEE = 15 // ₱15 fixed fee for PayPal
 
 // Calculate fee breakdown for display (updates when payment provider changes)
@@ -534,15 +534,17 @@ const feeBreakdown = computed(() => {
     return { subtotal, discount, discountedSubtotal: 0, processingFee: 0, adminFee: 0, totalFees: 0, total: 0 }
   }
 
-  // Processing fee on discounted subtotal
+  // Admin fee first
+  const adminFee = Math.round(discountedSubtotal * adminFeeRate * 100) / 100
+
+  // Processing fee on discounted subtotal + admin fee
+  const baseForProcessing = discountedSubtotal + adminFee
   let processingFee: number
   if (selectedPaymentProvider.value === 'paypal') {
-    processingFee = Math.round((discountedSubtotal * PAYPAL_PROCESSING_FEE_RATE + PAYPAL_FIXED_FEE) * 100) / 100
+    processingFee = Math.round((baseForProcessing * PAYPAL_PROCESSING_FEE_RATE + PAYPAL_FIXED_FEE) * 100) / 100
   } else {
-    processingFee = Math.round(discountedSubtotal * PROCESSING_FEE_RATE * 100) / 100
+    processingFee = Math.round(baseForProcessing * PROCESSING_FEE_RATE * 100) / 100
   }
-
-  const adminFee = Math.round(discountedSubtotal * adminFeeRate * 100) / 100
 
   const totalFees = Math.round((processingFee + adminFee) * 100) / 100
   const total = Math.round((discountedSubtotal + totalFees) * 100) / 100
