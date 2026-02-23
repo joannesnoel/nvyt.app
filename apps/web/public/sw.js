@@ -1,3 +1,15 @@
+// Service worker for nvyt PWA
+// Handles: push notifications, notification clicks, auto-update
+// No precaching — this is an SSR app, pages are server-rendered
+
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 self.addEventListener('push', (event) => {
   if (!event.data) return
   const data = event.data.json()

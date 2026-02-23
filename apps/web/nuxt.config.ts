@@ -24,6 +24,9 @@ export default defineNuxtConfig({
   ],
 
   pwa: {
+    strategies: 'injectManifest',
+    srcDir: 'public',
+    filename: 'sw.js',
     registerType: 'autoUpdate',
     manifest: {
       name: 'nvyt - Event & Ticketing Platform',
@@ -39,27 +42,9 @@ export default defineNuxtConfig({
         { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
     },
-    workbox: {
-      navigateFallback: undefined,
-      // SSR app: don't precache JS/CSS/HTML — they change every deploy and are loaded on-demand.
-      // Only precache stable static assets (icons, images, manifest).
-      globPatterns: ['**/*.{ico,png,svg,webp,woff2}'],
-      // Exclude _nuxt chunks from precaching entirely
-      globIgnores: ['_nuxt/**'],
-      importScripts: ['/push-sw.js'],
-      cleanupOutdatedCaches: true,
-      runtimeCaching: [
-        {
-          urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)$/,
-          handler: 'CacheFirst',
-          options: { cacheName: 'images', expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 } },
-        },
-        {
-          urlPattern: /^https:\/\/.*\.(?:woff2?|ttf|otf)$/,
-          handler: 'CacheFirst',
-          options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 } },
-        },
-      ],
+    injectManifest: {
+      // SSR app: no precaching — pages are server-rendered, JS chunks change every deploy
+      injectionPoint: undefined,
     },
     client: {
       installPrompt: true,
