@@ -27,13 +27,16 @@ const isTestingPush = ref(false)
 // Push notification state
 const pushEnabled = ref(false)
 const pushLoading = ref(false)
+let pushToggling = false
 
 onMounted(async () => {
   await webPush.checkSubscription()
   pushEnabled.value = webPush.isSubscribed.value
 })
 
-async function togglePush(newValue: boolean) {
+watch(pushEnabled, async (newValue) => {
+  if (pushToggling) return
+  pushToggling = true
   pushLoading.value = true
   try {
     if (newValue) {
@@ -41,23 +44,21 @@ async function togglePush(newValue: boolean) {
       pushEnabled.value = ok
       if (ok) {
         toast.add({ title: 'Push Notifications', description: 'Push notifications enabled', color: 'green' })
-      } else {
-        if (webPush.permission.value === 'denied') {
-          toast.add({ title: 'Permission Denied', description: 'Please allow notifications in your browser settings', color: 'red' })
-        }
+      } else if (webPush.permission.value === 'denied') {
+        toast.add({ title: 'Permission Denied', description: 'Please allow notifications in your browser settings', color: 'red' })
       }
     } else {
       await webPush.unsubscribe()
       pushEnabled.value = false
       toast.add({ title: 'Push Notifications', description: 'Push notifications disabled', color: 'gray' })
     }
-  } catch (e) {
-    // Revert on error
+  } catch {
     pushEnabled.value = webPush.isSubscribed.value
   } finally {
     pushLoading.value = false
+    pushToggling = false
   }
-}
+})
 
 async function testPush() {
   isTestingPush.value = true
@@ -405,7 +406,6 @@ async function changePassword() {
               <UToggle
                 v-model="pushEnabled"
                 :disabled="pushLoading"
-                @change="togglePush"
               />
             </div>
 
