@@ -19,6 +19,9 @@ const { data: eventData } = await useFetch(
 )
 const eventTitle = computed(() => eventData.value?.data?.title || 'Event')
 
+// Support unread count injected from layout
+const supportUnreadCount = inject<Ref<number>>('supportUnreadCount', ref(0))
+
 // Grouped event management navigation
 const eventNavGroups = computed(() => {
   const id = currentEventId.value
@@ -27,6 +30,7 @@ const eventNavGroups = computed(() => {
     {
       items: [
         { label: 'Overview', icon: 'i-heroicons-squares-2x2', to: `/dashboard/events/${id}` },
+        { label: 'Support Chat', icon: 'i-heroicons-chat-bubble-left-right', to: `/dashboard/events/${id}/support`, badge: supportUnreadCount.value },
       ]
     },
     {
@@ -111,7 +115,13 @@ function toggleColorMode() {
               @click="emit('close')"
             >
               <UIcon :name="item.icon" class="w-5 h-5 flex-shrink-0" />
-              <span>{{ item.label }}</span>
+              <span class="flex-1">{{ item.label }}</span>
+              <span
+                v-if="item.badge"
+                class="bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center"
+              >
+                {{ item.badge > 99 ? '99+' : item.badge }}
+              </span>
             </NuxtLink>
           </div>
         </div>

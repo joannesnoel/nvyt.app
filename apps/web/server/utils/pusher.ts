@@ -34,6 +34,10 @@ export const channels = {
   event: (eventId: string) => `event-${eventId}`,
   // User-specific channel for personal notifications
   user: (userId: string) => `private-user-${userId}`,
+  // Support chat channels
+  supportConversation: (id: string) => `support-conversation-${id}`,
+  supportAdmin: () => 'support-admin',
+  supportEvent: (eventId: string) => `support-event-${eventId}`,
 }
 
 // Event types
@@ -46,6 +50,11 @@ export const pusherEvents = {
   ATTENDEE_STATUS_CHANGED: 'attendee:status-changed',
   // Order events
   ORDER_PAYMENT_CONFIRMED: 'order:payment-confirmed',
+  // Support chat events
+  SUPPORT_NEW_MESSAGE: 'support:new-message',
+  SUPPORT_NEW_CONVERSATION: 'support:new-conversation',
+  SUPPORT_CONVERSATION_UPDATED: 'support:conversation-updated',
+  SUPPORT_TYPING: 'support:typing',
 }
 
 // Helper to broadcast ticket check-in
@@ -99,5 +108,80 @@ export async function broadcastAttendeeCheckIn(data: {
     )
   } catch (error) {
     console.error('[Pusher] Failed to broadcast attendee check-in:', error)
+  }
+}
+
+// Helper to broadcast support message to all relevant channels
+export async function broadcastSupportMessage(data: {
+  conversationId: string
+  eventId?: string | null
+  message: any
+}) {
+  const pusher = usePusher()
+  if (!pusher) return
+
+  const channelList = [
+    channels.supportConversation(data.conversationId),
+    channels.supportAdmin(),
+  ]
+  if (data.eventId) {
+    channelList.push(channels.supportEvent(data.eventId))
+  }
+
+  try {
+    await pusher.trigger(channelList, pusherEvents.SUPPORT_NEW_MESSAGE, {
+      conversationId: data.conversationId,
+      message: data.message,
+    })
+  } catch (error) {
+    console.error('[Pusher] Failed to broadcast support message:', error)
+  }
+}
+
+// Helper to broadcast new support conversation
+export async function broadcastNewConversation(data: {
+  conversation: any
+}) {
+  const pusher = usePusher()
+  if (!pusher) return
+
+  const channelList = [channels.supportAdmin()]
+  if (data.conversation.eventId) {
+    channelList.push(channels.supportEvent(data.conversation.eventId))
+  }
+
+  try {
+    await pusher.trigger(channelList, pusherEvents.SUPPORT_NEW_CONVERSATION, {
+      conversation: data.conversation,
+    })
+  } catch (error) {
+    console.error('[Pusher] Failed to broadcast new conversation:', error)
+  }
+}
+
+// Helper to broadcast support conversation update
+export async function broadcastConversationUpdated(data: {
+  conversationId: string
+  eventId?: string | null
+  updates: any
+}) {
+  const pusher = usePusher()
+  if (!pusher) return
+
+  const channelList = [
+    channels.supportConversation(data.conversationId),
+    channels.supportAdmin(),
+  ]
+  if (data.eventId) {
+    channelList.push(channels.supportEvent(data.eventId))
+  }
+
+  try {
+    await pusher.trigger(channelList, pusherEvents.SUPPORT_CONVERSATION_UPDATED, {
+      conversationId: data.conversationId,
+      updates: data.updates,
+    })
+  } catch (error) {
+    console.error('[Pusher] Failed to broadcast conversation update:', error)
   }
 }

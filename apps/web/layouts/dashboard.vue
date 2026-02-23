@@ -10,6 +10,18 @@ watch(() => route.path, () => {
   sidebarOpen.value = false
 })
 
+// Support unread count — fetched here so both sidebar and hamburger badge can use it
+const currentEventId = computed(() => {
+  const match = route.path.match(/\/dashboard\/events\/([^/]+)/)
+  return match ? match[1] : null
+})
+const { data: supportUnreadData } = await useFetch(
+  () => currentEventId.value ? `/api/v1/events/${currentEventId.value}/support/unread-count` : null,
+  { watch: [currentEventId] }
+)
+const supportUnreadCount = computed(() => (supportUnreadData.value as any)?.data?.unreadCount ?? 0)
+provide('supportUnreadCount', supportUnreadCount)
+
 // User dropdown items
 const userMenuItems = computed(() => [
   [{
@@ -53,13 +65,20 @@ const userMenuItems = computed(() => [
         <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
           <!-- Mobile menu button -->
           <div class="flex items-center gap-4">
-            <UButton
-              icon="i-heroicons-bars-3"
-              color="gray"
-              variant="ghost"
-              class="lg:hidden"
-              @click="sidebarOpen = true"
-            />
+            <div class="relative lg:hidden">
+              <UButton
+                icon="i-heroicons-bars-3"
+                color="gray"
+                variant="ghost"
+                @click="sidebarOpen = true"
+              />
+              <span
+                v-if="supportUnreadCount > 0"
+                class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center pointer-events-none"
+              >
+                {{ supportUnreadCount > 99 ? '99+' : supportUnreadCount }}
+              </span>
+            </div>
 
             <!-- Mobile logo -->
             <NuxtLink to="/" class="lg:hidden flex items-center gap-2">

@@ -28,3 +28,6 @@ export * from './eventVerification'
 
 // PSGC (Philippine Standard Geographic Code)
 export * from './psgc'
+
+// Support Chat
+export * from './support'

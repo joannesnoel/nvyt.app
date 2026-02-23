@@ -294,6 +294,9 @@ const userMenuItems = computed(() => {
       </div>
     </footer>
 
+    <!-- Support Chat Widget -->
+    <SupportChatWidget />
+
     <!-- Fixed Bottom Banners Container -->
     <div class="fixed bottom-0 inset-x-0 z-40 flex flex-col-reverse">
       <EmailVerificationBanner />

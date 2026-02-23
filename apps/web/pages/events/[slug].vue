@@ -133,6 +133,17 @@ const apiError = computed(() => {
 })
 const isOrganizer = computed(() => event.value?.isOrganizer)
 
+// Set support chat event context so conversations get tagged with this event
+const { setEventContext, clearEventContext } = useSupportChat()
+watch(() => event.value?.id, (eventId) => {
+  if (eventId) {
+    setEventContext(eventId)
+  }
+}, { immediate: true })
+onBeforeUnmount(() => {
+  clearEventContext()
+})
+
 // Computed CSS for color template (skip 'green' to use NuxtUI default)
 const colorTemplateStyle = computed(() => {
   const colorTemplate = event.value?.colorTemplate || 'green'

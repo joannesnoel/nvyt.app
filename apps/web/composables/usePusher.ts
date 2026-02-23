@@ -8,6 +8,9 @@ export const channels = {
   order: (orderNumber: string) => `order-${orderNumber}`,
   event: (eventId: string) => `event-${eventId}`,
   user: (userId: string) => `private-user-${userId}`,
+  supportConversation: (id: string) => `support-conversation-${id}`,
+  supportAdmin: () => 'support-admin',
+  supportEvent: (eventId: string) => `support-event-${eventId}`,
 }
 
 // Event types (must match server)
@@ -17,6 +20,10 @@ export const pusherEvents = {
   ATTENDEE_CHECKED_IN: 'attendee:checked-in',
   ATTENDEE_STATUS_CHANGED: 'attendee:status-changed',
   ORDER_PAYMENT_CONFIRMED: 'order:payment-confirmed',
+  SUPPORT_NEW_MESSAGE: 'support:new-message',
+  SUPPORT_NEW_CONVERSATION: 'support:new-conversation',
+  SUPPORT_CONVERSATION_UPDATED: 'support:conversation-updated',
+  SUPPORT_TYPING: 'support:typing',
 }
 
 export function usePusher() {

@@ -1,0 +1,1 @@
+ALTER TABLE "support_conversations" ADD COLUMN "last_heartbeat_at" timestamp with time zone;

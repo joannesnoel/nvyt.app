@@ -1692,3 +1692,56 @@ export function ticketRegisteredSetupEmail(data: {
     `,
   }
 }
+
+export function supportReplyNotificationEmail(data: {
+  visitorName: string
+  responderName: string
+  messagePreview: string
+  resumeUrl: string
+  eventTitle?: string
+}): { subject: string; html: string } {
+  const contextLine = data.eventTitle
+    ? ` regarding <strong>${data.eventTitle}</strong>`
+    : ''
+
+  return {
+    subject: 'You have a new reply from nvyt support',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
+        </div>
+
+        <h2 style="color: #111; margin-bottom: 10px;">New Reply to Your Conversation</h2>
+
+        <p>Hi ${data.visitorName},</p>
+
+        <p><strong>${data.responderName}</strong> replied to your support conversation${contextLine}:</p>
+
+        <div style="background: #f8f9fa; border-left: 4px solid #6366f1; border-radius: 4px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0; color: #444; white-space: pre-wrap;">${data.messagePreview}</p>
+        </div>
+
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${data.resumeUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Continue Conversation</a>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          The NVYT&trade; Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
