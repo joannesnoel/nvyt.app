@@ -48,11 +48,11 @@ resource "aws_ecs_task_definition" "expire_orders" {
 
       command = [
         "/bin/sh", "-c",
-        "curl -sf -X POST -H \"Authorization: Bearer $CRON_SECRET\" http://localhost:3000/api/v1/cron/expire-orders || true"
+        "for i in $(seq 1 30); do curl -sf http://localhost:3000/ && break || sleep 3; done && curl -sf -X POST -H \"Authorization: Bearer $CRON_SECRET\" http://localhost:3000/api/v1/cron/expire-orders"
       ]
 
-      # Use the app container as a sidecar so curl can reach localhost:3000
-      essential = false
+      # Must be essential so ECS stops the entire task when curl exits
+      essential = true
 
       secrets = [
         { name = "CRON_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:CRON_SECRET::" },
@@ -93,6 +93,15 @@ resource "aws_ecs_task_definition" "expire_orders" {
         { name = "NUXT_JWT_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_JWT_SECRET::" },
         { name = "NUXT_CRON_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_CRON_SECRET::" },
         { name = "CRON_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:CRON_SECRET::" },
+        { name = "NUXT_PAYMONGO_SECRET_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYMONGO_SECRET_KEY::" },
+        { name = "NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_PAYMONGO_PUBLIC_KEY::" },
+        { name = "NUXT_PAYPAL_CLIENT_ID", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYPAL_CLIENT_ID::" },
+        { name = "NUXT_PAYPAL_CLIENT_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYPAL_CLIENT_SECRET::" },
+        { name = "NUXT_PAYPAL_MODE", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PAYPAL_MODE::" },
+        { name = "NUXT_SMTP_HOST", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_SMTP_HOST::" },
+        { name = "NUXT_SMTP_PORT", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_SMTP_PORT::" },
+        { name = "NUXT_SMTP_USER", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_SMTP_USER::" },
+        { name = "NUXT_SMTP_PASS", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_SMTP_PASS::" },
       ]
 
       logConfiguration = {

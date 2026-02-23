@@ -137,7 +137,8 @@
       "Bash(export PATH=\"$HOME/.local/share/pnpm:$PATH\")",
       "Bash(pnpm --filter @nvyt/web add:*)",
       "Bash(pnpm --filter @nvyt/web exec nuxi typecheck:*)",
-      "Bash(export PATH=\"$HOME/.nvm/versions/node/v24.13.0/bin:$HOME/.local/share/pnpm:$PATH\")"
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v24.13.0/bin:$HOME/.local/share/pnpm:$PATH\")",
+      "Bash(aws:*)"
     ]
   },
   "hooks": {

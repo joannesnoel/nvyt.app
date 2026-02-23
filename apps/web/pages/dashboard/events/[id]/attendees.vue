@@ -38,6 +38,7 @@ const stats = computed(() => response.value?.data?.stats ?? {
   total: 0, confirmed: 0, pending: 0, waitlisted: 0, declined: 0, cancelled: 0, checkedIn: 0
 })
 const meta = computed(() => response.value?.meta)
+const ticketTypeStats = computed(() => (response.value?.data as any)?.ticketTypeStats ?? [])
 
 // Debounced search
 let searchTimeout: ReturnType<typeof setTimeout>
@@ -226,6 +227,20 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
           <p class="text-2xl font-bold text-primary">{{ stats.checkedIn }}</p>
           <p class="text-sm text-gray-500">Checked In</p>
         </UCard>
+      </div>
+
+      <!-- Ticket Type Breakdown -->
+      <div v-if="isTicketMode && ticketTypeStats.length > 0" class="mb-8">
+        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Sales by Ticket Type</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <UCard v-for="tt in ticketTypeStats" :key="tt.id" class="text-center">
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ tt.sold }}</p>
+            <p class="text-sm text-gray-500">{{ tt.name }}</p>
+            <p v-if="tt.quantity != null" class="text-xs text-gray-400 mt-1">
+              of {{ tt.quantity }}
+            </p>
+          </UCard>
+        </div>
       </div>
 
       <!-- Filters & Actions -->

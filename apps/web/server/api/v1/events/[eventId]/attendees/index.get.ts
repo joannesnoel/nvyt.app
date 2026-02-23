@@ -332,9 +332,43 @@ async function getTicketStats(
     }
   })
 
+  // Get per-ticket-type stats (only non-cancelled/non-refunded from paid/pending orders)
+  const ticketTypeStatsResult = await db
+    .select({
+      id: ticketTypes.id,
+      name: ticketTypes.name,
+      quantity: ticketTypes.quantity,
+      sold: sql<number>`count(${tickets.id})`,
+    })
+    .from(ticketTypes)
+    .leftJoin(
+      tickets,
+      and(
+        eq(tickets.ticketTypeId, ticketTypes.id),
+        inArray(tickets.status, ['confirmed', 'checked_in', 'pending']),
+      )
+    )
+    .leftJoin(orders, eq(tickets.orderId, orders.id))
+    .where(
+      and(
+        eq(ticketTypes.eventId, eventId),
+        sql`(${orders.paymentStatus} IN ('paid', 'pending') OR ${orders.paymentStatus} IS NULL)`,
+      )
+    )
+    .groupBy(ticketTypes.id, ticketTypes.name, ticketTypes.quantity, ticketTypes.sortOrder)
+    .orderBy(ticketTypes.sortOrder)
+
+  const ticketTypeStats = ticketTypeStatsResult.map(row => ({
+    id: row.id,
+    name: row.name,
+    quantity: row.quantity,
+    sold: Number(row.sold),
+  }))
+
   return successResponse({
     attendees: attendeesList,
     stats,
+    ticketTypeStats,
   }, {
     page,
     limit,
