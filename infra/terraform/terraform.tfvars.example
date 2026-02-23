@@ -22,7 +22,8 @@ admin_emails = "admin@example.com"
 # PayMongo (get from PayMongo dashboard)
 paymongo_public_key     = "pk_live_xxx"
 paymongo_secret_key     = "sk_live_xxx"
-paymongo_webhook_secret = "whsk_xxx"
+paymongo_webhook_secret  = "whsk_xxx"
+paymongo_payment_methods = "qrph"
 
 # Google Maps
 google_maps_api_key = "AIzaSy..."
@@ -48,6 +49,13 @@ smtp_port = "587"
 smtp_user = "your-smtp-user"
 smtp_pass = "your-smtp-password"
 smtp_from = "nvyt <noreply@nvyt.app>"
+
+# Cron job authentication
+cron_secret = "your-cron-secret"
+
+# Web Push (VAPID) - generate with: npx web-push generate-vapid-keys
+vapid_public_key  = "your-vapid-public-key"
+vapid_private_key = "your-vapid-private-key"
 
 # Database (optional - defaults are fine for most cases)
 # db_instance_class    = "db.t3.micro"
