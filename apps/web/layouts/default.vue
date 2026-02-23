@@ -27,6 +27,9 @@ function isNavActive(to: string) {
   return route.path === to || route.path.startsWith(to + '/')
 }
 
+// Admin support unread count (real-time via Pusher)
+const { unreadCount: adminSupportUnread } = useAdminSupportUnread()
+
 // User dropdown menu items (Settings, Admin, Sign out)
 const userMenuItems = computed(() => {
   const items: any[][] = [
@@ -45,6 +48,11 @@ const userMenuItems = computed(() => {
   // Add admin section if user is admin
   if (user.value?.isAdmin) {
     items.push([{
+      slot: 'support',
+      label: 'Support Chat',
+      icon: 'i-heroicons-chat-bubble-left-right',
+      to: '/admin/support',
+    }, {
       label: 'Admin',
       icon: 'i-heroicons-shield-check',
       to: '/admin/verifications',
@@ -158,11 +166,17 @@ const userMenuItems = computed(() => {
                 :popper="{ placement: 'bottom-end' }"
               >
                 <UButton color="gray" variant="ghost" class="gap-2">
-                  <UAvatar
-                    :src="user.avatarUrl || undefined"
-                    :alt="user.name"
-                    size="xs"
-                  />
+                  <div class="relative">
+                    <UAvatar
+                      :src="user.avatarUrl || undefined"
+                      :alt="user.name"
+                      size="xs"
+                    />
+                    <span
+                      v-if="adminSupportUnread > 0"
+                      class="absolute -top-1 -right-1 bg-red-500 border-2 border-white dark:border-gray-900 rounded-full w-3 h-3"
+                    />
+                  </div>
                   <span class="hidden sm:inline">{{ user.name }}</span>
                   <UIcon name="i-heroicons-chevron-down" class="w-4 h-4" />
                 </UButton>
@@ -175,6 +189,19 @@ const userMenuItems = computed(() => {
                     <p class="text-sm text-gray-500 truncate">
                       {{ user.email }}
                     </p>
+                  </div>
+                </template>
+
+                <template #support="{ item }">
+                  <div class="flex items-center gap-2 w-full">
+                    <UIcon :name="item.icon" class="w-4 h-4 flex-shrink-0" />
+                    <span class="flex-1 truncate">{{ item.label }}</span>
+                    <span
+                      v-if="adminSupportUnread > 0"
+                      class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center"
+                    >
+                      {{ adminSupportUnread > 99 ? '99+' : adminSupportUnread }}
+                    </span>
                   </div>
                 </template>
               </UDropdown>

@@ -22,6 +22,9 @@ const { data: supportUnreadData } = await useFetch(
 const supportUnreadCount = computed(() => (supportUnreadData.value as any)?.data?.unreadCount ?? 0)
 provide('supportUnreadCount', supportUnreadCount)
 
+// Admin support unread count (real-time via Pusher)
+const { unreadCount: adminSupportUnread } = useAdminSupportUnread()
+
 // User dropdown items
 const userMenuItems = computed(() => [
   [{
@@ -29,11 +32,21 @@ const userMenuItems = computed(() => [
     slot: 'account',
     disabled: true,
   }],
-  [{
-    label: 'Settings',
-    icon: 'i-heroicons-cog-6-tooth',
-    to: '/settings',
-  }],
+  [
+    ...(user.value?.isAdmin
+      ? [{
+          slot: 'support',
+          label: 'Support Chat',
+          icon: 'i-heroicons-chat-bubble-left-right',
+          to: '/admin/support',
+        }]
+      : []),
+    {
+      label: 'Settings',
+      icon: 'i-heroicons-cog-6-tooth',
+      to: '/settings',
+    },
+  ],
   [{
     label: 'Sign out',
     icon: 'i-heroicons-arrow-right-on-rectangle',
@@ -96,11 +109,17 @@ const userMenuItems = computed(() => [
               :popper="{ placement: 'bottom-end' }"
             >
               <UButton color="gray" variant="ghost" class="gap-2">
-                <UAvatar
-                  :src="user?.avatarUrl || undefined"
-                  :alt="user?.name"
-                  size="xs"
-                />
+                <div class="relative">
+                  <UAvatar
+                    :src="user?.avatarUrl || undefined"
+                    :alt="user?.name"
+                    size="xs"
+                  />
+                  <span
+                    v-if="adminSupportUnread > 0"
+                    class="absolute -top-1 -right-1 bg-red-500 border-2 border-white dark:border-gray-900 rounded-full w-3 h-3"
+                  />
+                </div>
                 <span class="hidden sm:inline text-sm font-medium">{{ user?.name }}</span>
                 <UIcon name="i-heroicons-chevron-down" class="w-4 h-4" />
               </UButton>
@@ -113,6 +132,19 @@ const userMenuItems = computed(() => [
                   <p class="text-sm text-gray-500 truncate">
                     {{ user?.email }}
                   </p>
+                </div>
+              </template>
+
+              <template #support="{ item }">
+                <div class="flex items-center gap-2 w-full">
+                  <UIcon :name="item.icon" class="w-4 h-4 flex-shrink-0" />
+                  <span class="flex-1 truncate">{{ item.label }}</span>
+                  <span
+                    v-if="adminSupportUnread > 0"
+                    class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center"
+                  >
+                    {{ adminSupportUnread > 99 ? '99+' : adminSupportUnread }}
+                  </span>
                 </div>
               </template>
             </UDropdown>

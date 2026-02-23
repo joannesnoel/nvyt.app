@@ -7,6 +7,7 @@ definePageMeta({
 const toast = useToast()
 const { subscribe, events: pusherEvents } = usePusher()
 const { user } = useAuth()
+const { refresh: refreshAdminUnread } = useAdminSupportUnread()
 
 // Filters
 const filters = reactive({
@@ -74,6 +75,7 @@ async function selectConversation(id: string) {
     // Refresh list to update unread counts
     refreshList()
     refreshStats()
+    refreshAdminUnread()
   } catch {
     toast.add({ title: 'Failed to load conversation', color: 'red' })
   } finally {
@@ -319,65 +321,67 @@ const statusOptions = [
         <!-- Detail -->
         <template v-else-if="selectedConversation">
           <!-- Header -->
-          <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <!-- Back button on mobile -->
-                <UButton
-                  icon="i-heroicons-arrow-left"
-                  color="gray"
-                  variant="ghost"
-                  size="sm"
-                  class="md:hidden"
-                  @click="selectedId = null"
-                />
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="font-semibold text-gray-900 dark:text-white">
-                      {{ selectedConversation.visitorName }}
-                    </span>
-                    <span v-if="selectedConversation.visitorOnline" class="w-2 h-2 rounded-full bg-green-500" />
-                    <UBadge :color="statusColor(selectedConversation.status)" variant="soft" size="xs">
-                      {{ statusLabel(selectedConversation.status) }}
-                    </UBadge>
-                  </div>
-                  <p v-if="selectedConversation.visitorEmail" class="text-xs text-gray-500">
-                    {{ selectedConversation.visitorEmail }}
-                  </p>
-                  <p v-if="selectedConversation.eventTitle" class="text-xs text-primary-500">
-                    {{ selectedConversation.eventTitle }}
-                  </p>
+          <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 space-y-2">
+            <!-- Top row: back button, name, status -->
+            <div class="flex items-center gap-3 min-w-0">
+              <UButton
+                icon="i-heroicons-arrow-left"
+                color="gray"
+                variant="ghost"
+                size="sm"
+                class="md:hidden flex-shrink-0"
+                @click="selectedId = null"
+              />
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-semibold text-gray-900 dark:text-white truncate">
+                    {{ selectedConversation.visitorName }}
+                  </span>
+                  <span v-if="selectedConversation.visitorOnline" class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                  <UBadge :color="statusColor(selectedConversation.status)" variant="soft" size="xs" class="flex-shrink-0">
+                    {{ statusLabel(selectedConversation.status) }}
+                  </UBadge>
                 </div>
+                <p v-if="selectedConversation.visitorEmail" class="text-xs text-gray-500 truncate">
+                  {{ selectedConversation.visitorEmail }}
+                </p>
+                <p v-if="selectedConversation.eventTitle" class="text-xs text-primary-500 truncate">
+                  {{ selectedConversation.eventTitle }}
+                </p>
               </div>
-              <div class="flex items-center gap-1">
-                <UButton
-                  v-if="!selectedConversation.assigneeId"
-                  size="xs"
-                  color="gray"
-                  variant="soft"
-                  @click="assignToMe"
-                >
-                  Assign to me
-                </UButton>
-                <UButton
-                  v-if="selectedConversation.status !== 'resolved'"
-                  size="xs"
-                  color="green"
-                  variant="soft"
-                  @click="resolveConversation"
-                >
-                  Resolve
-                </UButton>
-                <UButton
-                  v-if="selectedConversation.status !== 'closed'"
-                  size="xs"
-                  color="gray"
-                  variant="soft"
-                  @click="closeConversation"
-                >
-                  Close
-                </UButton>
-              </div>
+            </div>
+            <!-- Action buttons -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <UButton
+                v-if="!selectedConversation.assigneeId"
+                size="xs"
+                color="gray"
+                variant="soft"
+                icon="i-heroicons-user-plus"
+                @click="assignToMe"
+              >
+                Assign to me
+              </UButton>
+              <UButton
+                v-if="selectedConversation.status !== 'resolved'"
+                size="xs"
+                color="green"
+                variant="soft"
+                icon="i-heroicons-check-circle"
+                @click="resolveConversation"
+              >
+                Resolve
+              </UButton>
+              <UButton
+                v-if="selectedConversation.status !== 'closed'"
+                size="xs"
+                color="gray"
+                variant="soft"
+                icon="i-heroicons-x-circle"
+                @click="closeConversation"
+              >
+                Close
+              </UButton>
             </div>
           </div>
 
