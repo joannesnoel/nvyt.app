@@ -24,13 +24,15 @@ export function useWebPush() {
         navigator.serviceWorker.ready,
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Service worker not ready')), 10000)),
       ])
-      let sub = await registration.pushManager.getSubscription()
-      if (!sub) {
-        sub = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(config.public.vapidPublicKey as string),
-        })
+      // Always unsubscribe existing push subscription first to avoid VAPID key mismatch
+      const existingSub = await registration.pushManager.getSubscription()
+      if (existingSub) {
+        await existingSub.unsubscribe()
       }
+      const sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(config.public.vapidPublicKey as string),
+      })
       const subJson = sub.toJSON()
       await $fetch('/api/v1/push/subscribe', {
         method: 'POST',
