@@ -27,15 +27,18 @@ export async function sendPushNotification(
 ): Promise<boolean> {
   if (!ensureConfigured()) return false
   try {
-    await webPush.sendNotification(
+    const result = await webPush.sendNotification(
       { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
       JSON.stringify(payload),
     )
+    console.log(`[web-push] Sent to ${subscription.endpoint.substring(0, 50)}... status=${result.statusCode}`)
     return true
   } catch (error: any) {
+    console.error(`[web-push] Failed: status=${error.statusCode} body=${error.body} message=${error.message}`)
     if (error.statusCode === 410 || error.statusCode === 404) {
       const db = useDatabase()
       await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, subscription.endpoint))
+      console.log('[web-push] Removed expired subscription')
     }
     return false
   }
