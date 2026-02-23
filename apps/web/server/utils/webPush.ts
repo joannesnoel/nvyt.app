@@ -1,6 +1,6 @@
 import webPush from 'web-push'
-import { eq } from 'drizzle-orm'
-import { pushSubscriptions } from '@nvyt/db'
+import { eq, inArray } from 'drizzle-orm'
+import { pushSubscriptions, users } from '@nvyt/db'
 
 let configured = false
 
@@ -51,6 +51,27 @@ export async function sendPushToUser(
   if (!ensureConfigured()) return 0
   const db = useDatabase()
   const subs = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId))
+  let sent = 0
+  await Promise.allSettled(
+    subs.map(async (sub) => {
+      const ok = await sendPushNotification(sub, payload)
+      if (ok) sent++
+    }),
+  )
+  return sent
+}
+
+export async function sendPushToAdmins(
+  payload: { title: string; body: string; url?: string; icon?: string; tag?: string },
+): Promise<number> {
+  if (!ensureConfigured()) return 0
+  const adminEmails = getAdminEmails()
+  if (adminEmails.length === 0) return 0
+  const db = useDatabase()
+  const adminUsers = await db.select({ id: users.id }).from(users).where(inArray(users.email, adminEmails))
+  if (adminUsers.length === 0) return 0
+  const adminIds = adminUsers.map(u => u.id)
+  const subs = await db.select().from(pushSubscriptions).where(inArray(pushSubscriptions.userId, adminIds))
   let sent = 0
   await Promise.allSettled(
     subs.map(async (sub) => {

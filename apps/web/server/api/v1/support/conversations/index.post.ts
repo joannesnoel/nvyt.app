@@ -84,5 +84,13 @@ export default defineEventHandler(async (event) => {
     message,
   })
 
+  // Push notification to all admins for new conversation
+  sendPushToAdmins({
+    title: `New Support: ${data.visitorName}`,
+    body: data.message.substring(0, 100),
+    url: '/admin/support',
+    tag: `support-new-${conversation.id}`,
+  }).catch(err => console.error('[Support] Failed to send push to admins:', err))
+
   return successResponse({ conversation, messages: [message] })
 })

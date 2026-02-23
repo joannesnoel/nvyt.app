@@ -69,14 +69,19 @@ export default defineEventHandler(async (event) => {
     message,
   })
 
-  // Push notification to assigned admin/organizer
+  // Push notification to assigned admin/organizer, or all admins if unassigned
+  const pushPayload = {
+    title: `Support: ${conversation.visitorName}`,
+    body: (content || 'Sent an attachment').substring(0, 100),
+    url: '/admin/support',
+    tag: `support-${conversationId}`,
+  }
   if (conversation.assigneeId) {
-    sendPushToUser(conversation.assigneeId, {
-      title: `Support: ${conversation.visitorName}`,
-      body: (content || 'Sent an attachment').substring(0, 100),
-      url: '/admin/support',
-      tag: `support-${conversationId}`,
-    }).catch(err => console.error('[Support] Failed to send push notification:', err))
+    sendPushToUser(conversation.assigneeId, pushPayload)
+      .catch(err => console.error('[Support] Failed to send push notification:', err))
+  } else {
+    sendPushToAdmins(pushPayload)
+      .catch(err => console.error('[Support] Failed to send push to admins:', err))
   }
 
   return successResponse(message)
