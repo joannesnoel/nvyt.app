@@ -65,6 +65,11 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
     # Cron
     NUXT_CRON_SECRET = var.cron_secret
     CRON_SECRET      = var.cron_secret
+
+    # Web Push (VAPID)
+    NUXT_VAPID_PUBLIC_KEY        = var.vapid_public_key
+    NUXT_VAPID_PRIVATE_KEY       = var.vapid_private_key
+    NUXT_PUBLIC_VAPID_PUBLIC_KEY = var.vapid_public_key
   })
 }
 

@@ -108,6 +108,10 @@ resource "aws_ecs_task_definition" "main" {
         # Cron
         { name = "NUXT_CRON_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_CRON_SECRET::" },
         { name = "CRON_SECRET", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:CRON_SECRET::" },
+        # Web Push (VAPID)
+        { name = "NUXT_VAPID_PUBLIC_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_VAPID_PUBLIC_KEY::" },
+        { name = "NUXT_VAPID_PRIVATE_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_VAPID_PRIVATE_KEY::" },
+        { name = "NUXT_PUBLIC_VAPID_PUBLIC_KEY", valueFrom = "${aws_secretsmanager_secret.app_secrets.arn}:NUXT_PUBLIC_VAPID_PUBLIC_KEY::" },
       ]
 
       logConfiguration = {

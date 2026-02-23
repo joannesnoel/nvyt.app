@@ -10,9 +10,11 @@ useHead({
   title: defaultTitle,
   meta: [
     { name: 'description', content: defaultDescription },
+    { name: 'theme-color', content: '#6366f1' },
   ],
   link: [
     { rel: 'icon', type: 'image/png', href: '/logo.png' },
+    { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
   ],
 })
 

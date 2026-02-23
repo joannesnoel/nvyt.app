@@ -250,3 +250,17 @@ variable "cron_secret" {
   sensitive   = true
   default     = ""
 }
+
+# Web Push (VAPID)
+variable "vapid_public_key" {
+  description = "VAPID public key for web push notifications"
+  type        = string
+  default     = ""
+}
+
+variable "vapid_private_key" {
+  description = "VAPID private key for web push notifications"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

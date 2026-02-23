@@ -15,12 +15,54 @@ export default defineNuxtConfig({
   },
 
   modules: [
+    '@vite-pwa/nuxt',
     '@nuxt/ui',
     '@pinia/nuxt',
     '@vueuse/nuxt',
     '@nuxt/eslint',
     '@sentry/nuxt/module',
   ],
+
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'nvyt - Event & Ticketing Platform',
+      short_name: 'nvyt',
+      description: 'Create events, sell tickets, and manage everything.',
+      theme_color: '#6366f1',
+      background_color: '#ffffff',
+      display: 'standalone',
+      start_url: '/',
+      icons: [
+        { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+        { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    },
+    workbox: {
+      navigateFallback: undefined,
+      globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+      importScripts: ['/push-sw.js'],
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+          handler: 'CacheFirst',
+          options: { cacheName: 'images', expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 } },
+        },
+        {
+          urlPattern: /^https:\/\/.*\.(?:woff2?|ttf|otf)$/,
+          handler: 'CacheFirst',
+          options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 } },
+        },
+      ],
+    },
+    client: {
+      installPrompt: true,
+    },
+    devOptions: {
+      enabled: true,
+    },
+  },
 
   css: ['~/assets/css/main.css'],
 
@@ -31,6 +73,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     // Private keys (server-side only)
+    vapidPublicKey: process.env.NUXT_VAPID_PUBLIC_KEY || '',
+    vapidPrivateKey: process.env.NUXT_VAPID_PRIVATE_KEY || '',
     jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
     databaseUrl: process.env.DATABASE_URL,
     // Admin access (comma-separated list of emails)
@@ -67,6 +111,7 @@ export default defineNuxtConfig({
 
     // Public keys (exposed to client)
     public: {
+      vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY || '',
       appName: 'nvyt',
       appUrl: process.env.APP_URL || 'http://localhost:3000',
       paymongoPublicKey: process.env.PAYMONGO_PUBLIC_KEY,

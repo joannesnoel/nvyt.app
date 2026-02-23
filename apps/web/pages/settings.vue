@@ -6,6 +6,7 @@ definePageMeta({
 
 const { user, fetchUser } = useAuth()
 const toast = useToast()
+const webPush = useWebPush()
 
 // Form state
 const name = ref('')
@@ -21,6 +22,40 @@ const showPasswordSection = ref(false)
 // Loading states
 const isSaving = ref(false)
 const isChangingPassword = ref(false)
+const isTestingPush = ref(false)
+
+// Push notification state
+const pushEnabled = computed(() => webPush.isSubscribed.value)
+
+onMounted(() => {
+  webPush.checkSubscription()
+})
+
+async function togglePush() {
+  if (webPush.isSubscribed.value) {
+    await webPush.unsubscribe()
+    toast.add({ title: 'Push Notifications', description: 'Push notifications disabled', color: 'gray' })
+  } else {
+    const ok = await webPush.subscribe()
+    if (ok) {
+      toast.add({ title: 'Push Notifications', description: 'Push notifications enabled', color: 'green' })
+    } else if (webPush.permission.value === 'denied') {
+      toast.add({ title: 'Permission Denied', description: 'Please allow notifications in your browser settings', color: 'red' })
+    }
+  }
+}
+
+async function testPush() {
+  isTestingPush.value = true
+  try {
+    await $fetch('/api/v1/push/test', { method: 'POST' })
+    toast.add({ title: 'Test Sent', description: 'You should receive a test notification shortly', color: 'green' })
+  } catch {
+    toast.add({ title: 'Error', description: 'Failed to send test notification', color: 'red' })
+  } finally {
+    isTestingPush.value = false
+  }
+}
 
 // Initialize form with user data
 watchEffect(() => {
@@ -325,6 +360,61 @@ async function changePassword() {
               </div>
             </div>
           </div>
+        </div>
+      </UCard>
+
+      <!-- Push Notifications Section -->
+      <UCard class="mt-6">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <UIcon name="i-heroicons-bell" class="w-5 h-5 text-primary" />
+            <h2 class="font-semibold text-gray-900 dark:text-white">Push Notifications</h2>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <div v-if="!webPush.isSupported.value" class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-yellow-500" />
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Push notifications are not supported on this browser.
+            </p>
+          </div>
+
+          <template v-else>
+            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white">Enable Push Notifications</p>
+                <p class="text-sm text-gray-500">
+                  Receive notifications for support replies and updates
+                </p>
+              </div>
+              <UToggle
+                :model-value="pushEnabled"
+                :loading="webPush.isLoading.value"
+                @change="togglePush"
+              />
+            </div>
+
+            <div v-if="webPush.permission.value === 'denied'" class="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <UIcon name="i-heroicons-x-circle" class="w-5 h-5 text-red-500" />
+              <p class="text-sm text-red-600 dark:text-red-400">
+                Notifications are blocked. Please enable them in your browser settings.
+              </p>
+            </div>
+
+            <div v-if="webPush.isSubscribed.value" class="flex justify-end">
+              <UButton
+                color="gray"
+                variant="outline"
+                size="sm"
+                :loading="isTestingPush"
+                icon="i-heroicons-paper-airplane"
+                @click="testPush"
+              >
+                Send Test Notification
+              </UButton>
+            </div>
+          </template>
         </div>
       </UCard>
 

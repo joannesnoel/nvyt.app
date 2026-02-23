@@ -75,6 +75,16 @@ export default defineEventHandler(async (event) => {
     updates: { status: 'waiting_on_visitor' },
   })
 
+  // Push notification to visitor
+  if (conversation.userId) {
+    sendPushToUser(conversation.userId, {
+      title: 'Support Reply',
+      body: `${user.name}: ${(content || 'Sent an attachment').substring(0, 100)}`,
+      url: '/support/chat',
+      tag: `support-${conversationId}`,
+    }).catch(err => console.error('[Support] Failed to send push notification:', err))
+  }
+
   // Email notification if visitor is offline and has email
   // Visitor is considered online only if heartbeat was received within the last 2 minutes
   const HEARTBEAT_STALE_MS = 2 * 60 * 1000

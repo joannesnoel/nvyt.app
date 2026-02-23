@@ -69,5 +69,15 @@ export default defineEventHandler(async (event) => {
     message,
   })
 
+  // Push notification to assigned admin/organizer
+  if (conversation.assigneeId) {
+    sendPushToUser(conversation.assigneeId, {
+      title: `Support: ${conversation.visitorName}`,
+      body: (content || 'Sent an attachment').substring(0, 100),
+      url: '/admin/support',
+      tag: `support-${conversationId}`,
+    }).catch(err => console.error('[Support] Failed to send push notification:', err))
+  }
+
   return successResponse(message)
 })
