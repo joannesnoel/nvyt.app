@@ -18,7 +18,10 @@ export function useWebPush() {
       permission.value = perm
       if (perm !== 'granted') return false
 
-      const registration = await navigator.serviceWorker.ready
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Service worker not ready')), 10000)),
+      ])
       let sub = await registration.pushManager.getSubscription()
       if (!sub) {
         sub = await registration.pushManager.subscribe({
@@ -63,7 +66,10 @@ export function useWebPush() {
   async function checkSubscription() {
     if (!isSupported.value || !import.meta.client) return
     try {
-      const registration = await navigator.serviceWorker.ready
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 5000)),
+      ])
       const sub = await registration.pushManager.getSubscription()
       isSubscribed.value = !!sub
     } catch { /* no-op */ }

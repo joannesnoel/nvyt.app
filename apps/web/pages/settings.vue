@@ -25,23 +25,37 @@ const isChangingPassword = ref(false)
 const isTestingPush = ref(false)
 
 // Push notification state
-const pushEnabled = computed(() => webPush.isSubscribed.value)
+const pushEnabled = ref(false)
+const pushLoading = ref(false)
 
-onMounted(() => {
-  webPush.checkSubscription()
+onMounted(async () => {
+  await webPush.checkSubscription()
+  pushEnabled.value = webPush.isSubscribed.value
 })
 
-async function togglePush() {
-  if (webPush.isSubscribed.value) {
-    await webPush.unsubscribe()
-    toast.add({ title: 'Push Notifications', description: 'Push notifications disabled', color: 'gray' })
-  } else {
-    const ok = await webPush.subscribe()
-    if (ok) {
-      toast.add({ title: 'Push Notifications', description: 'Push notifications enabled', color: 'green' })
-    } else if (webPush.permission.value === 'denied') {
-      toast.add({ title: 'Permission Denied', description: 'Please allow notifications in your browser settings', color: 'red' })
+async function togglePush(newValue: boolean) {
+  pushLoading.value = true
+  try {
+    if (newValue) {
+      const ok = await webPush.subscribe()
+      pushEnabled.value = ok
+      if (ok) {
+        toast.add({ title: 'Push Notifications', description: 'Push notifications enabled', color: 'green' })
+      } else {
+        if (webPush.permission.value === 'denied') {
+          toast.add({ title: 'Permission Denied', description: 'Please allow notifications in your browser settings', color: 'red' })
+        }
+      }
+    } else {
+      await webPush.unsubscribe()
+      pushEnabled.value = false
+      toast.add({ title: 'Push Notifications', description: 'Push notifications disabled', color: 'gray' })
     }
+  } catch (e) {
+    // Revert on error
+    pushEnabled.value = webPush.isSubscribed.value
+  } finally {
+    pushLoading.value = false
   }
 }
 
@@ -389,8 +403,8 @@ async function changePassword() {
                 </p>
               </div>
               <UToggle
-                :model-value="pushEnabled"
-                :loading="webPush.isLoading.value"
+                v-model="pushEnabled"
+                :disabled="pushLoading"
                 @change="togglePush"
               />
             </div>
@@ -402,7 +416,7 @@ async function changePassword() {
               </p>
             </div>
 
-            <div v-if="webPush.isSubscribed.value" class="flex justify-end">
+            <div v-if="pushEnabled && !pushLoading" class="flex justify-end">
               <UButton
                 color="gray"
                 variant="outline"
