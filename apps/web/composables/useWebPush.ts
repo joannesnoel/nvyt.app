@@ -6,8 +6,10 @@ export function useWebPush() {
   const config = useRuntimeConfig()
 
   if (import.meta.client) {
-    isSupported.value = 'serviceWorker' in navigator && 'PushManager' in window
-    permission.value = Notification.permission
+    isSupported.value = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+    if (isSupported.value) {
+      permission.value = Notification.permission
+    }
   }
 
   async function subscribe() {
