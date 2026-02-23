@@ -41,8 +41,13 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: undefined,
-      globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+      // SSR app: don't precache JS/CSS/HTML — they change every deploy and are loaded on-demand.
+      // Only precache stable static assets (icons, images, manifest).
+      globPatterns: ['**/*.{ico,png,svg,webp,woff2}'],
+      // Exclude _nuxt chunks from precaching entirely
+      globIgnores: ['_nuxt/**'],
       importScripts: ['/push-sw.js'],
+      cleanupOutdatedCaches: true,
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)$/,
