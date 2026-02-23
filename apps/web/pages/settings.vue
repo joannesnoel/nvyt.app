@@ -27,16 +27,14 @@ const isTestingPush = ref(false)
 // Push notification state
 const pushEnabled = ref(false)
 const pushLoading = ref(false)
-let pushToggling = false
 
 onMounted(async () => {
   await webPush.checkSubscription()
   pushEnabled.value = webPush.isSubscribed.value
 })
 
-watch(pushEnabled, async (newValue) => {
-  if (pushToggling) return
-  pushToggling = true
+async function togglePush(newValue: boolean) {
+  if (pushLoading.value) return
   pushLoading.value = true
   try {
     if (newValue) {
@@ -56,9 +54,8 @@ watch(pushEnabled, async (newValue) => {
     pushEnabled.value = webPush.isSubscribed.value
   } finally {
     pushLoading.value = false
-    pushToggling = false
   }
-})
+}
 
 async function testPush() {
   isTestingPush.value = true
@@ -404,8 +401,9 @@ async function changePassword() {
                 </p>
               </div>
               <UToggle
-                v-model="pushEnabled"
+                :model-value="pushEnabled"
                 :disabled="pushLoading"
+                @update:model-value="togglePush"
               />
             </div>
 
