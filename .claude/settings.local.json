@@ -139,7 +139,9 @@
       "Bash(pnpm --filter @nvyt/web exec nuxi typecheck:*)",
       "Bash(export PATH=\"$HOME/.nvm/versions/node/v24.13.0/bin:$HOME/.local/share/pnpm:$PATH\")",
       "Bash(aws:*)",
-      "Bash(npx sharp-cli:*)"
+      "Bash(npx sharp-cli:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ]
   },
   "hooks": {
