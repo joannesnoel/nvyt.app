@@ -18,6 +18,13 @@ const optionalDatetime = z.union([
   z.literal(''),
 ]).optional().transform(val => (val === '' || val === undefined) ? undefined : val)
 
+// For update schemas: null means "clear this field"
+const updatableDatetime = z.union([
+  datetimeString,
+  z.literal(''),
+  z.null(),
+]).optional().transform(val => (val === '' ? null : val))
+
 // Reusable HTML description validator: allows up to 2000 chars raw (HTML overhead),
 // but text content (tags stripped) must be ≤ 500 chars.
 function stripHtmlTags(html: string): string {
@@ -35,7 +42,7 @@ export const createTicketTypeSchema = z.object({
   name: z.string().min(1).max(100),
   description: htmlDescription,
   price: z.number().min(0),
-  quantity: z.number().int().positive().nullable().optional().transform(val => val ?? undefined), // null = unlimited
+  quantity: z.number().int().positive().nullable().optional(), // null = unlimited
   salesStart: optionalDatetime,
   salesEnd: optionalDatetime,
   maxPerOrder: z.number().int().positive().default(10),
@@ -45,7 +52,10 @@ export const createTicketTypeSchema = z.object({
   showNextTierPrice: z.boolean().default(true),
 })
 
-export const updateTicketTypeSchema = createTicketTypeSchema.partial().omit({ eventId: true })
+export const updateTicketTypeSchema = createTicketTypeSchema.partial().omit({ eventId: true }).extend({
+  salesStart: updatableDatetime,
+  salesEnd: updatableDatetime,
+})
 
 export const paymentProviderEnum = z.enum(['paymongo', 'paypal'])
 

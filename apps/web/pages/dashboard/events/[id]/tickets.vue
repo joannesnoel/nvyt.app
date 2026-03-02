@@ -33,6 +33,7 @@ const showModal = ref(false)
 const editingTicketType = ref<any>(null)
 const isSubmitting = ref(false)
 const unpublishConfirmed = ref(false)
+const formErrors = ref<Record<string, string>>({})
 
 // Whether saving will unpublish the event
 const willUnpublish = computed(() => {
@@ -117,13 +118,14 @@ function toISOString(datetimeLocal: string): string {
 
 async function saveTicketType() {
   isSubmitting.value = true
+  formErrors.value = {}
   try {
     // Convert dates to ISO strings to preserve timezone
     const payload = {
       ...formData.value,
-      quantity: formData.value.quantity || undefined,
-      salesStart: formData.value.salesStart ? toISOString(formData.value.salesStart) : undefined,
-      salesEnd: formData.value.salesEnd ? toISOString(formData.value.salesEnd) : undefined,
+      quantity: formData.value.quantity != null && formData.value.quantity !== '' ? formData.value.quantity : null,
+      salesStart: formData.value.salesStart ? toISOString(formData.value.salesStart) : null,
+      salesEnd: formData.value.salesEnd ? toISOString(formData.value.salesEnd) : null,
     }
 
     if (editingTicketType.value) {
@@ -162,6 +164,12 @@ async function saveTicketType() {
       })
     }
   } catch (e: any) {
+    const fieldErrors = e.data?.data?.fieldErrors as Record<string, string[]> | undefined
+    if (fieldErrors) {
+      for (const [field, msgs] of Object.entries(fieldErrors)) {
+        if (msgs?.length) formErrors.value[field] = msgs[0]
+      }
+    }
     toast.add({
       title: 'Error',
       description: e.data?.message || 'Failed to save ticket type',
@@ -869,7 +877,7 @@ function getTierTypeColor(tierType: string) {
         </template>
 
         <form @submit.prevent="saveTicketType" class="space-y-4">
-          <UFormGroup label="Name" required>
+          <UFormGroup label="Name" required :error="formErrors.name">
             <UInput
               v-model="formData.name"
               placeholder="e.g., General Admission, VIP"
@@ -877,7 +885,7 @@ function getTierTypeColor(tierType: string) {
             />
           </UFormGroup>
 
-          <UFormGroup label="Description">
+          <UFormGroup label="Description" :error="formErrors.description">
             <RichTextEditor
               v-model="formData.description"
               placeholder="What's included with this ticket?"
@@ -886,7 +894,7 @@ function getTierTypeColor(tierType: string) {
           </UFormGroup>
 
           <div class="grid grid-cols-2 gap-4">
-            <UFormGroup label="Price (PHP)" required>
+            <UFormGroup label="Price (PHP)" required :error="formErrors.price">
               <UInput
                 v-model.number="formData.price"
                 type="number"
@@ -897,7 +905,7 @@ function getTierTypeColor(tierType: string) {
               />
             </UFormGroup>
 
-            <UFormGroup label="Quantity">
+            <UFormGroup label="Quantity" :error="formErrors.quantity">
               <UInput
                 v-model.number="formData.quantity"
                 type="number"
@@ -911,7 +919,7 @@ function getTierTypeColor(tierType: string) {
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <UFormGroup label="Min per Order">
+            <UFormGroup label="Min per Order" :error="formErrors.minPerOrder">
               <UInput
                 v-model.number="formData.minPerOrder"
                 type="number"
@@ -920,7 +928,7 @@ function getTierTypeColor(tierType: string) {
               />
             </UFormGroup>
 
-            <UFormGroup label="Max per Order">
+            <UFormGroup label="Max per Order" :error="formErrors.maxPerOrder">
               <UInput
                 v-model.number="formData.maxPerOrder"
                 type="number"
@@ -931,14 +939,14 @@ function getTierTypeColor(tierType: string) {
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <UFormGroup label="Sales Start">
+            <UFormGroup label="Sales Start" :error="formErrors.salesStart">
               <UInput
                 v-model="formData.salesStart"
                 type="datetime-local"
               />
             </UFormGroup>
 
-            <UFormGroup label="Sales End">
+            <UFormGroup label="Sales End" :error="formErrors.salesEnd">
               <UInput
                 v-model="formData.salesEnd"
                 type="datetime-local"

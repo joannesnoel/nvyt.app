@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
   if (data.name !== undefined) updateData.name = data.name
   if (data.description !== undefined) updateData.description = data.description
   if (data.price !== undefined) updateData.price = String(data.price)
-  if (data.quantity !== undefined) updateData.quantity = data.quantity
+  if (data.quantity !== undefined) updateData.quantity = data.quantity ?? null
   if (data.salesStart !== undefined) updateData.salesStart = data.salesStart ? new Date(data.salesStart) : null
   if (data.salesEnd !== undefined) updateData.salesEnd = data.salesEnd ? new Date(data.salesEnd) : null
   if (data.maxPerOrder !== undefined) updateData.maxPerOrder = data.maxPerOrder

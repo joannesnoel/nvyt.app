@@ -66,7 +66,7 @@ const userMenuItems = computed(() => [
 
     <!-- Desktop Sidebar -->
     <aside class="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col" :class="{ 'top-9': user?.isImpersonating }">
-      <div class="flex flex-col flex-1 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+      <div class="flex flex-col flex-1 overflow-y-auto bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
         <DashboardSidebar />
       </div>
     </aside>
