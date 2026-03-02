@@ -27,6 +27,23 @@ function isNavActive(to: string) {
   return route.path === to || route.path.startsWith(to + '/')
 }
 
+// Bottom banners height tracking — sets CSS variable for chat widget offset
+const bottomBannersRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  if (!bottomBannersRef.value) return
+  const el = bottomBannersRef.value
+  const update = () => {
+    document.documentElement.style.setProperty('--bottom-banners-height', `${el.offsetHeight}px`)
+  }
+  const resizeObs = new ResizeObserver(update)
+  resizeObs.observe(el)
+  const mutationObs = new MutationObserver(update)
+  mutationObs.observe(el, { childList: true, subtree: true, attributes: true })
+  update()
+  onUnmounted(() => { resizeObs.disconnect(); mutationObs.disconnect() })
+})
+
 // Admin support unread count (real-time via Pusher)
 const { unreadCount: adminSupportUnread } = useAdminSupportUnread()
 
@@ -325,7 +342,7 @@ const userMenuItems = computed(() => {
     <SupportChatWidget />
 
     <!-- Fixed Bottom Banners Container -->
-    <div class="fixed bottom-0 inset-x-0 z-40 flex flex-col-reverse">
+    <div ref="bottomBannersRef" class="fixed bottom-0 inset-x-0 z-40 flex flex-col-reverse">
       <EmailVerificationBanner />
       <RegistrationReminderBanner />
     </div>

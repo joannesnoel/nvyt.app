@@ -60,7 +60,7 @@ const isClosed = computed(() => {
 
 <template>
   <ClientOnly>
-    <div class="fixed bottom-4 right-4 z-50 flex flex-col items-end">
+    <div class="fixed right-4 z-50 flex flex-col items-end" style="bottom: calc(1rem + var(--bottom-banners-height, 0px))">
       <!-- Chat Panel -->
       <Transition
         enter-active-class="transition duration-200 ease-out"
