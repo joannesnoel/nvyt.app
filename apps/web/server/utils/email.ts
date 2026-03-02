@@ -182,6 +182,7 @@ export function rsvpConfirmationEmail(data: {
           <p style="margin: 0 0 10px 0; font-size: 14px;">Your QR Code for Check-in</p>
           <p style="margin: 0; font-family: monospace; font-size: 18px; letter-spacing: 2px;">${data.qrCode}</p>
         </div>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
 
         <p style="text-align: center;">
           <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
@@ -332,6 +333,7 @@ export function waitlistPromotedEmail(data: {
           <p style="margin: 0 0 10px 0; font-size: 14px;">Your QR Code for Check-in</p>
           <p style="margin: 0; font-family: monospace; font-size: 18px; letter-spacing: 2px;">${data.qrCode}</p>
         </div>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
 
         <p style="text-align: center;">
           <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
@@ -389,6 +391,7 @@ export function rsvpApprovedEmail(data: {
           <p style="margin: 0 0 10px 0; font-size: 14px;">Your QR Code for Check-in</p>
           <p style="margin: 0; font-family: monospace; font-size: 18px; letter-spacing: 2px;">${data.qrCode}</p>
         </div>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
 
         <p style="text-align: center;">
           <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
@@ -492,6 +495,7 @@ export function eventReminderEmail(data: {
           <p style="margin: 0 0 10px 0; font-size: 14px;">Your QR Code for Check-in</p>
           <p style="margin: 0; font-family: monospace; font-size: 18px; letter-spacing: 2px;">${data.qrCode}</p>
         </div>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
 
         <p style="text-align: center;">
           <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
@@ -583,6 +587,7 @@ export function ticketPurchaseConfirmationEmail(data: {
             <p style="margin: 0; font-weight: 600; color: #111827;">${t.attendeeName}</p>
             <p style="margin: 4px 0 0 0; font-size: 11px; color: #9ca3af; font-family: monospace; word-break: break-all;">${t.qrCode}</p>
           </div>
+          <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
         </div>
       `
     )
@@ -786,6 +791,7 @@ export function attendeeTicketEmail(data: {
             </div>
           </div>
 
+          <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0 0 12px 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
           <p style="color: #666; font-size: 14px; text-align: center;">Save this email or take a screenshot of the QR code. You can also view your ticket online anytime.</p>
 
           <p style="text-align: center; margin: 30px 0;">

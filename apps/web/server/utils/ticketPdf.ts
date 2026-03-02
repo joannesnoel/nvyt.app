@@ -231,6 +231,15 @@ export async function generateTicketPdf(ticket: TicketData): Promise<Buffer> {
           align: 'center',
         })
 
+      doc
+        .fillColor(textMuted)
+        .fontSize(9)
+        .font('Helvetica')
+        .text('This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.', 50, doc.y + 8, {
+          width: 512,
+          align: 'center',
+        })
+
       // Contact information
       const contactY = doc.y + 15
       doc
@@ -457,6 +466,15 @@ export async function generateAllTicketsPdf(tickets: TicketData[]): Promise<Buff
         .fontSize(10)
         .font('Helvetica')
         .text('Present this ticket at the venue for entry', 50, 680, {
+          width: 512,
+          align: 'center',
+        })
+
+      doc
+        .fillColor(textMuted)
+        .fontSize(9)
+        .font('Helvetica')
+        .text('This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.', 50, doc.y + 8, {
           width: 512,
           align: 'center',
         })

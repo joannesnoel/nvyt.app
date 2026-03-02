@@ -217,6 +217,7 @@ function getStatusColor(status: string) {
           <template #description>
             Present this QR code at the event entrance. The organizer will scan it to check you in.
             Keep your phone charged or take a screenshot of the QR code.
+            This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.
           </template>
         </UAlert>
       </div>
