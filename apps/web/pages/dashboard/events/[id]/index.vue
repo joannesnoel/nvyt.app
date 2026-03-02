@@ -9,9 +9,19 @@ definePageMeta({
 })
 
 const route = useRoute()
+const router = useRouter()
 const eventId = computed(() => route.params.id as string)
 const toast = useToast()
 const colorMode = useColorMode()
+
+// Auto-accept collaborator invitation if arriving from invite email
+if (route.query.invite === 'accept') {
+  try {
+    await $fetch(`/api/v1/events/${eventId.value}/collaborators/accept`, { method: 'POST' })
+    toast.add({ title: 'Invitation Accepted', description: 'You now have access to this event.', color: 'green' })
+  } catch {}
+  await router.replace({ query: { ...route.query, invite: undefined } })
+}
 
 // Fetch event by ID (not slug)
 const { data: eventResponse, pending, refresh } = await useFetch(

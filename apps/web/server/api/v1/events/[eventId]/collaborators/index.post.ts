@@ -112,7 +112,7 @@ export default defineEventHandler(async (event) => {
   const appUrl = config.public?.appUrl || 'https://nvyt.app'
   const acceptUrl = isNewUser
     ? `${appUrl}/register?invite=${inviteToken}`
-    : `${appUrl}/dashboard/events/${eventId}`
+    : `${appUrl}/dashboard/events/${eventId}?invite=accept`
 
   // Send invitation email
   const emailContent = collaboratorInvitationEmail({
