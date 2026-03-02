@@ -77,7 +77,7 @@ const { data: events, pending } = await useFetch('/api/v1/events')
               {{ new Date(event.startDate).toLocaleDateString() }}
             </p>
             <p class="text-sm text-gray-500 dark:text-gray-500 mt-2 line-clamp-2">
-              {{ event.description }}
+              {{ event.description?.replace(/<[^>]*>/g, '') }}
             </p>
           </div>
         </NuxtLink>
