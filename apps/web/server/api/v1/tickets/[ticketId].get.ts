@@ -2,8 +2,28 @@ import { tickets, ticketTypes, events, orders, users } from '@nvyt/db'
 import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const ticketId = getRouterParam(event, 'ticketId')
+  const setupToken = getQuery(event).token as string | undefined
+
+  // Try session auth first, then fall back to setup token
+  let userId: string | null = null
+  const user = await getUserFromEvent(event)
+
+  if (user) {
+    userId = user.id
+  } else if (setupToken) {
+    const tokenStatus = await verifyAccountSetupToken(setupToken)
+    if (tokenStatus.valid) {
+      userId = tokenStatus.userId
+    }
+  }
+
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Authentication required',
+    })
+  }
 
   if (!ticketId) {
     throw createError({
@@ -65,8 +85,8 @@ export default defineEventHandler(async (event) => {
   }
 
   // Verify ownership - allow purchaser OR attendee to view
-  const isPurchaser = result.ticket.userId === user.id
-  const isAttendee = result.ticket.attendeeUserId === user.id
+  const isPurchaser = result.ticket.userId === userId
+  const isAttendee = result.ticket.attendeeUserId === userId
 
   if (!isPurchaser && !isAttendee) {
     throw createError({

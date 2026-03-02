@@ -735,9 +735,17 @@ export function attendeeTicketEmail(data: {
   ticketNumber: string
   qrCode: string
   ticketUrl: string
+  purchaserName?: string
+  setupToken?: string
 }): { subject: string; html: string } {
+  const ticketViewUrl = data.setupToken
+    ? `${data.ticketUrl}?token=${data.setupToken}`
+    : data.ticketUrl
+  const setupUrl = data.setupToken
+    ? `${new URL(data.ticketUrl).origin}/setup-account?token=${data.setupToken}`
+    : null
   return {
-    subject: `Your ticket for ${data.eventTitle}`,
+    subject: `Ticket for ${data.attendeeName} - ${data.eventTitle}`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -755,7 +763,7 @@ export function attendeeTicketEmail(data: {
 
           <p style="text-align: center;">Hi ${data.attendeeName},</p>
 
-          <p style="text-align: center;">Here's your ticket for <strong>${data.eventTitle}</strong>. Show the QR code below at the event for check-in.</p>
+          <p style="text-align: center;">${data.purchaserName ? `<strong>${data.purchaserName}</strong> has registered a ticket in your name for <strong>${data.eventTitle}</strong>.` : `Here's your ticket for <strong>${data.eventTitle}</strong>.`} Show the QR code below at the event for check-in.</p>
 
           <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
             <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
@@ -781,8 +789,16 @@ export function attendeeTicketEmail(data: {
           <p style="color: #666; font-size: 14px; text-align: center;">Save this email or take a screenshot of the QR code. You can also view your ticket online anytime.</p>
 
           <p style="text-align: center; margin: 30px 0;">
-            <a href="${data.ticketUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">View Ticket Online</a>
+            <a href="${ticketViewUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">View Ticket Online</a>
           </p>
+
+          ${setupUrl ? `
+          <div style="background: #f0f0ff; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+            <p style="margin: 0 0 12px 0;">We've created an nvyt account for you. Set up a password to manage your tickets and future events.</p>
+            <a href="${setupUrl}" style="display: inline-block; background: white; color: #6366f1; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500; border: 2px solid #6366f1;">Set Up Your Account</a>
+          </div>
+          <p style="color: #666; font-size: 13px; text-align: center;">This link will expire in 7 days. After that, you can use the "Forgot password" option on the login page.</p>
+          ` : ''}
 
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
@@ -1628,65 +1644,6 @@ export function paymentReminderSetupEmail(data: {
             The NVYT&trade; Team
           </p>
         </div>
-      </body>
-      </html>
-    `,
-  }
-}
-
-export function ticketRegisteredSetupEmail(data: {
-  attendeeName: string
-  eventTitle: string
-  eventDate: string
-  eventLocation?: string
-  ticketType: string
-  purchaserName: string
-  setupUrl: string
-}): { subject: string; html: string } {
-  return {
-    subject: `A ticket to ${data.eventTitle} has been registered in your name`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
-            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
-          </a>
-        </div>
-
-        <h2 style="color: #111; margin-bottom: 10px;">You're Going to ${data.eventTitle}!</h2>
-
-        <p>Hi ${data.attendeeName},</p>
-
-        <p><strong>${data.purchaserName}</strong> has registered a ticket in your name for <strong>${data.eventTitle}</strong>.</p>
-
-        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
-          <p style="margin: 0 0 10px 0;"><strong>Event:</strong> ${data.eventTitle}</p>
-          <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
-          ${data.eventLocation ? `<p style="margin: 0 0 10px 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
-          <p style="margin: 0;"><strong>Ticket Type:</strong> ${data.ticketType}</p>
-        </div>
-
-        <p>We've created an nvyt account for you. Set up a password to access your ticket and manage future events:</p>
-
-        <p style="text-align: center; margin: 30px 0;">
-          <a href="${data.setupUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 500;">Set Up Your Account</a>
-        </p>
-
-        <p style="color: #666; font-size: 14px;">This link will expire in 7 days. After that, you can use the "Forgot password" option on the login page.</p>
-
-        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-
-        <p style="color: #666; font-size: 14px;">
-          See you at the event!<br>
-          The NVYT&trade; Team
-        </p>
       </body>
       </html>
     `,

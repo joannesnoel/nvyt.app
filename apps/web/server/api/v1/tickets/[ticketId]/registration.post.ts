@@ -1,7 +1,7 @@
 import { tickets, ticketTypes, events, orders, ticketRegistrationFields, users } from '@nvyt/db'
 import { submitTicketRegistrationSchema, type AddressData } from '@nvyt/shared'
 import { eq, and, asc } from 'drizzle-orm'
-import { sendEmail, ticketRegisteredNotificationEmail, ticketRegisteredSetupEmail, attendeeTicketEmail } from '~/server/utils/email'
+import { sendEmail, ticketRegisteredNotificationEmail, attendeeTicketEmail } from '~/server/utils/email'
 import { createAccountSetupToken } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
@@ -303,7 +303,7 @@ export default defineEventHandler(async (event) => {
 
   // Get purchaser info
   const [purchaser] = await db
-    .select({ id: users.id, name: users.name, email: users.email })
+    .select({ id: users.id, name: users.name, email: users.email, passwordHash: users.passwordHash })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1)
@@ -422,8 +422,9 @@ export default defineEventHandler(async (event) => {
 
   // Get attendee email for sending ticket
   // - If attendee has their own user account, use their email
-  // - If guest attendee (no separate account), no email to send
-  const attendeeEmailForNotification = attendeeUser?.email || (isSameAsPurchaser ? purchaser.email : null)
+  // - If same as purchaser, use purchaser's email
+  // - If guest attendee (no separate account), send to purchaser so they get the QR code
+  const attendeeEmailForNotification = attendeeUser?.email || (isSameAsPurchaser || isGuestAttendee ? purchaser.email : null)
 
   if (attendeeEmailForNotification) {
     const config = useRuntimeConfig()
@@ -439,7 +440,20 @@ export default defineEventHandler(async (event) => {
       minute: '2-digit',
     })
 
-    // Send the ticket with QR code to the attendee
+    // If the email recipient has no password, include a setup token so they can view the ticket and set up their account
+    // Reuse the incoming token if the recipient is the same user (creating a new one would invalidate the current token)
+    const recipientUser = attendeeUser || purchaser
+    const incomingToken = getQuery(event).token as string | undefined
+    let emailSetupToken: string | undefined
+    if (!recipientUser.passwordHash) {
+      if (incomingToken && recipientUser.id === userId) {
+        emailSetupToken = incomingToken
+      } else {
+        emailSetupToken = await createAccountSetupToken(recipientUser.id)
+      }
+    }
+
+    // Send the ticket with QR code (and optional setup link) to the attendee
     const ticketUrl = `${baseUrl}/tickets/${updatedTicket.id}`
     const ticketEmailContent = attendeeTicketEmail({
       attendeeName: attendeeName || 'there',
@@ -450,29 +464,12 @@ export default defineEventHandler(async (event) => {
       ticketNumber: updatedTicket.ticketNumber,
       qrCode: updatedTicket.qrCode,
       ticketUrl,
+      purchaserName: !isSameAsPurchaser && !isGuestAttendee ? purchaser.name : undefined,
+      setupToken: emailSetupToken,
     })
 
     sendEmail({ to: attendeeEmailForNotification, ...ticketEmailContent })
       .catch(err => console.error('[Registration] Failed to send ticket email:', err))
-
-    // If attendee is different from purchaser and needs account setup, also send setup email
-    if (!isSameAsPurchaser && attendeeUser && !attendeeUser.passwordHash) {
-      const setupToken = await createAccountSetupToken(attendeeUser.id)
-      const setupUrl = `${baseUrl}/setup-account?token=${setupToken}`
-
-      const setupEmailContent = ticketRegisteredSetupEmail({
-        attendeeName: attendeeName || attendeeUser.name || 'there',
-        eventTitle: ticketResult.event.title,
-        eventDate,
-        eventLocation: ticketResult.event.location || undefined,
-        ticketType: ticketResult.ticketType.name,
-        purchaserName: purchaser.name,
-        setupUrl,
-      })
-
-      sendEmail({ to: attendeeEmailForNotification, ...setupEmailContent })
-        .catch(err => console.error('[Registration] Failed to send setup email:', err))
-    }
   }
 
   return successResponse({

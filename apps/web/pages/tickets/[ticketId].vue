@@ -1,16 +1,25 @@
 <script setup lang="ts">
 definePageMeta({
   layout: 'default',
-  middleware: 'auth',
 })
 
 const route = useRoute()
+const { user } = useAuth()
 const ticketId = computed(() => route.params.ticketId as string)
+const token = computed(() => route.query.token as string | undefined)
 
-// Fetch ticket details
+// Only use token if user is not logged in
+const queryToken = computed(() => user.value ? undefined : token.value)
+
+// Redirect to login if not authenticated and no token
+if (!user.value && !token.value) {
+  navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+}
+
+// Fetch ticket details (include token for guest access)
 const { data: ticketResponse, pending, error } = await useFetch(
   () => `/api/v1/tickets/${ticketId.value}`,
-  { watch: [ticketId] }
+  { query: { token: queryToken.value }, watch: [ticketId] }
 )
 
 const ticket = computed(() => ticketResponse.value?.data)
