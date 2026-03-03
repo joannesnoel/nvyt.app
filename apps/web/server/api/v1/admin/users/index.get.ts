@@ -46,6 +46,8 @@ export default defineEventHandler(async (event) => {
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   // Get users with counts
+  // Note: must use table-qualified names in subqueries because Drizzle's sql`` strips
+  // table qualifiers from column references, causing ambiguous "id" resolution.
   const usersList = await db
     .select({
       id: users.id,
@@ -57,8 +59,8 @@ export default defineEventHandler(async (event) => {
       hasPassword: sql<boolean>`${users.passwordHash} is not null`,
       hasGoogle: sql<boolean>`${users.googleId} is not null`,
       hasFacebook: sql<boolean>`${users.facebookId} is not null`,
-      eventCount: sql<number>`(select count(*) from ${events} where ${events.organizerId} = ${users.id})`,
-      orderCount: sql<number>`(select count(*) from ${orders} where ${orders.userId} = ${users.id})`,
+      eventCount: sql<number>`(select count(*)::int from "events" where "events"."organizer_id" = "users"."id")`,
+      orderCount: sql<number>`(select count(*)::int from "orders" where "orders"."user_id" = "users"."id" and "orders"."payment_status" = 'paid')`,
     })
     .from(users)
     .where(whereClause)

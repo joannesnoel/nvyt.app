@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Dashboard', icon: 'i-heroicons-home', to: '/admin' },
   { label: 'Support', icon: 'i-heroicons-chat-bubble-left-right', to: '/admin/support' },
   { label: 'Users', icon: 'i-heroicons-users', to: '/admin/users' },
+  { label: 'Events', icon: 'i-heroicons-calendar-days', to: '/admin/events' },
   { label: 'Verifications', icon: 'i-heroicons-shield-check', to: '/admin/verifications' },
   { label: 'Payouts', icon: 'i-heroicons-banknotes', to: '/admin/payouts' },
   { label: 'Reconcile', icon: 'i-heroicons-arrow-path', to: '/admin/reconcile-payments' },

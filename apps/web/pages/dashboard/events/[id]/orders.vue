@@ -180,7 +180,7 @@ async function sendPaymentReminders() {
         </UCard>
       </div>
 
-      <!-- Order Stats -->
+      <!-- Ticket Stats -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <UCard class="text-center">
           <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalOrders }}</p>

@@ -141,7 +141,10 @@
       "Bash(aws:*)",
       "Bash(npx sharp-cli:*)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(docker exec:*)",
+      "Bash(cat:*)",
+      "Bash(git diff:*)"
     ]
   },
   "hooks": {
