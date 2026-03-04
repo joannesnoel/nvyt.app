@@ -107,6 +107,9 @@ function handlePlaceSelect() {
       if (component.types.includes('locality')) {
         locationDetails.city = component.long_name
       }
+      if (component.types.includes('administrative_area_level_2')) {
+        locationDetails.province = component.long_name
+      }
       if (component.types.includes('country')) {
         locationDetails.country = component.long_name
       }

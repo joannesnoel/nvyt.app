@@ -249,9 +249,9 @@ function isUpcoming(date: string) {
                   <p class="text-sm text-gray-500 mt-1">
                     <UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 inline mr-1" />
                     {{ formatDateTime(group.event.startDate) }}
-                    <span v-if="group.event.location" class="ml-2">
+                    <span v-if="group.event.locationDetails?.city || group.event.locationDetails?.province" class="ml-2">
                       <UIcon name="i-heroicons-map-pin" class="w-3.5 h-3.5 inline mr-1" />
-                      {{ group.event.location }}
+                      {{ [group.event.locationDetails.city, group.event.locationDetails.province].filter(Boolean).join(', ') }}
                     </span>
                   </p>
                 </div>
@@ -343,9 +343,9 @@ function isUpcoming(date: string) {
                 <UIcon name="i-heroicons-calendar-days" class="w-4 h-4 inline mr-1" />
                 {{ formatDate(event.startDate) }}
               </p>
-              <p v-if="event.location" class="text-sm text-gray-500 mt-1 truncate">
+              <p v-if="event.locationDetails?.city || event.locationDetails?.province" class="text-sm text-gray-500 mt-1 truncate">
                 <UIcon name="i-heroicons-map-pin" class="w-4 h-4 inline mr-1" />
-                {{ event.location }}
+                {{ [event.locationDetails.city, event.locationDetails.province].filter(Boolean).join(', ') }}
               </p>
 
               <!-- Stats -->

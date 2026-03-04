@@ -52,6 +52,7 @@ export default defineEventHandler(async (event) => {
           endDate: events.endDate,
           timezone: events.timezone,
           location: events.location,
+          locationDetails: events.locationDetails,
           status: events.status,
         },
         order: {
@@ -146,6 +147,7 @@ export default defineEventHandler(async (event) => {
           endDate: events.endDate,
           timezone: events.timezone,
           location: events.location,
+          locationDetails: events.locationDetails,
           status: events.status,
         },
       })

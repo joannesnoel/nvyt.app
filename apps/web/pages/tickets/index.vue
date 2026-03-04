@@ -285,9 +285,9 @@ const statusOptions = [
                   <UIcon name="i-heroicons-calendar" class="w-4 h-4" />
                   {{ formatDate(group.event?.startDate) }}
                 </div>
-                <div v-if="group.event?.location" class="flex items-center gap-1">
+                <div v-if="group.event?.locationDetails?.city || group.event?.locationDetails?.province" class="flex items-center gap-1">
                   <UIcon name="i-heroicons-map-pin" class="w-4 h-4" />
-                  {{ group.event.location }}
+                  {{ [group.event.locationDetails.city, group.event.locationDetails.province].filter(Boolean).join(', ') }}
                 </div>
               </div>
 

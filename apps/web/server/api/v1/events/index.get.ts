@@ -67,6 +67,7 @@ export default defineEventHandler(async (event) => {
       startDate: events.startDate,
       endDate: events.endDate,
       location: events.location,
+      locationDetails: events.locationDetails,
       visibility: events.visibility,
       registrationMode: events.registrationMode,
       maxAttendees: events.maxAttendees,

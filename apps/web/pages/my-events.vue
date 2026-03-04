@@ -226,9 +226,9 @@ function isUpcoming(date: string) {
               <UIcon name="i-heroicons-calendar-days" class="w-4 h-4 inline mr-1" />
               {{ formatDate(event.startDate) }}
             </p>
-            <p v-if="event.location" class="text-sm text-gray-500 mt-1 truncate">
+            <p v-if="event.locationDetails?.city || event.locationDetails?.province" class="text-sm text-gray-500 mt-1 truncate">
               <UIcon name="i-heroicons-map-pin" class="w-4 h-4 inline mr-1" />
-              {{ event.location }}
+              {{ [event.locationDetails.city, event.locationDetails.province].filter(Boolean).join(', ') }}
             </p>
 
             <!-- Stats -->

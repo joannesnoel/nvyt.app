@@ -7,6 +7,17 @@ const { getEventImage } = useYoutubeThumbnail()
 
 // TODO: Replace with actual API call
 const { data: events, pending } = await useFetch('/api/v1/events')
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
 </script>
 
 <template>
@@ -74,7 +85,11 @@ const { data: events, pending } = await useFetch('/api/v1/events')
               {{ event.title }}
             </h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {{ new Date(event.startDate).toLocaleDateString() }}
+              {{ formatDate(event.startDate) }}
+            </p>
+            <p v-if="event.locationDetails?.city || event.locationDetails?.province" class="text-sm text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-1">
+              <UIcon name="i-heroicons-map-pin" class="w-4 h-4 flex-shrink-0" />
+              <span class="truncate">{{ [event.locationDetails.city, event.locationDetails.province].filter(Boolean).join(', ') }}</span>
             </p>
             <p class="text-sm text-gray-500 dark:text-gray-500 mt-2 line-clamp-2">
               {{ event.description?.replace(/<[^>]*>/g, '') }}

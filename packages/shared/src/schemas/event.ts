@@ -73,6 +73,7 @@ export const locationDetailsSchema = z.object({
   type: z.enum(['physical', 'online', 'hybrid']),
   address: z.string().optional(),
   city: z.string().optional(),
+  province: z.string().optional(),
   country: z.string().optional(),
   coordinates: z.object({
     lat: z.number(),
