@@ -8,7 +8,7 @@ async function stopImpersonating() {
   try {
     await $fetch('/api/v1/admin/stop-impersonate', { method: 'POST' })
     await fetchUser()
-    await navigateTo('/admin/users')
+    await navigateTo('/admin')
   } catch {
     stopping.value = false
   }

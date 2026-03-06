@@ -42,6 +42,8 @@ export const useAuth = () => {
 
     if (response.success && response.data) {
       user.value = response.data.user as User
+      // Fetch full profile to get isAdmin, isImpersonating
+      await fetchUser()
       return response.data
     }
 

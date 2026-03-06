@@ -1,4 +1,4 @@
-import { sql, eq, gte } from 'drizzle-orm'
+import { sql, eq, gte, and } from 'drizzle-orm'
 import { orders } from '@nvyt/db'
 
 export default defineEventHandler(async (event) => {
@@ -22,19 +22,25 @@ export default defineEventHandler(async (event) => {
   const today = new Date()
   today.setHours(23, 59, 59, 999)
   while (currentDate <= today) {
-    dateLabels.push(currentDate.toISOString().split('T')[0])
+    const y = currentDate.getFullYear()
+    const m = String(currentDate.getMonth() + 1).padStart(2, '0')
+    const d = String(currentDate.getDate()).padStart(2, '0')
+    dateLabels.push(`${y}-${m}-${d}`)
     currentDate.setDate(currentDate.getDate() + 1)
   }
 
   // Daily revenue (net = subtotal - discount)
   const dailyRevenue = await db
     .select({
-      date: sql<string>`DATE(${orders.paidAt})`.as('date'),
+      date: sql<string>`DATE(${orders.paidAt})::text`.as('date'),
       amount: sql<number>`COALESCE(SUM(${orders.subtotalAmount}::numeric - ${orders.discountAmount}::numeric), 0)`.as('amount'),
     })
     .from(orders)
     .where(
-      sql`${orders.paymentStatus} = 'paid' AND ${orders.paidAt} >= ${startDate}`,
+      and(
+        eq(orders.paymentStatus, 'paid'),
+        gte(orders.paidAt, startDate),
+      ),
     )
     .groupBy(sql`DATE(${orders.paidAt})`)
     .orderBy(sql`DATE(${orders.paidAt})`)
