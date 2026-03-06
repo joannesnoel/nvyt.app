@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Login - NVYT' })
+
 const route = useRoute()
 const { login, isAuthenticated } = useAuth()
 const toast = useToast()

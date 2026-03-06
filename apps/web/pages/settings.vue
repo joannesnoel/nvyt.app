@@ -4,6 +4,8 @@ definePageMeta({
   middleware: 'auth',
 })
 
+useHead({ title: 'Settings - NVYT' })
+
 const { user, fetchUser } = useAuth()
 const toast = useToast()
 const webPush = useWebPush()

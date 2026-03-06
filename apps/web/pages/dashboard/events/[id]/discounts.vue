@@ -13,6 +13,7 @@ const { data: eventResponse, pending: eventPending } = await useFetch(
   { watch: [eventId] }
 )
 const event = computed(() => eventResponse.value?.data)
+useHead(() => ({ title: event.value?.title ? `Discounts - ${event.value.title} - NVYT` : 'NVYT' }))
 
 // Fetch ticket types (for restriction multi-select)
 const { data: ticketTypesResponse } = await useFetch(

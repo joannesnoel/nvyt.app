@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Support - NVYT' })
+
 const route = useRoute()
 const {
   conversation,

@@ -16,6 +16,7 @@ const { data: eventResponse, pending: loading } = await useFetch(
 )
 
 const event = computed(() => eventResponse.value?.data)
+useHead(() => ({ title: event.value?.title ? `Edit ${event.value.title} - NVYT` : 'NVYT' }))
 
 // Fetch requirements (for tickets mode)
 const { data: requirementsResponse, refresh: refreshRequirements } = await useFetch(

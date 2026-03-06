@@ -15,6 +15,8 @@ const { data, pending } = await useFetch(
 )
 
 const event = computed(() => data.value?.data?.event)
+
+useHead(() => ({ title: event.value?.title ? `${event.value.title} - Admin - NVYT` : 'NVYT' }))
 const stats = computed(() => data.value?.data?.stats)
 const recentOrders = computed(() => data.value?.data?.recentOrders || [])
 const ticketTypes = computed(() => data.value?.data?.ticketTypes || [])
@@ -98,6 +100,7 @@ function getVerificationStatusLabel(status: string) {
 }
 
 // Impersonate organizer
+const { fetchUser } = useAuth()
 const impersonating = ref(false)
 
 async function impersonateOrganizer() {
@@ -108,6 +111,7 @@ async function impersonateOrganizer() {
       method: 'POST',
       body: { userId: event.value.organizer.id },
     })
+    await fetchUser()
     await navigateTo('/dashboard')
   } catch (e: any) {
     toast.add({ title: e?.data?.message || 'Failed to impersonate', color: 'red' })

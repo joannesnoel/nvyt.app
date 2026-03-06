@@ -12,6 +12,7 @@ const { data: eventResponse } = await useFetch<{ data?: { registrationMode?: str
   () => `/api/v1/events/by-id/${eventId.value}`,
 )
 const event = computed(() => eventResponse.value?.data)
+useHead(() => ({ title: event.value?.title ? `Attendees - ${event.value.title} - NVYT` : 'NVYT' }))
 const isTicketMode = computed(() => event.value?.registrationMode === 'tickets')
 
 // Filters

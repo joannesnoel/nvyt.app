@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Reports - NVYT' })
+
 // Date range filter
 const dateRange = reactive({
   startDate: '',

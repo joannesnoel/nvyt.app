@@ -7,6 +7,8 @@ const route = useRoute()
 const eventId = computed(() => route.params.id as string)
 const toast = useToast()
 
+useHead({ title: 'Check-in - NVYT' })
+
 // Scanner mode: 'camera' or 'manual'
 const scannerMode = ref<'camera' | 'manual'>('camera')
 const scannerPaused = ref(false)

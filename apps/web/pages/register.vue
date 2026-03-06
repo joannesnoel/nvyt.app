@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Register - NVYT' })
+
 const route = useRoute()
 const { register, isAuthenticated } = useAuth()
 const toast = useToast()

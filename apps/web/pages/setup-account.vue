@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Setup Account - NVYT' })
+
 const route = useRoute()
 const { fetchUser, isAuthenticated } = useAuth()
 const toast = useToast()

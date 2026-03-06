@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Terms of Service - NVYT' })
+
 useSeoMeta({
   title: 'Terms of Service - NVYT',
   description: 'Terms of Service for NVYT event management and ticketing platform.',

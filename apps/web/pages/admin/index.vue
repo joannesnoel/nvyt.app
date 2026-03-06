@@ -7,6 +7,8 @@ definePageMeta({
   middleware: ['admin'],
 })
 
+useHead({ title: 'Admin Dashboard - NVYT' })
+
 const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 
@@ -160,7 +162,7 @@ function formatCurrency(amount: number) {
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-                Daily Revenue
+                Revenue ({{ chartPeriod }}d)
               </h3>
               <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                 {{ formatCurrency(analytics?.revenue?.periodTotal ?? 0) }}

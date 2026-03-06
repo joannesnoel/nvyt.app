@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'checkout',
 })
 
+useHead({ title: 'QR Payment - NVYT' })
+
 const route = useRoute()
 const router = useRouter()
 

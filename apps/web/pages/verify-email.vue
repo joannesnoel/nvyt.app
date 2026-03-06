@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Verify Email - NVYT' })
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()

@@ -29,6 +29,7 @@ const { data: eventResponse, pending, refresh } = await useFetch(
   { watch: [eventId] }
 )
 const event = computed(() => eventResponse.value?.data)
+useHead(() => ({ title: event.value?.title ? `${event.value.title} - Dashboard - NVYT` : 'NVYT' }))
 
 // Fetch attendees stats
 const { data: attendeesData } = await useFetch(

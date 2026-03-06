@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Register Attendees - NVYT' })
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()

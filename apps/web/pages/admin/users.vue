@@ -4,6 +4,8 @@ definePageMeta({
   middleware: ['admin'],
 })
 
+useHead({ title: 'Users - Admin - NVYT' })
+
 const route = useRoute()
 
 // Filters
@@ -78,6 +80,7 @@ async function resendVerification(userId: string) {
   }
 }
 
+const { fetchUser } = useAuth()
 const impersonatingId = ref<string | null>(null)
 
 async function loginAs(userId: string) {
@@ -87,6 +90,7 @@ async function loginAs(userId: string) {
       method: 'POST',
       body: { userId },
     })
+    await fetchUser()
     await navigateTo('/dashboard')
   } catch (e: any) {
     toast.add({ title: e?.data?.message || 'Failed to impersonate', color: 'red' })

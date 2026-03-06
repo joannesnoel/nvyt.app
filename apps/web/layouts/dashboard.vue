@@ -32,21 +32,43 @@ const userMenuItems = computed(() => [
     slot: 'account',
     disabled: true,
   }],
-  [
-    ...(user.value?.isAdmin
-      ? [{
-          slot: 'support',
-          label: 'Support Chat',
-          icon: 'i-heroicons-chat-bubble-left-right',
-          to: '/admin/support',
-        }]
-      : []),
-    {
-      label: 'Settings',
-      icon: 'i-heroicons-cog-6-tooth',
-      to: '/settings',
-    },
-  ],
+  [{
+    label: 'Settings',
+    icon: 'i-heroicons-cog-6-tooth',
+    to: '/settings',
+  }],
+  ...(user.value?.isAdmin
+    ? [[{
+        label: 'Admin Dashboard',
+        icon: 'i-heroicons-home',
+        to: '/admin',
+      }, {
+        slot: 'support',
+        label: 'Support Chat',
+        icon: 'i-heroicons-chat-bubble-left-right',
+        to: '/admin/support',
+      }, {
+        label: 'Users',
+        icon: 'i-heroicons-users',
+        to: '/admin/users',
+      }, {
+        label: 'Events',
+        icon: 'i-heroicons-calendar-days',
+        to: '/admin/events',
+      }, {
+        label: 'Verifications',
+        icon: 'i-heroicons-shield-check',
+        to: '/admin/verifications',
+      }, {
+        label: 'Payouts',
+        icon: 'i-heroicons-banknotes',
+        to: '/admin/payouts',
+      }, {
+        label: 'Reconcile Payments',
+        icon: 'i-heroicons-arrow-path',
+        to: '/admin/reconcile-payments',
+      }]]
+    : []),
   [{
     label: 'Sign out',
     icon: 'i-heroicons-arrow-right-on-rectangle',

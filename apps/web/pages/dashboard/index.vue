@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Dashboard - NVYT' })
+
 const { user } = useAuth()
 const { getEventImage } = useYoutubeThumbnail()
 

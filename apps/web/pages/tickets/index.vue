@@ -4,6 +4,8 @@ definePageMeta({
   middleware: 'auth',
 })
 
+useHead({ title: 'My Tickets - NVYT' })
+
 const { getEventImage } = useYoutubeThumbnail()
 const route = useRoute()
 const page = computed(() => Number(route.query.page) || 1)

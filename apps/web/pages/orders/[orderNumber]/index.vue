@@ -8,6 +8,8 @@ const route = useRoute()
 const toast = useToast()
 const orderNumber = computed(() => route.params.orderNumber as string)
 
+useHead(() => ({ title: `Order ${orderNumber.value} - NVYT` }))
+
 // Fetch order details
 const { data: orderResponse, pending, error } = await useFetch<{
   data?: {

@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'dashboard',
 })
 
+useHead({ title: 'Create Event - NVYT' })
+
 const form = reactive<Partial<CreateEventInput>>({
   title: '',
   description: '',

@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Refund Policy - NVYT' })
+
 useSeoMeta({
   title: 'Refund Policy - NVYT',
   description: 'Refund policy for ticket purchases on NVYT event management and ticketing platform.',

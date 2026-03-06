@@ -7,6 +7,8 @@ const route = useRoute()
 const eventId = computed(() => route.params.id as string)
 const toast = useToast()
 
+useHead({ title: 'Orders - NVYT' })
+
 // Filters
 const statusFilter = ref<string | undefined>(undefined)
 const searchQuery = ref('')

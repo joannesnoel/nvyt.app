@@ -13,6 +13,7 @@ const { data: eventResponse, pending: eventPending } = await useFetch(
   { watch: [eventId] }
 )
 const event = computed(() => eventResponse.value?.data)
+useHead(() => ({ title: event.value?.title ? `FAQs - ${event.value.title} - NVYT` : 'NVYT' }))
 
 // Fetch FAQs
 const { data: faqsResponse, pending: faqsPending, refresh: refreshFaqs } = await useFetch(

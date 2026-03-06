@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Earnings - NVYT' })
+
 const { data: summaryData, pending: summaryPending, refresh: refreshSummary } = await useFetch('/api/v1/wallet/summary')
 
 const wallet = computed(() => summaryData.value?.data?.wallet)

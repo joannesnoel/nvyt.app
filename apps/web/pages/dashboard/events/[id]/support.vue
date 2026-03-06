@@ -10,6 +10,8 @@ const { user } = useAuth()
 
 const eventId = computed(() => route.params.id as string)
 
+useHead({ title: 'Support - NVYT' })
+
 // Fetch conversations
 const queryParams = computed(() => ({
   page: 1,

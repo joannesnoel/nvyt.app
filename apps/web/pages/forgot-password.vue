@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Forgot Password - NVYT' })
+
 const toast = useToast()
 const { isAuthenticated } = useAuth()
 

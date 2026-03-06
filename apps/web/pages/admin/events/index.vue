@@ -4,6 +4,8 @@ definePageMeta({
   middleware: ['admin'],
 })
 
+useHead({ title: 'Events - Admin - NVYT' })
+
 const route = useRoute()
 
 // Filters

@@ -13,6 +13,7 @@ const { data: eventResponse } = await useFetch(
   { watch: [eventId] }
 )
 const event = computed(() => eventResponse.value?.data)
+useHead(() => ({ title: event.value?.title ? `Verification - ${event.value.title} - NVYT` : 'NVYT' }))
 
 // Fetch verification status
 const { data: verificationResponse, refresh } = await useFetch(

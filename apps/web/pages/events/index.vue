@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Explore Events - NVYT' })
+
 const { getEventImage } = useYoutubeThumbnail()
 
 // TODO: Replace with actual API call

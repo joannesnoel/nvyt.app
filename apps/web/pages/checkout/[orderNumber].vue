@@ -6,6 +6,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Checkout - NVYT' })
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()

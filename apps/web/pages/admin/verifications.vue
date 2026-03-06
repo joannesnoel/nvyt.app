@@ -4,6 +4,8 @@ definePageMeta({
   middleware: ['admin'],
 })
 
+useHead({ title: 'Verifications - Admin - NVYT' })
+
 const route = useRoute()
 const toast = useToast()
 

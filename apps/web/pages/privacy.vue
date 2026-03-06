@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Privacy Policy - NVYT' })
+
 useSeoMeta({
   title: 'Privacy Policy - NVYT',
   description: 'Privacy Policy for NVYT event management and ticketing platform.',

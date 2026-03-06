@@ -24,6 +24,8 @@ const { data: ticketResponse, pending, error } = await useFetch(
 
 const ticket = computed(() => ticketResponse.value?.data)
 
+useHead(() => ({ title: ticket.value?.ticketNumber ? `Ticket #${ticket.value.ticketNumber} - NVYT` : 'NVYT' }))
+
 // Generate QR code URL (using a QR code API service)
 const qrCodeUrl = computed(() => {
   if (!ticket.value?.qrCode) return ''

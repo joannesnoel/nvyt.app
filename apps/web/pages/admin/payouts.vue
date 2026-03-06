@@ -4,6 +4,8 @@ definePageMeta({
   middleware: ['admin'],
 })
 
+useHead({ title: 'Payouts - Admin - NVYT' })
+
 const route = useRoute()
 
 // Filters

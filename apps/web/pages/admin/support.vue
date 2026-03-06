@@ -4,6 +4,8 @@ definePageMeta({
   middleware: ['admin'],
 })
 
+useHead({ title: 'Support - Admin - NVYT' })
+
 const toast = useToast()
 const { subscribe, events: pusherEvents } = usePusher()
 const { user } = useAuth()

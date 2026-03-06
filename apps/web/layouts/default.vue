@@ -65,22 +65,34 @@ const userMenuItems = computed(() => {
   // Add admin section if user is admin
   if (user.value?.isAdmin) {
     items.push([{
+      label: 'Admin Dashboard',
+      icon: 'i-heroicons-home',
+      to: '/admin',
+    }, {
       slot: 'support',
       label: 'Support Chat',
       icon: 'i-heroicons-chat-bubble-left-right',
       to: '/admin/support',
     }, {
-      label: 'Admin',
-      icon: 'i-heroicons-shield-check',
-      to: '/admin/verifications',
-    }, {
       label: 'Users',
       icon: 'i-heroicons-users',
       to: '/admin/users',
     }, {
+      label: 'Events',
+      icon: 'i-heroicons-calendar-days',
+      to: '/admin/events',
+    }, {
+      label: 'Verifications',
+      icon: 'i-heroicons-shield-check',
+      to: '/admin/verifications',
+    }, {
       label: 'Payouts',
       icon: 'i-heroicons-banknotes',
       to: '/admin/payouts',
+    }, {
+      label: 'Reconcile Payments',
+      icon: 'i-heroicons-arrow-path',
+      to: '/admin/reconcile-payments',
     }])
   }
 

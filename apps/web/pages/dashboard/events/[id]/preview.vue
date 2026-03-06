@@ -14,6 +14,7 @@ const { data: eventResponse, pending, refresh } = await useFetch(
   { watch: [eventId] }
 )
 const event = computed(() => eventResponse.value?.data)
+useHead(() => ({ title: event.value?.title ? `Preview ${event.value.title} - NVYT` : 'NVYT' }))
 
 // Event Media state
 const coverImage = ref('')

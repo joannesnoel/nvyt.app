@@ -4,6 +4,8 @@ definePageMeta({
   middleware: ['admin'],
 })
 
+useHead({ title: 'Reconcile Payments - Admin - NVYT' })
+
 const running = ref(false)
 const result = ref<any>(null)
 const error = ref<string | null>(null)

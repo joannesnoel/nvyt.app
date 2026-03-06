@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Payouts - NVYT' })
+
 const toast = useToast()
 
 // Fetch wallet data

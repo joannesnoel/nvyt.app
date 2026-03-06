@@ -4,6 +4,8 @@ definePageMeta({
   middleware: 'auth',
 })
 
+useHead({ title: 'My Events - NVYT' })
+
 const { getEventImage } = useYoutubeThumbnail()
 
 // Filter state

@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'default',
 })
 
+useHead({ title: 'Transactions - NVYT' })
+
 const route = useRoute()
 const router = useRouter()
 
