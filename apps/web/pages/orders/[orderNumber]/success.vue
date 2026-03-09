@@ -88,10 +88,8 @@ watchEffect(() => {
 // Fetch registration status when order is paid
 watch(() => order.value?.paymentStatus, async (paymentStatus) => {
   if (paymentStatus === 'paid') {
-    // Track purchase event in Google Analytics (only once per session per order)
-    const storageKey = `ga4_purchase_${orderNumber.value}`
-    if (!sessionStorage.getItem(storageKey) && order.value) {
-      sessionStorage.setItem(storageKey, '1')
+    // Track purchase event in Google Analytics
+    if (import.meta.client && order.value) {
       trackPurchase({
         transactionId: order.value.orderNumber,
         value: parseFloat(order.value.totalAmount),
