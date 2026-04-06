@@ -391,7 +391,7 @@ function goBack() {
           </div>
 
           <!-- Pay button (desktop) -->
-          <div class="hidden lg:block">
+          <div class="block">
             <UButton
               color="primary"
               size="xl"
