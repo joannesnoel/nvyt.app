@@ -7,7 +7,7 @@ import { createPaymentIntent, toCentavos, getPublicKey } from '~/server/utils/pa
 import { sendEmail, accountSetupEmail } from '~/server/utils/email'
 import { calculateProcessingFees, type PaymentProvider } from '~/server/utils/wallet'
 import { getActivePrice, validateTierAvailability, incrementTierQuantitySold, hasActiveTier } from '~/server/utils/pricing'
-import { calculateDiscount } from '~/server/utils/discount'
+import { calculateDiscount, countApplicableTickets } from '~/server/utils/discount'
 
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -419,10 +419,6 @@ export default defineEventHandler(async (event) => {
     if (!codeRecord.isActive) {
       throw createError({ statusCode: 400, message: 'This discount code is no longer active' })
     }
-    if (codeRecord.usageLimit !== null && codeRecord.usageCount >= codeRecord.usageLimit) {
-      throw createError({ statusCode: 400, message: 'This discount code has reached its usage limit' })
-    }
-
     const discountItems = data.items.map(item => {
       const detail = itemDetails.find(d => d.ticketTypeId === item.ticketTypeId)
       return {
@@ -432,24 +428,37 @@ export default defineEventHandler(async (event) => {
       }
     })
 
+    const applicableTicketTypeIds = codeRecord.ticketTypeIds as string[] | null
+    const applicableTicketCount = countApplicableTickets(discountItems, applicableTicketTypeIds)
+
+    if (codeRecord.usageLimit !== null && codeRecord.usageCount + applicableTicketCount > codeRecord.usageLimit) {
+      const remaining = codeRecord.usageLimit - codeRecord.usageCount
+      throw createError({
+        statusCode: 400,
+        message: remaining <= 0
+          ? 'This discount code has reached its usage limit'
+          : `This discount code can only be applied to ${remaining} more ticket(s)`,
+      })
+    }
+
     discountAmount = calculateDiscount(
       codeRecord.discountType,
       parseFloat(codeRecord.discountValue),
       discountItems,
-      codeRecord.ticketTypeIds as string[] | null,
+      applicableTicketTypeIds,
     )
 
-    // Atomically increment usage count
+    // Atomically increment usage count by applicable ticket count (race-safe)
     const [updated] = await db
       .update(discountCodes)
       .set({
-        usageCount: sql`${discountCodes.usageCount} + 1`,
+        usageCount: sql`${discountCodes.usageCount} + ${applicableTicketCount}`,
         updatedAt: new Date(),
       })
       .where(and(
         eq(discountCodes.id, codeRecord.id),
         codeRecord.usageLimit !== null
-          ? sql`${discountCodes.usageCount} < ${codeRecord.usageLimit}`
+          ? sql`${discountCodes.usageCount} + ${applicableTicketCount} <= ${codeRecord.usageLimit}`
           : sql`1=1`,
       ))
       .returning()

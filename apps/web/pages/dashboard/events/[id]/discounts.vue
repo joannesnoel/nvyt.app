@@ -242,7 +242,7 @@ const ticketTypeOptions = computed(() =>
                 </p>
                 <div class="flex flex-wrap gap-4 text-sm text-gray-500">
                   <span>
-                    Used: {{ code.usageCount }}{{ code.usageLimit ? ` / ${code.usageLimit}` : '' }}
+                    Used: {{ code.usageCount }} ticket{{ code.usageCount !== 1 ? 's' : '' }}{{ code.usageLimit ? ` / ${code.usageLimit}` : '' }}
                   </span>
                   <span v-if="code.ticketTypeIds?.length">
                     Applies to: {{ (code.ticketTypeIds as string[]).map(id => getTicketTypeName(id)).join(', ') }}

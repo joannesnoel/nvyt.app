@@ -1,7 +1,7 @@
 import { discountCodes } from '@nvyt/db'
 import { validateDiscountCodeSchema } from '@nvyt/shared'
 import { eq, and } from 'drizzle-orm'
-import { calculateDiscount } from '~/server/utils/discount'
+import { calculateDiscount, countApplicableTickets } from '~/server/utils/discount'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'eventId')
@@ -41,10 +41,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'This discount code is no longer active' })
   }
 
-  if (code.usageLimit !== null && code.usageCount >= code.usageLimit) {
-    throw createError({ statusCode: 400, message: 'This discount code has reached its usage limit' })
-  }
-
   // Check ticket type restrictions
   const applicableTicketTypeIds = code.ticketTypeIds as string[] | null
   const applicableItems = data.items.filter(item => {
@@ -57,6 +53,22 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       message: 'This discount code does not apply to any of the selected ticket types',
     })
+  }
+
+  // Check usage limit against applicable ticket count
+  const applicableTicketCount = countApplicableTickets(data.items, applicableTicketTypeIds)
+
+  if (code.usageLimit !== null) {
+    const remaining = code.usageLimit - code.usageCount
+    if (remaining <= 0) {
+      throw createError({ statusCode: 400, message: 'This discount code has reached its usage limit' })
+    }
+    if (applicableTicketCount > remaining) {
+      throw createError({
+        statusCode: 400,
+        message: `This discount code can only be applied to ${remaining} more ticket(s)`,
+      })
+    }
   }
 
   const discountAmount = calculateDiscount(
@@ -72,5 +84,6 @@ export default defineEventHandler(async (event) => {
     discountValue: parseFloat(code.discountValue),
     applicableTicketTypeIds,
     discountAmount,
+    remainingUses: code.usageLimit !== null ? code.usageLimit - code.usageCount : null,
   })
 })
