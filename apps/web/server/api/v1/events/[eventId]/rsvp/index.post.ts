@@ -249,6 +249,7 @@ export default defineEventHandler(async (event) => {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: eventData.timezone || 'Asia/Manila',
   })
 
   // Send appropriate email based on status

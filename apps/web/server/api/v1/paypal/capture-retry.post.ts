@@ -199,6 +199,7 @@ export default defineEventHandler(async (event) => {
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
+      timeZone: orderResult.event.timezone || 'Asia/Manila',
     })
 
     const totalAmount = new Intl.NumberFormat('en-PH', {

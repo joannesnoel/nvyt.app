@@ -73,6 +73,7 @@ export default defineEventHandler(async (event) => {
     .select({
       title: events.title,
       startDate: events.startDate,
+      timezone: events.timezone,
     })
     .from(events)
     .where(eq(events.id, eventId))
@@ -124,6 +125,7 @@ export default defineEventHandler(async (event) => {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
+          timeZone: eventData.timezone || 'Asia/Manila',
         })
       : 'TBD',
     permissions,

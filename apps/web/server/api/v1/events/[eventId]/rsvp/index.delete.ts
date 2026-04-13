@@ -130,6 +130,7 @@ async function promoteFromWaitlist(db: ReturnType<typeof useDatabase>, eventId: 
           day: 'numeric',
           hour: 'numeric',
           minute: '2-digit',
+          timeZone: eventData.timezone || 'Asia/Manila',
         })
 
         const emailContent = waitlistPromotedEmail({

@@ -438,6 +438,7 @@ export default defineEventHandler(async (event) => {
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
+      timeZone: ticketResult.event.timezone || 'Asia/Manila',
     })
 
     // If the email recipient has no password, include a setup token so they can view the ticket and set up their account

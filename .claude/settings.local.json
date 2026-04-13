@@ -144,7 +144,9 @@
       "Bash(git push:*)",
       "Bash(docker exec:*)",
       "Bash(cat:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(lsof:*)",
+      "Bash(kill 711344:*)"
     ]
   },
   "hooks": {
