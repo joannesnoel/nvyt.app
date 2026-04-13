@@ -34,3 +34,22 @@ export function calculateDiscount(
 
   return Math.round(totalDiscount * 100) / 100
 }
+
+/**
+ * Count the total number of tickets that a discount code applies to.
+ */
+export function countApplicableTickets(
+  items: Array<{ ticketTypeId: string; quantity: number }>,
+  applicableTicketTypeIds: string[] | null,
+): number {
+  let count = 0
+  for (const item of items) {
+    if (applicableTicketTypeIds && applicableTicketTypeIds.length > 0) {
+      if (!applicableTicketTypeIds.includes(item.ticketTypeId)) {
+        continue
+      }
+    }
+    count += item.quantity
+  }
+  return count
+}

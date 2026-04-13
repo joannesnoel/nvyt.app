@@ -163,6 +163,37 @@ const statusOptions = computed(() => {
 
 // Column header labels based on mode
 const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP Date')
+
+// QR code modal
+const showQrModal = ref(false)
+const qrAttendee = ref<any>(null)
+
+function viewQrCode(attendee: any) {
+  qrAttendee.value = attendee
+  showQrModal.value = true
+}
+
+// Ticket PDF download
+const pdfDownloading = ref(false)
+
+async function downloadTicketPdf(ticketId: string) {
+  pdfDownloading.value = true
+  try {
+    const response = await $fetch(`/api/v1/tickets/${ticketId}/download`, {
+      responseType: 'blob',
+    }) as Blob
+    const url = URL.createObjectURL(response)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `ticket-${ticketId}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e.data?.message || 'Failed to download ticket', color: 'red' })
+  } finally {
+    pdfDownloading.value = false
+  }
+}
 </script>
 
 <template>
@@ -366,6 +397,27 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
 
             <div class="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-800 pl-9">
               <UButton
+                v-if="attendee.qrCode"
+                color="primary"
+                variant="soft"
+                size="xs"
+                icon="i-heroicons-qr-code"
+                @click="viewQrCode(attendee)"
+              >
+                View QR
+              </UButton>
+              <UButton
+                v-if="isTicketMode"
+                color="primary"
+                variant="soft"
+                size="xs"
+                icon="i-heroicons-arrow-down-tray"
+                :loading="pdfDownloading"
+                @click="downloadTicketPdf(attendee.id)"
+              >
+                PDF
+              </UButton>
+              <UButton
                 v-if="attendee.status !== 'confirmed'"
                 color="green"
                 variant="soft"
@@ -469,6 +521,16 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
                 <td class="py-3 px-4 text-right">
                   <UDropdown
                     :items="[[
+                      ...(attendee.qrCode ? [{
+                        label: 'View QR Code',
+                        icon: 'i-heroicons-qr-code',
+                        click: () => viewQrCode(attendee)
+                      }] : []),
+                      ...(isTicketMode ? [{
+                        label: 'Download PDF',
+                        icon: 'i-heroicons-arrow-down-tray',
+                        click: () => downloadTicketPdf(attendee.id)
+                      }] : []),
                       {
                         label: isTicketMode ? 'Mark as Paid' : 'Confirm',
                         icon: 'i-heroicons-check',
@@ -514,4 +576,43 @@ const dateColumnLabel = computed(() => isTicketMode.value ? 'Registered' : 'RSVP
       </UCard>
     </div>
   </div>
+
+  <!-- QR Code Modal -->
+  <UModal v-model="showQrModal">
+    <UCard>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">QR Code</h3>
+          <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showQrModal = false" />
+        </div>
+      </template>
+
+      <div v-if="qrAttendee" class="flex flex-col items-center gap-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          {{ qrAttendee.user?.name || qrAttendee.attendeeName || 'Attendee' }}
+        </p>
+        <p v-if="qrAttendee.ticketNumber" class="text-xs text-gray-500">
+          {{ qrAttendee.ticketNumber }}
+        </p>
+        <img
+          :src="`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrAttendee.qrCode)}`"
+          :alt="`QR Code for ${qrAttendee.user?.name || 'attendee'}`"
+          class="w-64 h-64"
+        />
+        <p class="text-xs text-gray-400 font-mono break-all text-center max-w-[280px]">
+          {{ qrAttendee.qrCode }}
+        </p>
+        <UButton
+          v-if="isTicketMode"
+          color="primary"
+          variant="soft"
+          icon="i-heroicons-arrow-down-tray"
+          @click="downloadTicketPdf(qrAttendee.id)"
+          :loading="pdfDownloading"
+        >
+          Download PDF
+        </UButton>
+      </div>
+    </UCard>
+  </UModal>
 </template>

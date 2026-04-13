@@ -32,6 +32,7 @@ const invitePermissions = ref({
   canManageTickets: false,
   canCheckIn: true,
   canManageAttendees: false,
+  canViewTickets: false,
   canViewAnalytics: true,
 })
 const isInviting = ref(false)
@@ -45,6 +46,7 @@ const editPermissions = ref({
   canManageTickets: false,
   canCheckIn: false,
   canManageAttendees: false,
+  canViewTickets: false,
   canViewAnalytics: false,
 })
 const isUpdating = ref(false)
@@ -60,6 +62,7 @@ const permissions = [
   { key: 'canManageTickets', label: 'Manage Tickets', description: 'Can create, edit, and delete ticket types' },
   { key: 'canCheckIn', label: 'Check-in', description: 'Can check-in attendees at the event' },
   { key: 'canManageAttendees', label: 'Manage Attendees', description: 'Can approve, reject, or remove attendees' },
+  { key: 'canViewTickets', label: 'View Tickets', description: 'Can view ticket QR codes and download tickets' },
   { key: 'canViewAnalytics', label: 'View Analytics', description: 'Can view event statistics and reports' },
 ] as const
 
@@ -71,6 +74,7 @@ function openInviteModal() {
     canManageTickets: false,
     canCheckIn: true,
     canManageAttendees: false,
+    canViewTickets: false,
     canViewAnalytics: true,
   }
   showInviteModal.value = true
@@ -114,6 +118,7 @@ function openEditModal(collaborator: any) {
     canManageTickets: collaborator.canManageTickets,
     canCheckIn: collaborator.canCheckIn,
     canManageAttendees: collaborator.canManageAttendees,
+    canViewTickets: collaborator.canViewTickets,
     canViewAnalytics: collaborator.canViewAnalytics,
   }
   showEditModal.value = true

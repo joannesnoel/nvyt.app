@@ -7,7 +7,7 @@ import { createCheckoutSession, toCentavos } from '~/server/utils/paymongo'
 import { sendEmail, accountSetupEmail, paymentSuccessfulEmail } from '~/server/utils/email'
 import { calculateProcessingFees, type PaymentProvider } from '~/server/utils/wallet'
 import { getActivePrice, validateTierAvailability, incrementTierQuantitySold, hasActiveTier } from '~/server/utils/pricing'
-import { calculateDiscount } from '~/server/utils/discount'
+import { calculateDiscount, countApplicableTickets } from '~/server/utils/discount'
 
 function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
@@ -423,10 +423,6 @@ export default defineEventHandler(async (event) => {
     if (!codeRecord.isActive) {
       throw createError({ statusCode: 400, message: 'This discount code is no longer active' })
     }
-    if (codeRecord.usageLimit !== null && codeRecord.usageCount >= codeRecord.usageLimit) {
-      throw createError({ statusCode: 400, message: 'This discount code has reached its usage limit' })
-    }
-
     // Build items for discount calculation
     const discountItems = data.items.map(item => {
       const tt = ticketTypeMap.get(item.ticketTypeId)!
@@ -435,24 +431,37 @@ export default defineEventHandler(async (event) => {
       return { ticketTypeId: item.ticketTypeId, quantity: item.quantity, unitPrice }
     })
 
+    const applicableTicketTypeIds = codeRecord.ticketTypeIds as string[] | null
+    const applicableTicketCount = countApplicableTickets(discountItems, applicableTicketTypeIds)
+
+    if (codeRecord.usageLimit !== null && codeRecord.usageCount + applicableTicketCount > codeRecord.usageLimit) {
+      const remaining = codeRecord.usageLimit - codeRecord.usageCount
+      throw createError({
+        statusCode: 400,
+        message: remaining <= 0
+          ? 'This discount code has reached its usage limit'
+          : `This discount code can only be applied to ${remaining} more ticket(s)`,
+      })
+    }
+
     discountAmount = calculateDiscount(
       codeRecord.discountType,
       parseFloat(codeRecord.discountValue),
       discountItems,
-      codeRecord.ticketTypeIds as string[] | null,
+      applicableTicketTypeIds,
     )
 
-    // Atomically increment usage count (race-safe)
+    // Atomically increment usage count by applicable ticket count (race-safe)
     const [updated] = await db
       .update(discountCodes)
       .set({
-        usageCount: sql`${discountCodes.usageCount} + 1`,
+        usageCount: sql`${discountCodes.usageCount} + ${applicableTicketCount}`,
         updatedAt: new Date(),
       })
       .where(and(
         eq(discountCodes.id, codeRecord.id),
         codeRecord.usageLimit !== null
-          ? sql`${discountCodes.usageCount} < ${codeRecord.usageLimit}`
+          ? sql`${discountCodes.usageCount} + ${applicableTicketCount} <= ${codeRecord.usageLimit}`
           : sql`1=1`,
       ))
       .returning()
@@ -466,6 +475,31 @@ export default defineEventHandler(async (event) => {
 
   // Apply discount to total
   const discountedSubtotal = Math.max(0, totalAmount - discountAmount)
+
+  // Distribute discount proportionally to each ticket's pricePaid
+  if (discountAmount > 0 && discountCodeRecord) {
+    const applicableTicketTypeIds = discountCodeRecord.ticketTypeIds as string[] | null
+    const applicableTickets = ticketsToCreate.filter(t => {
+      if (!applicableTicketTypeIds || applicableTicketTypeIds.length === 0) return true
+      return applicableTicketTypeIds.includes(t.ticketTypeId)
+    })
+    const applicableSubtotal = applicableTickets.reduce((sum, t) => sum + parseFloat(t.pricePaid as string), 0)
+
+    if (applicableSubtotal > 0) {
+      let remainingDiscount = discountAmount
+      for (let i = 0; i < applicableTickets.length; i++) {
+        const ticket = applicableTickets[i]
+        const originalPrice = parseFloat(ticket.pricePaid as string)
+        const isLast = i === applicableTickets.length - 1
+        const share = isLast
+          ? remainingDiscount
+          : Math.round((originalPrice / applicableSubtotal) * discountAmount * 100) / 100
+        const discountedPrice = Math.max(0, Math.round((originalPrice - share) * 100) / 100)
+        ticket.pricePaid = String(discountedPrice)
+        remainingDiscount -= (originalPrice - discountedPrice)
+      }
+    }
+  }
 
   // Check for free tickets (no payment needed)
   const isFreeOrder = discountedSubtotal === 0

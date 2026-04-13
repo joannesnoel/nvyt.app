@@ -82,15 +82,33 @@ export async function cancelPendingOrder(pendingOrder: {
       .set({ paymentStatus: 'failed', updatedAt: new Date() })
       .where(eq(orders.id, pendingOrder.id))
 
-    // Decrement discount code usage if applicable
+    // Decrement discount code usage by applicable ticket count
     if (pendingOrder.discountCodeId) {
-      await tx
-        .update(discountCodes)
-        .set({
-          usageCount: sql`GREATEST(${discountCodes.usageCount} - 1, 0)`,
-          updatedAt: new Date(),
-        })
+      const [discountCode] = await tx
+        .select({ ticketTypeIds: discountCodes.ticketTypeIds })
+        .from(discountCodes)
         .where(eq(discountCodes.id, pendingOrder.discountCodeId))
+        .limit(1)
+
+      if (discountCode) {
+        const applicableTicketTypeIds = discountCode.ticketTypeIds as string[] | null
+        let applicableTicketCount = 0
+        for (const t of pendingTickets) {
+          if (!applicableTicketTypeIds || applicableTicketTypeIds.length === 0 || applicableTicketTypeIds.includes(t.ticketTypeId)) {
+            applicableTicketCount++
+          }
+        }
+
+        if (applicableTicketCount > 0) {
+          await tx
+            .update(discountCodes)
+            .set({
+              usageCount: sql`GREATEST(${discountCodes.usageCount} - ${applicableTicketCount}, 0)`,
+              updatedAt: new Date(),
+            })
+            .where(eq(discountCodes.id, pendingOrder.discountCodeId))
+        }
+      }
     }
   })
 }

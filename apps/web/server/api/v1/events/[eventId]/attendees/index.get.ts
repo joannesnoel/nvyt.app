@@ -13,8 +13,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Require canManageAttendees permission (owner or collaborator)
-  await requireEventAccess(event, eventId, 'canManageAttendees')
+  // Require canManageAttendees or canViewTickets permission (owner or collaborator)
+  const access = await requireEventAccess(event, eventId)
+  if (!access.isOwner && !access.permissions.canManageAttendees && !access.permissions.canViewTickets) {
+    throw createError({
+      statusCode: 403,
+      message: 'You do not have permission to view attendees',
+    })
+  }
 
   // Validate filters
   const result = attendeeFiltersSchema.safeParse(query)
