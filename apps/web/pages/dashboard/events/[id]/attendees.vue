@@ -172,6 +172,28 @@ function viewQrCode(attendee: any) {
   qrAttendee.value = attendee
   showQrModal.value = true
 }
+
+// Ticket PDF download
+const pdfDownloading = ref(false)
+
+async function downloadTicketPdf(ticketId: string) {
+  pdfDownloading.value = true
+  try {
+    const response = await $fetch(`/api/v1/tickets/${ticketId}/download`, {
+      responseType: 'blob',
+    }) as Blob
+    const url = URL.createObjectURL(response)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `ticket-${ticketId}.pdf`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e.data?.message || 'Failed to download ticket', color: 'red' })
+  } finally {
+    pdfDownloading.value = false
+  }
+}
 </script>
 
 <template>
@@ -385,6 +407,17 @@ function viewQrCode(attendee: any) {
                 View QR
               </UButton>
               <UButton
+                v-if="isTicketMode"
+                color="primary"
+                variant="soft"
+                size="xs"
+                icon="i-heroicons-arrow-down-tray"
+                :loading="pdfDownloading"
+                @click="downloadTicketPdf(attendee.id)"
+              >
+                PDF
+              </UButton>
+              <UButton
                 v-if="attendee.status !== 'confirmed'"
                 color="green"
                 variant="soft"
@@ -493,6 +526,11 @@ function viewQrCode(attendee: any) {
                         icon: 'i-heroicons-qr-code',
                         click: () => viewQrCode(attendee)
                       }] : []),
+                      ...(isTicketMode ? [{
+                        label: 'Download PDF',
+                        icon: 'i-heroicons-arrow-down-tray',
+                        click: () => downloadTicketPdf(attendee.id)
+                      }] : []),
                       {
                         label: isTicketMode ? 'Mark as Paid' : 'Confirm',
                         icon: 'i-heroicons-check',
@@ -564,6 +602,16 @@ function viewQrCode(attendee: any) {
         <p class="text-xs text-gray-400 font-mono break-all text-center max-w-[280px]">
           {{ qrAttendee.qrCode }}
         </p>
+        <UButton
+          v-if="isTicketMode"
+          color="primary"
+          variant="soft"
+          icon="i-heroicons-arrow-down-tray"
+          @click="downloadTicketPdf(qrAttendee.id)"
+          :loading="pdfDownloading"
+        >
+          Download PDF
+        </UButton>
       </div>
     </UCard>
   </UModal>

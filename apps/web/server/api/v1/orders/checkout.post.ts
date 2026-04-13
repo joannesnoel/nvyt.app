@@ -476,6 +476,31 @@ export default defineEventHandler(async (event) => {
   // Apply discount to total
   const discountedSubtotal = Math.max(0, totalAmount - discountAmount)
 
+  // Distribute discount proportionally to each ticket's pricePaid
+  if (discountAmount > 0 && discountCodeRecord) {
+    const applicableTicketTypeIds = discountCodeRecord.ticketTypeIds as string[] | null
+    const applicableTickets = ticketsToCreate.filter(t => {
+      if (!applicableTicketTypeIds || applicableTicketTypeIds.length === 0) return true
+      return applicableTicketTypeIds.includes(t.ticketTypeId)
+    })
+    const applicableSubtotal = applicableTickets.reduce((sum, t) => sum + parseFloat(t.pricePaid as string), 0)
+
+    if (applicableSubtotal > 0) {
+      let remainingDiscount = discountAmount
+      for (let i = 0; i < applicableTickets.length; i++) {
+        const ticket = applicableTickets[i]
+        const originalPrice = parseFloat(ticket.pricePaid as string)
+        const isLast = i === applicableTickets.length - 1
+        const share = isLast
+          ? remainingDiscount
+          : Math.round((originalPrice / applicableSubtotal) * discountAmount * 100) / 100
+        const discountedPrice = Math.max(0, Math.round((originalPrice - share) * 100) / 100)
+        ticket.pricePaid = String(discountedPrice)
+        remainingDiscount -= (originalPrice - discountedPrice)
+      }
+    }
+  }
+
   // Check for free tickets (no payment needed)
   const isFreeOrder = discountedSubtotal === 0
 
