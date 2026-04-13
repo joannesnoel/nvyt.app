@@ -1,0 +1,1 @@
+ALTER TABLE "event_collaborators" ADD COLUMN "can_view_tickets" boolean DEFAULT false NOT NULL;

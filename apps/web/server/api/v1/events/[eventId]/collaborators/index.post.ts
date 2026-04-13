@@ -95,6 +95,7 @@ export default defineEventHandler(async (event) => {
       canManageTickets: data.canManageTickets,
       canCheckIn: data.canCheckIn,
       canManageAttendees: data.canManageAttendees,
+      canViewTickets: data.canViewTickets,
       canViewAnalytics: data.canViewAnalytics,
       invitedBy: user.id,
     })
@@ -107,6 +108,7 @@ export default defineEventHandler(async (event) => {
   if (data.canManageTickets) permissions.push('Manage tickets')
   if (data.canCheckIn) permissions.push('Check in attendees')
   if (data.canManageAttendees) permissions.push('Manage attendees')
+  if (data.canViewTickets) permissions.push('View tickets')
   if (data.canViewAnalytics) permissions.push('View analytics')
 
   // Build accept URL

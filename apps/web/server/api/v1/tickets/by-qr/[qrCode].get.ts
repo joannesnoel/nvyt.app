@@ -61,12 +61,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify the current user is the event organizer
+  // Verify the current user is the event organizer or has canViewTickets/canCheckIn permission
   if (result.event.organizerId !== user.id) {
-    throw createError({
-      statusCode: 403,
-      message: 'You are not authorized to scan tickets for this event',
-    })
+    const access = await checkEventAccess(event, result.event.id)
+    if (!access?.permissions.canCheckIn && !access?.permissions.canViewTickets) {
+      throw createError({
+        statusCode: 403,
+        message: 'You are not authorized to view tickets for this event',
+      })
+    }
   }
 
   // Determine if ticket is valid for check-in

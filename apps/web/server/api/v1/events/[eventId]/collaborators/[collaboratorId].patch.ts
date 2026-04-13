@@ -62,6 +62,7 @@ export default defineEventHandler(async (event) => {
   if (data.canManageTickets !== undefined) updateData.canManageTickets = data.canManageTickets
   if (data.canCheckIn !== undefined) updateData.canCheckIn = data.canCheckIn
   if (data.canManageAttendees !== undefined) updateData.canManageAttendees = data.canManageAttendees
+  if (data.canViewTickets !== undefined) updateData.canViewTickets = data.canViewTickets
   if (data.canViewAnalytics !== undefined) updateData.canViewAnalytics = data.canViewAnalytics
 
   // Update the collaborator

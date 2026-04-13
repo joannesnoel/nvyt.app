@@ -43,15 +43,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Check authorization - user must own the order or be the event organizer
+  // Check authorization - user must own the order, be the event organizer, or have canViewTickets
   const isOwner = order.userId === user.id
   const isOrganizer = eventData.organizerId === user.id
 
   if (!isOwner && !isOrganizer) {
-    throw createError({
-      statusCode: 403,
-      message: 'You do not have permission to download these tickets',
-    })
+    const access = await checkEventAccess(event, eventData.id)
+    if (!access?.permissions.canViewTickets) {
+      throw createError({
+        statusCode: 403,
+        message: 'You do not have permission to download these tickets',
+      })
+    }
   }
 
   // Only allow download for paid orders

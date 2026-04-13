@@ -8,6 +8,7 @@ export const inviteCollaboratorSchema = z.object({
   canManageTickets: z.boolean().optional().default(false),
   canCheckIn: z.boolean().optional().default(true),
   canManageAttendees: z.boolean().optional().default(false),
+  canViewTickets: z.boolean().optional().default(false),
   canViewAnalytics: z.boolean().optional().default(true),
 })
 
@@ -18,6 +19,7 @@ export const updateCollaboratorSchema = z.object({
   canManageTickets: z.boolean().optional(),
   canCheckIn: z.boolean().optional(),
   canManageAttendees: z.boolean().optional(),
+  canViewTickets: z.boolean().optional(),
   canViewAnalytics: z.boolean().optional(),
 })
 

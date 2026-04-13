@@ -40,15 +40,20 @@ export default defineEventHandler(async (event) => {
 
   const { ticket, ticketType, event: eventData, order } = ticketData
 
-  // Check authorization - user must own the ticket or be the event organizer
+  // Check authorization - user must own the ticket, be the event organizer, or have canViewTickets
   const isOwner = ticket.userId === user.id
   const isOrganizer = eventData.organizerId === user.id
+  let hasViewTickets = false
 
   if (!isOwner && !isOrganizer) {
-    throw createError({
-      statusCode: 403,
-      message: 'You do not have permission to download this ticket',
-    })
+    const access = await checkEventAccess(event, eventData.id)
+    hasViewTickets = access?.permissions.canViewTickets ?? false
+    if (!hasViewTickets) {
+      throw createError({
+        statusCode: 403,
+        message: 'You do not have permission to download this ticket',
+      })
+    }
   }
 
   // Only allow download for confirmed tickets
