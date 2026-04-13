@@ -189,6 +189,7 @@ export default defineEventHandler(async (event) => {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: existingEvent.timezone || 'Asia/Manila',
     })
 
     // Get all confirmed/pending RSVP attendees

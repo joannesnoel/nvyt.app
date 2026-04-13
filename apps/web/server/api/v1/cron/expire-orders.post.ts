@@ -36,7 +36,7 @@ async function verifyWithProvider(order: {
  */
 async function fulfillPaidOrder(
   order: typeof orders.$inferSelect,
-  evt: { id: string; title: string; startDate: Date; location: string | null; organizerId: string | null },
+  evt: { id: string; title: string; startDate: Date; location: string | null; organizerId: string | null; timezone: string },
   paymentMethod: string | null,
 ) {
   const db = useDatabase()
@@ -113,6 +113,7 @@ async function fulfillPaidOrder(
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
+        timeZone: evt.timezone || 'Asia/Manila',
       })
 
       const orderUrl = `${config.public.appUrl}/orders/${order.orderNumber}`
@@ -185,6 +186,7 @@ export default defineEventHandler(async (event) => {
         startDate: events.startDate,
         location: events.location,
         organizerId: events.organizerId,
+        timezone: events.timezone,
       },
     })
     .from(orders)

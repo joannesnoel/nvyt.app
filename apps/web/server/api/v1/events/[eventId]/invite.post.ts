@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
       slug: events.slug,
       description: events.description,
       startDate: events.startDate,
+      timezone: events.timezone,
       location: events.location,
       visibility: events.visibility,
       inviteToken: events.inviteToken,
@@ -103,6 +104,7 @@ export default defineEventHandler(async (event) => {
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
+        timeZone: eventData.timezone || 'Asia/Manila',
       })
     : 'TBD'
 

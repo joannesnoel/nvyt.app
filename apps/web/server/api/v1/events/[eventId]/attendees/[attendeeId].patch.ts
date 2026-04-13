@@ -129,6 +129,7 @@ export default defineEventHandler(async (event) => {
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
+      timeZone: eventData.timezone || 'Asia/Manila',
     })
 
     // Send appropriate email based on status change
@@ -160,7 +161,7 @@ export default defineEventHandler(async (event) => {
 async function promoteFromWaitlist(
   db: ReturnType<typeof useDatabase>,
   eventId: string,
-  eventData: { maxAttendees: number | null; title: string; slug: string; startDate: Date; location: string | null }
+  eventData: { maxAttendees: number | null; title: string; slug: string; startDate: Date; location: string | null; timezone: string }
 ) {
   if (!eventData.maxAttendees) return
 
@@ -221,6 +222,7 @@ async function promoteFromWaitlist(
           day: 'numeric',
           hour: 'numeric',
           minute: '2-digit',
+          timeZone: eventData.timezone || 'Asia/Manila',
         })
 
         const emailContent = waitlistPromotedEmail({
