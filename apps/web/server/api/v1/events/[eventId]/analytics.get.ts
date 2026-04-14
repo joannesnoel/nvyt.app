@@ -106,7 +106,8 @@ export default defineEventHandler(async (event) => {
         and(
           eq(orders.eventId, eventId),
           eq(orders.paymentStatus, 'paid'),
-          gte(orders.createdAt, startDate)
+          gte(orders.createdAt, startDate),
+          sql`${orders.paymentMethod} is distinct from 'external'`,
         )
       )
 
@@ -177,7 +178,8 @@ export default defineEventHandler(async (event) => {
         and(
           eq(orders.eventId, eventId),
           eq(orders.paymentStatus, 'paid'),
-          gte(orders.createdAt, startDate)
+          gte(orders.createdAt, startDate),
+          sql`${orders.paymentMethod} is distinct from 'external'`,
         )
       )
       .groupBy(sql`COALESCE(${orders.paymentMethod}, ${orders.paymentProvider}, 'unknown')`)
