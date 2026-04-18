@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
       attendeeCount: sql<number>`(select count(*)::int from "attendees" where "attendees"."event_id" = "events"."id" and "attendees"."status" in ('confirmed', 'pending'))`,
       ticketCount: sql<number>`(select count(*)::int from "tickets" where "tickets"."event_id" = "events"."id" and "tickets"."status" in ('confirmed', 'checked_in'))`,
       orderCount: sql<number>`(select count(*)::int from "orders" where "orders"."event_id" = "events"."id" and "orders"."payment_status" = 'paid')`,
-      revenue: sql<number>`(select coalesce(sum("orders"."total_amount"::numeric), 0) from "orders" where "orders"."event_id" = "events"."id" and "orders"."payment_status" = 'paid')`,
+      revenue: sql<number>`(select coalesce(sum("orders"."total_amount"::numeric), 0) from "orders" where "orders"."event_id" = "events"."id" and "orders"."payment_status" = 'paid' and "orders"."payment_method" is distinct from 'external')`,
     })
     .from(events)
     .innerJoin(users, eq(events.organizerId, users.id))

@@ -68,9 +68,9 @@ export default defineEventHandler(async (event) => {
     .select({
       totalOrders: sql<number>`count(*)`,
       paidOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} = 'paid')`,
-      grossRevenue: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.totalAmount}::numeric else 0 end), 0)`,
-      netRevenue: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then (${orders.subtotalAmount}::numeric - ${orders.discountAmount}::numeric) else 0 end), 0)`,
-      totalFees: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.totalFees}::numeric else 0 end), 0)`,
+      grossRevenue: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' and ${orders.paymentMethod} is distinct from 'external' then ${orders.totalAmount}::numeric else 0 end), 0)`,
+      netRevenue: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' and ${orders.paymentMethod} is distinct from 'external' then (${orders.subtotalAmount}::numeric - ${orders.discountAmount}::numeric) else 0 end), 0)`,
+      totalFees: sql<number>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' and ${orders.paymentMethod} is distinct from 'external' then ${orders.totalFees}::numeric else 0 end), 0)`,
     })
     .from(orders)
     .where(eq(orders.eventId, id))

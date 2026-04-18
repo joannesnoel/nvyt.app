@@ -40,6 +40,7 @@ export default defineEventHandler(async (event) => {
       and(
         eq(orders.paymentStatus, 'paid'),
         gte(orders.paidAt, startDate),
+        sql`${orders.paymentMethod} is distinct from 'external'`,
       ),
     )
     .groupBy(sql`DATE(${orders.paidAt})`)

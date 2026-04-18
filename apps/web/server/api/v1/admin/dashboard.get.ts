@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
     .select({
       totalOrders: sql<number>`count(*)`,
       paidOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} = 'paid')`,
-      totalRevenue: sql<string>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' then ${orders.totalAmount} else 0 end), 0)`,
+      totalRevenue: sql<string>`coalesce(sum(case when ${orders.paymentStatus} = 'paid' and ${orders.paymentMethod} is distinct from 'external' then ${orders.totalAmount} else 0 end), 0)`,
     })
     .from(orders)
 
