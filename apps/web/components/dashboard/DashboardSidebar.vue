@@ -22,50 +22,68 @@ const eventTitle = computed(() => eventData.value?.data?.title || 'Event')
 // Support unread count injected from layout
 const supportUnreadCount = inject<Ref<number>>('supportUnreadCount', ref(0))
 
-// Grouped event management navigation
+// Permission helpers
+const isOwner = computed(() => eventData.value?.data?.isOrganizer ?? false)
+const perms = computed(() => eventData.value?.data?.permissions)
+function can(permission: string): boolean {
+  if (isOwner.value) return true
+  if (!perms.value) return false
+  return !!(perms.value as Record<string, boolean>)[permission]
+}
+
+// Grouped event management navigation — filtered by permissions
 const eventNavGroups = computed(() => {
   const id = currentEventId.value
   if (!id) return []
-  return [
+
+  const allGroups = [
     {
       items: [
         { label: 'Overview', icon: 'i-heroicons-squares-2x2', to: `/dashboard/events/${id}` },
-        { label: 'Support Chat', icon: 'i-heroicons-chat-bubble-left-right', to: `/dashboard/events/${id}/support`, badge: supportUnreadCount.value },
+        can('canEdit') ? { label: 'Support Chat', icon: 'i-heroicons-chat-bubble-left-right', to: `/dashboard/events/${id}/support`, badge: supportUnreadCount.value } : null,
       ]
     },
     {
       label: 'Setup',
       items: [
-        { label: 'Event Info', icon: 'i-heroicons-pencil-square', to: `/dashboard/events/${id}/edit` },
-        { label: 'Page Template', icon: 'i-heroicons-paint-brush', to: `/dashboard/events/${id}/preview` },
-        { label: 'Guest Form', icon: 'i-heroicons-clipboard-document-list', to: `/dashboard/events/${id}/registration` },
-        { label: 'Team Members', icon: 'i-heroicons-user-group', to: `/dashboard/events/${id}/team` },
+        can('canEdit') ? { label: 'Event Info', icon: 'i-heroicons-pencil-square', to: `/dashboard/events/${id}/edit` } : null,
+        can('canEdit') ? { label: 'Page Template', icon: 'i-heroicons-paint-brush', to: `/dashboard/events/${id}/preview` } : null,
+        can('canEdit') ? { label: 'Guest Form', icon: 'i-heroicons-clipboard-document-list', to: `/dashboard/events/${id}/registration` } : null,
+        isOwner.value ? { label: 'Team Members', icon: 'i-heroicons-user-group', to: `/dashboard/events/${id}/team` } : null,
       ]
     },
     {
       label: 'Tickets & Sales',
       items: [
-        { label: 'Tickets', icon: 'i-heroicons-ticket', to: `/dashboard/events/${id}/tickets` },
-        { label: 'Discounts', icon: 'i-heroicons-tag', to: `/dashboard/events/${id}/discounts` },
-        { label: 'Orders', icon: 'i-heroicons-shopping-cart', to: `/dashboard/events/${id}/orders` },
+        can('canManageTickets') ? { label: 'Tickets', icon: 'i-heroicons-ticket', to: `/dashboard/events/${id}/tickets` } : null,
+        can('canManageTickets') ? { label: 'Discounts', icon: 'i-heroicons-tag', to: `/dashboard/events/${id}/discounts` } : null,
+        can('canViewAnalytics') ? { label: 'Orders', icon: 'i-heroicons-shopping-cart', to: `/dashboard/events/${id}/orders` } : null,
       ]
     },
     {
       label: 'Guests',
       items: [
-        { label: 'Attendees', icon: 'i-heroicons-users', to: `/dashboard/events/${id}/attendees` },
-        { label: 'Check-in', icon: 'i-heroicons-qr-code', to: `/dashboard/events/${id}/check-in` },
-        { label: 'Invite', icon: 'i-heroicons-envelope', to: `/dashboard/events/${id}/invite` },
+        (can('canManageAttendees') || can('canViewTickets')) ? { label: 'Attendees', icon: 'i-heroicons-users', to: `/dashboard/events/${id}/attendees` } : null,
+        can('canCheckIn') ? { label: 'Check-in', icon: 'i-heroicons-qr-code', to: `/dashboard/events/${id}/check-in` } : null,
+        can('canEdit') ? { label: 'Invite', icon: 'i-heroicons-envelope', to: `/dashboard/events/${id}/invite` } : null,
       ]
     },
     {
       label: 'Content',
       items: [
-        { label: 'Announcements', icon: 'i-heroicons-megaphone', to: `/dashboard/events/${id}/announcements` },
-        { label: 'FAQs', icon: 'i-heroicons-question-mark-circle', to: `/dashboard/events/${id}/faqs` },
+        can('canEdit') ? { label: 'Announcements', icon: 'i-heroicons-megaphone', to: `/dashboard/events/${id}/announcements` } : null,
+        can('canEdit') ? { label: 'FAQs', icon: 'i-heroicons-question-mark-circle', to: `/dashboard/events/${id}/faqs` } : null,
       ]
     },
   ]
+
+  // Filter out null items and empty groups
+  return allGroups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(Boolean) as { label: string; icon: string; to: string; badge?: number }[],
+    }))
+    .filter(group => group.items.length > 0)
 })
 
 function isActive(to: string) {

@@ -1,8 +1,7 @@
 import { eq, and, gte, sql } from 'drizzle-orm'
-import { events, attendees, tickets, orders, eventCollaborators, ticketTypes } from '@nvyt/db'
+import { events, attendees, tickets, orders, ticketTypes } from '@nvyt/db'
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
   const db = useDatabase()
 
   const eventId = getRouterParam(event, 'eventId')
@@ -10,7 +9,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Event ID required' })
   }
 
-  // Fetch event and verify ownership/collaboration
+  await requireEventAccess(event, eventId, 'canViewAnalytics')
+
+  // Fetch event
   const [eventRecord] = await db
     .select()
     .from(events)
@@ -19,24 +20,6 @@ export default defineEventHandler(async (event) => {
 
   if (!eventRecord) {
     throw createError({ statusCode: 404, message: 'Event not found' })
-  }
-
-  // Check if user is owner or collaborator
-  const isOwner = eventRecord.organizerId === user.id
-  if (!isOwner) {
-    const [collab] = await db
-      .select()
-      .from(eventCollaborators)
-      .where(
-        and(
-          eq(eventCollaborators.eventId, eventId),
-          eq(eventCollaborators.userId, user.id)
-        )
-      )
-      .limit(1)
-    if (!collab) {
-      throw createError({ statusCode: 403, message: 'Access denied' })
-    }
   }
 
   const isTicketMode = eventRecord.registrationMode === 'tickets'

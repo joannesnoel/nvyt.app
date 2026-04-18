@@ -1,5 +1,5 @@
-import { eq, and, sql, asc, desc } from 'drizzle-orm'
-import { events, users, ticketTypes, attendees, contributionItems, eventRequirements, eventFaqs, eventAnnouncements } from '@nvyt/db'
+import { eq, and, sql, asc, desc, isNotNull } from 'drizzle-orm'
+import { events, users, ticketTypes, attendees, contributionItems, eventRequirements, eventFaqs, eventAnnouncements, eventCollaborators } from '@nvyt/db'
 
 export default defineEventHandler(async (event) => {
   const eventId = getRouterParam(event, 'id')
@@ -172,6 +172,29 @@ export default defineEventHandler(async (event) => {
     userAttendee = attendance ?? null
   }
 
+  // Look up collaborator permissions for non-owners
+  let permissions = null
+  if (currentUser && !isOrganizer) {
+    const collaborator = await db.query.eventCollaborators.findFirst({
+      where: and(
+        eq(eventCollaborators.eventId, eventData.id),
+        eq(eventCollaborators.userId, currentUser.id),
+        isNotNull(eventCollaborators.acceptedAt)
+      ),
+    })
+    if (collaborator) {
+      permissions = {
+        canEdit: collaborator.canEdit,
+        canPublish: collaborator.canPublish,
+        canManageTickets: collaborator.canManageTickets,
+        canCheckIn: collaborator.canCheckIn,
+        canManageAttendees: collaborator.canManageAttendees,
+        canViewTickets: collaborator.canViewTickets,
+        canViewAnalytics: collaborator.canViewAnalytics,
+      }
+    }
+  }
+
   // Include invite token only for organizer
   const responseData = {
     ...eventData,
@@ -184,6 +207,7 @@ export default defineEventHandler(async (event) => {
     attendeeCount,
     userAttendee,
     isOrganizer,
+    permissions,
   }
 
   return successResponse(responseData)
