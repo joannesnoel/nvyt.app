@@ -143,6 +143,9 @@ function getStatusLabel(status: string) {
   if (status === 'confirmed' && isTicketMode.value) {
     return 'Paid'
   }
+  if (status === 'checked_in') {
+    return 'Checked In'
+  }
   return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
@@ -418,7 +421,7 @@ async function downloadTicketPdf(ticketId: string) {
                 PDF
               </UButton>
               <UButton
-                v-if="attendee.status !== 'confirmed'"
+                v-if="attendee.status !== 'confirmed' && attendee.status !== 'checked_in'"
                 color="green"
                 variant="soft"
                 size="xs"
@@ -531,12 +534,11 @@ async function downloadTicketPdf(ticketId: string) {
                         icon: 'i-heroicons-arrow-down-tray',
                         click: () => downloadTicketPdf(attendee.id)
                       }] : []),
-                      {
+                      ...(attendee.status !== 'confirmed' && attendee.status !== 'checked_in' ? [{
                         label: isTicketMode ? 'Mark as Paid' : 'Confirm',
                         icon: 'i-heroicons-check',
-                        disabled: attendee.status === 'confirmed',
                         click: () => updateStatus(attendee.id, 'confirmed')
-                      },
+                      }] : []),
                       // Waitlist and Decline only for RSVP events
                       ...(!isTicketMode ? [{
                         label: 'Waitlist',
