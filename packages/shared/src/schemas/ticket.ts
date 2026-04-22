@@ -25,17 +25,17 @@ const updatableDatetime = z.union([
   z.null(),
 ]).optional().transform(val => (val === '' ? null : val))
 
-// Reusable HTML description validator: allows up to 2000 chars raw (HTML overhead),
-// but text content (tags stripped) must be ≤ 500 chars.
+// Reusable HTML description validator: allows up to 4000 chars raw (HTML overhead),
+// but text content (tags stripped) must be ≤ 1000 chars.
 function stripHtmlTags(html: string): string {
   return html.replace(/<[^>]*>/g, '')
 }
 
-export const htmlDescription = z.string().max(2000).optional()
+export const htmlDescription = z.string().max(4000).optional()
   .refine((val) => {
     if (!val) return true
-    return stripHtmlTags(val).length <= 500
-  }, { message: 'Description text must be 500 characters or fewer' })
+    return stripHtmlTags(val).length <= 1000
+  }, { message: 'Description text must be 1000 characters or fewer' })
 
 export const createTicketTypeSchema = z.object({
   eventId: z.string().uuid(),
