@@ -116,7 +116,12 @@ function getCountryName(code: string) {
 
 async function openDetail(verification: any) {
   selectedId.value = verification.id
+  agreementData.value = null
   await refreshDetail()
+  // Fetch service agreement for this event
+  if (selectedVerification.value?.verification?.eventId) {
+    await fetchAgreement(selectedVerification.value.verification.eventId)
+  }
   showModal.value = true
 }
 
@@ -129,7 +134,7 @@ function openReviewModal(action: 'approve' | 'reject' | 'start_review') {
   modalAction.value = action
   rejectionReason.value = ''
   reviewNotes.value = ''
-  adminFeeRate.value = 0
+  adminFeeRate.value = agreementPlatformFee.value
   showReviewModal.value = true
 }
 
@@ -179,6 +184,97 @@ const statusOptions = [
   { label: 'Approved', value: 'approved' },
   { label: 'Rejected', value: 'rejected' },
 ]
+
+// Service Agreement
+const agreementData = ref<any>(null)
+const generatingAgreement = ref(false)
+const publishingAgreement = ref(false)
+const showAgreementPreview = ref(false)
+const editingAgreement = ref(false)
+const editableContent = ref('')
+const savingAgreement = ref(false)
+
+async function fetchAgreement(eventId: string) {
+  try {
+    const res = await $fetch(`/api/v1/admin/events/${eventId}/service-agreement`) as any
+    agreementData.value = res?.data ?? null
+  } catch {
+    agreementData.value = null
+  }
+}
+
+const agreementPlatformFee = ref(3)
+
+async function generateAgreement() {
+  const eventId = selectedVerification.value?.verification?.eventId
+  if (!eventId) return
+  generatingAgreement.value = true
+  try {
+    await $fetch(`/api/v1/admin/events/${eventId}/service-agreement`, {
+      method: 'POST',
+      body: { platformFee: agreementPlatformFee.value },
+    })
+    await fetchAgreement(eventId)
+    toast.add({ title: 'Service agreement drafted', color: 'green' })
+    showAgreementPreview.value = true
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e?.data?.message || 'Failed to generate agreement', color: 'red' })
+  } finally {
+    generatingAgreement.value = false
+  }
+}
+
+async function toggleAgreementStatus() {
+  const eventId = selectedVerification.value?.verification?.eventId
+  if (!eventId || !agreementData.value) return
+  const newStatus = agreementData.value.status === 'published' ? 'draft' : 'published'
+  publishingAgreement.value = true
+  try {
+    await $fetch(`/api/v1/admin/events/${eventId}/service-agreement`, {
+      method: 'PATCH',
+      body: { status: newStatus },
+    })
+    await fetchAgreement(eventId)
+    toast.add({
+      title: newStatus === 'published' ? 'Agreement published' : 'Agreement unpublished',
+      description: newStatus === 'published' ? 'The organizer can now view and print this agreement.' : undefined,
+      color: 'green',
+    })
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e?.data?.message || 'Failed to update agreement', color: 'red' })
+  } finally {
+    publishingAgreement.value = false
+  }
+}
+
+function startEditingAgreement() {
+  editableContent.value = agreementData.value?.content || ''
+  editingAgreement.value = true
+}
+
+function cancelEditingAgreement() {
+  editingAgreement.value = false
+  editableContent.value = ''
+}
+
+async function saveAgreementContent() {
+  const eventId = selectedVerification.value?.verification?.eventId
+  if (!eventId) return
+  savingAgreement.value = true
+  try {
+    await $fetch(`/api/v1/admin/events/${eventId}/service-agreement`, {
+      method: 'PATCH',
+      body: { content: editableContent.value },
+    })
+    await fetchAgreement(eventId)
+    editingAgreement.value = false
+    toast.add({ title: 'Agreement updated', color: 'green' })
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e?.data?.message || 'Failed to save agreement', color: 'red' })
+  } finally {
+    savingAgreement.value = false
+  }
+}
 </script>
 
 <template>
@@ -516,6 +612,69 @@ const statusOptions = [
                 {{ selectedVerification.verification.rejectionReason }}
               </p>
             </div>
+
+            <!-- Service Agreement -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-medium text-gray-500">Service Agreement</h4>
+                <UBadge v-if="agreementData" :color="agreementData.status === 'published' ? 'green' : 'yellow'" variant="soft" size="xs">
+                  {{ agreementData.status === 'published' ? 'Published' : 'Draft' }}
+                </UBadge>
+              </div>
+
+              <div class="space-y-3">
+                <p v-if="!agreementData" class="text-sm text-gray-500">No service agreement has been drafted.</p>
+
+                <UFormGroup label="Platform Fee (%)" class="max-w-[200px]">
+                  <UInput
+                    v-model.number="agreementPlatformFee"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="0"
+                  >
+                    <template #trailing>
+                      <span class="text-gray-500 text-sm">%</span>
+                    </template>
+                  </UInput>
+                </UFormGroup>
+
+                <div class="flex flex-wrap gap-2">
+                  <UButton
+                    v-if="agreementData"
+                    size="xs"
+                    color="primary"
+                    variant="soft"
+                    icon="i-heroicons-eye"
+                    @click="showAgreementPreview = true"
+                  >
+                    Preview
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    :color="agreementData ? 'gray' : 'primary'"
+                    :variant="agreementData ? 'soft' : undefined"
+                    :icon="agreementData ? 'i-heroicons-arrow-path' : 'i-heroicons-document-text'"
+                    :loading="generatingAgreement"
+                    @click="generateAgreement"
+                  >
+                    {{ agreementData ? 'Regenerate' : 'Draft Agreement' }}
+                  </UButton>
+                  <UButton
+                    v-if="agreementData"
+                    size="xs"
+                    :color="agreementData.status === 'published' ? 'yellow' : 'green'"
+                    variant="soft"
+                    :icon="agreementData.status === 'published' ? 'i-heroicons-eye-slash' : 'i-heroicons-check-circle'"
+                    :loading="publishingAgreement"
+                    @click="toggleAgreementStatus"
+                  >
+                    {{ agreementData.status === 'published' ? 'Unpublish' : 'Publish' }}
+                  </UButton>
+                </div>
+              </div>
+            </div>
           </div>
 
           <template #footer>
@@ -544,6 +703,85 @@ const statusOptions = [
                   @click="openReviewModal('approve')"
                 >
                   Approve
+                </UButton>
+              </div>
+            </div>
+          </template>
+        </UCard>
+      </UModal>
+
+      <!-- Service Agreement Preview Modal -->
+      <UModal v-model="showAgreementPreview" :ui="{ width: 'sm:max-w-6xl' }">
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ editingAgreement ? 'Edit Service Agreement' : 'Service Agreement Preview' }}
+              </h3>
+              <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showAgreementPreview = false; cancelEditingAgreement()" />
+            </div>
+          </template>
+
+          <div v-if="agreementData && !editingAgreement" class="overflow-auto max-h-[70vh] bg-white rounded-lg p-2">
+            <div v-html="agreementData.content" />
+          </div>
+
+          <div v-if="editingAgreement" class="space-y-2">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Edit the raw HTML content of the agreement.</p>
+            <textarea
+              v-model="editableContent"
+              class="w-full h-[60vh] font-mono text-sm p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+              spellcheck="false"
+            />
+          </div>
+
+          <template #footer>
+            <div class="flex justify-between">
+              <div>
+                <UButton
+                  v-if="!editingAgreement"
+                  color="gray"
+                  variant="soft"
+                  icon="i-heroicons-pencil-square"
+                  @click="startEditingAgreement"
+                >
+                  Edit
+                </UButton>
+              </div>
+              <div class="flex gap-2">
+                <UButton
+                  v-if="editingAgreement"
+                  color="gray"
+                  variant="soft"
+                  @click="cancelEditingAgreement"
+                >
+                  Cancel
+                </UButton>
+                <UButton
+                  v-if="editingAgreement"
+                  color="primary"
+                  icon="i-heroicons-check"
+                  :loading="savingAgreement"
+                  @click="saveAgreementContent"
+                >
+                  Save Changes
+                </UButton>
+                <UButton
+                  v-if="!editingAgreement"
+                  color="gray"
+                  variant="soft"
+                  @click="showAgreementPreview = false"
+                >
+                  Close
+                </UButton>
+                <UButton
+                  v-if="!editingAgreement && agreementData?.status !== 'published'"
+                  color="green"
+                  icon="i-heroicons-check-circle"
+                  :loading="publishingAgreement"
+                  @click="toggleAgreementStatus"
+                >
+                  Publish
                 </UButton>
               </div>
             </div>

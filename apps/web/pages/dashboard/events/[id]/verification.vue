@@ -357,23 +357,32 @@ const serviceAgreement = computed(() => (agreementResponse.value as any)?.data ?
 const showAgreementModal = ref(false)
 
 function printAgreement() {
-  const printWindow = window.open('', '_blank')
-  if (!printWindow || !serviceAgreement.value) return
+  if (!serviceAgreement.value) return
+  const printWindow = window.open('', '_blank', 'width=900,height=700')
+  if (!printWindow) return
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Service Agreement</title>
+      <title>Service Agreement - NVYT</title>
       <style>
-        @media print { body { margin: 0; } }
+        body { background: #fff; color: #111; margin: 0; }
+        @page { margin: 10mm 15mm; }
+        @page:first { margin-top: 15mm; }
+        @media print {
+          body { margin: 0; }
+        }
       </style>
     </head>
     <body>${serviceAgreement.value.content}</body>
     </html>
   `)
   printWindow.document.close()
-  printWindow.focus()
-  printWindow.print()
+  // Wait for images to load before printing
+  printWindow.onload = () => {
+    printWindow.focus()
+    printWindow.print()
+  }
 }
 
 const hasSignedAgreement = computed(() => {
@@ -464,56 +473,100 @@ function isDocTypeUploaded(type: string) {
             </div>
           </div>
         </UCard>
+        <!-- Service Agreement (inside approved block) -->
+        <UCard v-if="serviceAgreement">
+          <template #header>
+            <div class="flex items-center justify-between">
+              <h2 class="font-semibold text-gray-900 dark:text-white">Service Agreement</h2>
+              <UBadge v-if="hasSignedAgreement" color="green" variant="soft" size="xs">Signed Copy Uploaded</UBadge>
+            </div>
+          </template>
+
+          <div class="space-y-4">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              A service agreement has been prepared for this event. Please review, print, sign, and upload the signed copy.
+            </p>
+
+            <div class="flex flex-wrap gap-2">
+              <UButton
+                color="primary"
+                variant="soft"
+                icon="i-heroicons-eye"
+                @click="showAgreementModal = true"
+              >
+                View Agreement
+              </UButton>
+              <UButton
+                color="gray"
+                variant="soft"
+                icon="i-heroicons-printer"
+                @click="printAgreement"
+              >
+                Print
+              </UButton>
+              <UButton
+                :color="hasSignedAgreement ? 'green' : 'primary'"
+                :variant="hasSignedAgreement ? 'soft' : 'outline'"
+                :icon="hasSignedAgreement ? 'i-heroicons-check-circle' : 'i-heroicons-arrow-up-tray'"
+                :loading="isUploading && selectedDocumentType === 'signed_service_agreement'"
+                :disabled="isUploading"
+                @click="triggerFileUpload('signed_service_agreement')"
+              >
+                {{ hasSignedAgreement ? 'Re-upload Signed Copy' : 'Upload Signed Copy' }}
+              </UButton>
+            </div>
+          </div>
+        </UCard>
       </div>
-
-      <!-- Service Agreement (shown whenever published, regardless of verification status) -->
-      <UCard v-if="serviceAgreement" class="mb-6">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-gray-900 dark:text-white">Service Agreement</h2>
-            <UBadge v-if="hasSignedAgreement" color="green" variant="soft" size="xs">Signed Copy Uploaded</UBadge>
-          </div>
-        </template>
-
-        <div class="space-y-4">
-          <p class="text-sm text-gray-600 dark:text-gray-400">
-            A service agreement has been prepared for this event. Please review, print, sign, and upload the signed copy.
-          </p>
-
-          <div class="flex flex-wrap gap-2">
-            <UButton
-              color="primary"
-              variant="soft"
-              icon="i-heroicons-eye"
-              @click="showAgreementModal = true"
-            >
-              View Agreement
-            </UButton>
-            <UButton
-              color="gray"
-              variant="soft"
-              icon="i-heroicons-printer"
-              @click="printAgreement"
-            >
-              Print
-            </UButton>
-            <UButton
-              v-if="canEdit && hasBusinessInfo"
-              :color="hasSignedAgreement ? 'green' : 'primary'"
-              :variant="hasSignedAgreement ? 'soft' : 'outline'"
-              :icon="hasSignedAgreement ? 'i-heroicons-check-circle' : 'i-heroicons-arrow-up-tray'"
-              :loading="isUploading && selectedDocumentType === 'signed_service_agreement'"
-              :disabled="isUploading"
-              @click="triggerFileUpload('signed_service_agreement')"
-            >
-              {{ hasSignedAgreement ? 'Re-upload Signed Copy' : 'Upload Signed Copy' }}
-            </UButton>
-          </div>
-        </div>
-      </UCard>
 
       <!-- Form / Pending / Rejected -->
       <div v-else class="space-y-6">
+        <!-- Service Agreement (inside form/pending/rejected block) -->
+        <UCard v-if="serviceAgreement">
+          <template #header>
+            <div class="flex items-center justify-between">
+              <h2 class="font-semibold text-gray-900 dark:text-white">Service Agreement</h2>
+              <UBadge v-if="hasSignedAgreement" color="green" variant="soft" size="xs">Signed Copy Uploaded</UBadge>
+            </div>
+          </template>
+
+          <div class="space-y-4">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              A service agreement has been prepared for this event. Please review, print, sign, and upload the signed copy.
+            </p>
+
+            <div class="flex flex-wrap gap-2">
+              <UButton
+                color="primary"
+                variant="soft"
+                icon="i-heroicons-eye"
+                @click="showAgreementModal = true"
+              >
+                View Agreement
+              </UButton>
+              <UButton
+                color="gray"
+                variant="soft"
+                icon="i-heroicons-printer"
+                @click="printAgreement"
+              >
+                Print
+              </UButton>
+              <UButton
+                v-if="canEdit && hasBusinessInfo"
+                :color="hasSignedAgreement ? 'green' : 'primary'"
+                :variant="hasSignedAgreement ? 'soft' : 'outline'"
+                :icon="hasSignedAgreement ? 'i-heroicons-check-circle' : 'i-heroicons-arrow-up-tray'"
+                :loading="isUploading && selectedDocumentType === 'signed_service_agreement'"
+                :disabled="isUploading"
+                @click="triggerFileUpload('signed_service_agreement')"
+              >
+                {{ hasSignedAgreement ? 'Re-upload Signed Copy' : 'Upload Signed Copy' }}
+              </UButton>
+            </div>
+          </div>
+        </UCard>
+
         <!-- Rejection Notice -->
         <UCard v-if="verification?.status === 'rejected'" class="border-red-200 dark:border-red-800">
           <div class="flex items-start gap-4">
@@ -685,14 +738,7 @@ function isDocTypeUploaded(type: string) {
               </p>
             </div>
 
-            <!-- Hidden file input -->
-            <input
-              ref="fileInput"
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.webp"
-              class="hidden"
-              @change="handleFileUpload"
-            />
+            <!-- Hidden file input is placed outside conditional blocks -->
           </div>
         </UCard>
 
@@ -723,8 +769,17 @@ function isDocTypeUploaded(type: string) {
     </div>
   </div>
 
+  <!-- Hidden file input (always in DOM for uploads from any section) -->
+  <input
+    ref="fileInput"
+    type="file"
+    accept=".pdf,.jpg,.jpeg,.png,.webp"
+    class="hidden"
+    @change="handleFileUpload"
+  />
+
   <!-- Service Agreement Preview Modal -->
-  <UModal v-model="showAgreementModal" :ui="{ width: 'max-w-4xl' }">
+  <UModal v-model="showAgreementModal" :ui="{ width: 'sm:max-w-6xl' }">
     <UCard>
       <template #header>
         <div class="flex items-center justify-between">
@@ -733,7 +788,7 @@ function isDocTypeUploaded(type: string) {
         </div>
       </template>
 
-      <div v-if="serviceAgreement" class="overflow-auto max-h-[70vh]">
+      <div v-if="serviceAgreement" class="overflow-auto max-h-[70vh] bg-white rounded-lg p-2">
         <div v-html="serviceAgreement.content" />
       </div>
 

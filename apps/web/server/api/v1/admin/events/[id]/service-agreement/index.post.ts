@@ -3,6 +3,7 @@ import { events, users, eventVerifications, serviceAgreements } from '@nvyt/db'
 import { generateServiceAgreementHtml } from '~/server/utils/serviceAgreementTemplate'
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig()
   const user = await requireAuth(event)
   requireAdmin(user.email)
 
@@ -44,6 +45,19 @@ export default defineEventHandler(async (event) => {
     .where(eq(eventVerifications.eventId, eventId))
     .limit(1)
 
+  // Require verification to be submitted (pending, under_review, or approved)
+  const submittedStatuses = ['pending', 'under_review', 'approved']
+  if (!verification || !submittedStatuses.includes(verification.status)) {
+    throw createError({
+      statusCode: 400,
+      message: 'Cannot generate a service agreement until the organizer has submitted their verification documents.',
+    })
+  }
+
+  // Read optional platformFee from request body
+  const body = await readBody(event).catch(() => ({})) || {}
+  const platformFeeInput = typeof body.platformFee === 'number' ? body.platformFee : null
+
   // Format event date
   const eventDate = new Date(eventRow.startDate).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -55,9 +69,12 @@ export default defineEventHandler(async (event) => {
     timeZone: eventRow.timezone || 'Asia/Manila',
   })
 
-  const adminFeeRate = verification?.adminFeeRate
-    ? (parseFloat(verification.adminFeeRate) * 100).toFixed(2)
-    : '0'
+  // Use provided platformFee, fall back to verification's adminFeeRate
+  const adminFeeRate = platformFeeInput !== null
+    ? platformFeeInput.toFixed(1)
+    : verification.adminFeeRate
+      ? (parseFloat(verification.adminFeeRate) * 100).toFixed(1)
+      : '0'
 
   const businessTypeLabels: Record<string, string> = {
     sole_proprietor: 'Sole Proprietor',
@@ -69,14 +86,15 @@ export default defineEventHandler(async (event) => {
 
   const content = generateServiceAgreementHtml({
     platformName: 'NVYT',
-    platformUrl: 'https://nvyt.app',
+    platformUrl: config.public.appUrl,
     organizerName: eventRow.organizer.name,
     organizerEmail: eventRow.organizer.email,
-    businessName: verification?.businessName || eventRow.organizer.name,
-    businessType: verification?.businessType
+    businessName: verification.businessName,
+    businessType: verification.businessType
       ? (businessTypeLabels[verification.businessType] || verification.businessType)
       : '',
-    registrationNumber: verification?.registrationNumber || '',
+    businessTypeRaw: verification.businessType || '',
+    registrationNumber: verification.registrationNumber || '',
     eventTitle: eventRow.title,
     eventDate,
     eventLocation: eventRow.location || 'To be announced',

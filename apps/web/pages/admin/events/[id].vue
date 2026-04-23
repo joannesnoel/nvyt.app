@@ -119,53 +119,6 @@ async function impersonateOrganizer() {
   }
 }
 
-// Service Agreement
-const { data: agreementData, refresh: refreshAgreement } = await useFetch(
-  () => `/api/v1/admin/events/${eventId.value}/service-agreement`,
-  { watch: [eventId] }
-)
-const agreement = computed(() => (agreementData.value as any)?.data ?? null)
-const generatingAgreement = ref(false)
-const publishingAgreement = ref(false)
-const showAgreementPreview = ref(false)
-
-async function generateAgreement() {
-  generatingAgreement.value = true
-  try {
-    await $fetch(`/api/v1/admin/events/${eventId.value}/service-agreement`, {
-      method: 'POST',
-    })
-    await refreshAgreement()
-    toast.add({ title: 'Service agreement drafted', color: 'green' })
-    showAgreementPreview.value = true
-  } catch (e: any) {
-    toast.add({ title: 'Error', description: e?.data?.message || 'Failed to generate agreement', color: 'red' })
-  } finally {
-    generatingAgreement.value = false
-  }
-}
-
-async function toggleAgreementStatus() {
-  if (!agreement.value) return
-  const newStatus = agreement.value.status === 'published' ? 'draft' : 'published'
-  publishingAgreement.value = true
-  try {
-    await $fetch(`/api/v1/admin/events/${eventId.value}/service-agreement`, {
-      method: 'PATCH',
-      body: { status: newStatus },
-    })
-    await refreshAgreement()
-    toast.add({
-      title: newStatus === 'published' ? 'Agreement published' : 'Agreement unpublished',
-      description: newStatus === 'published' ? 'The organizer can now view and print this agreement.' : undefined,
-      color: 'green',
-    })
-  } catch (e: any) {
-    toast.add({ title: 'Error', description: e?.data?.message || 'Failed to update agreement', color: 'red' })
-  } finally {
-    publishingAgreement.value = false
-  }
-}
 </script>
 
 <template>
@@ -483,71 +436,6 @@ async function toggleAgreementStatus() {
             <p class="text-sm text-gray-500">No verification submitted for this event.</p>
           </UCard>
 
-          <!-- Service Agreement -->
-          <UCard v-if="isTicketMode">
-            <template #header>
-              <div class="flex items-center justify-between">
-                <h2 class="font-semibold text-gray-900 dark:text-white">Service Agreement</h2>
-                <UBadge v-if="agreement" :color="agreement.status === 'published' ? 'green' : 'yellow'" variant="soft" size="xs">
-                  {{ agreement.status === 'published' ? 'Published' : 'Draft' }}
-                </UBadge>
-              </div>
-            </template>
-
-            <div v-if="agreement" class="space-y-3">
-              <p class="text-sm text-gray-500">
-                Generated {{ new Date(agreement.createdAt).toLocaleDateString() }}
-                <span v-if="agreement.updatedAt !== agreement.createdAt">
-                  &middot; Updated {{ new Date(agreement.updatedAt).toLocaleDateString() }}
-                </span>
-              </p>
-
-              <div class="flex flex-wrap gap-2">
-                <UButton
-                  size="sm"
-                  color="primary"
-                  variant="soft"
-                  icon="i-heroicons-eye"
-                  @click="showAgreementPreview = true"
-                >
-                  Preview
-                </UButton>
-                <UButton
-                  size="sm"
-                  color="gray"
-                  variant="soft"
-                  icon="i-heroicons-arrow-path"
-                  :loading="generatingAgreement"
-                  @click="generateAgreement"
-                >
-                  Regenerate
-                </UButton>
-                <UButton
-                  size="sm"
-                  :color="agreement.status === 'published' ? 'yellow' : 'green'"
-                  variant="soft"
-                  :icon="agreement.status === 'published' ? 'i-heroicons-eye-slash' : 'i-heroicons-check-circle'"
-                  :loading="publishingAgreement"
-                  @click="toggleAgreementStatus"
-                >
-                  {{ agreement.status === 'published' ? 'Unpublish' : 'Publish' }}
-                </UButton>
-              </div>
-            </div>
-
-            <div v-else class="space-y-3">
-              <p class="text-sm text-gray-500">No service agreement has been drafted for this event.</p>
-              <UButton
-                size="sm"
-                color="primary"
-                icon="i-heroicons-document-text"
-                :loading="generatingAgreement"
-                @click="generateAgreement"
-              >
-                Draft Agreement
-              </UButton>
-            </div>
-          </UCard>
         </div>
       </div>
     </div>
@@ -562,35 +450,5 @@ async function toggleAgreementStatus() {
       <UButton to="/admin/events" color="primary">Back to Events</UButton>
     </div>
 
-    <!-- Service Agreement Preview Modal -->
-    <UModal v-model="showAgreementPreview" :ui="{ width: 'max-w-4xl' }">
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Service Agreement Preview</h3>
-            <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showAgreementPreview = false" />
-          </div>
-        </template>
-
-        <div v-if="agreement" class="prose dark:prose-invert max-w-none overflow-auto max-h-[70vh]">
-          <div v-html="agreement.content" />
-        </div>
-
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton color="gray" variant="soft" @click="showAgreementPreview = false">Close</UButton>
-            <UButton
-              v-if="agreement?.status !== 'published'"
-              color="green"
-              icon="i-heroicons-check-circle"
-              :loading="publishingAgreement"
-              @click="toggleAgreementStatus"
-            >
-              Publish
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </UModal>
   </div>
 </template>

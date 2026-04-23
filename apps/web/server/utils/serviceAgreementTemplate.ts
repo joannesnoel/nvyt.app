@@ -8,6 +8,7 @@ export interface ServiceAgreementData {
   organizerEmail: string
   businessName: string
   businessType: string
+  businessTypeRaw: string // raw value e.g. 'sole_proprietor', 'corporation'
   registrationNumber: string
 
   // Event
@@ -25,10 +26,14 @@ export interface ServiceAgreementData {
 
 export function generateServiceAgreementHtml(data: ServiceAgreementData): string {
   return `
-<div style="font-family: 'Times New Roman', Times, serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #111; line-height: 1.8; font-size: 14px;">
+<div style="font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #111; line-height: 1.8; font-size: 14px;">
 
   <div style="text-align: center; margin-bottom: 40px;">
-    <h1 style="font-size: 22px; font-weight: bold; margin: 0 0 4px 0; letter-spacing: 1px;">SERVICE AGREEMENT</h1>
+    <div style="display: inline-block; text-align: center;">
+      <img src="${data.platformUrl}/logo.png" alt="${data.platformName}" style="height: 48px; width: auto; display: block; margin: 0 auto 4px auto;" />
+      <p style="font-size: 12px; color: #555; margin: 0; letter-spacing: 0.5px;">NVYT™ Events &amp; Tickets</p>
+    </div>
+    <h1 style="font-size: 22px; font-weight: bold; margin: 20px 0 4px 0; letter-spacing: 1px;">SERVICE AGREEMENT</h1>
     <p style="font-size: 13px; color: #555; margin: 0;">Event Ticketing and Management Services</p>
   </div>
 
@@ -39,7 +44,10 @@ export function generateServiceAgreementHtml(data: ServiceAgreementData): string
       <td style="width: 50%; vertical-align: top; padding: 16px; border: 1px solid #ddd;">
         <p style="margin: 0 0 8px 0; font-weight: bold; font-size: 13px; color: #555; text-transform: uppercase;">Service Provider</p>
         <p style="margin: 0; font-weight: bold;">${data.platformName}</p>
-        <p style="margin: 0; font-size: 13px; color: #555;">${data.platformUrl}</p>
+        <p style="margin: 0; font-size: 13px;">Joannes L. Noel</p>
+        <p style="margin: 0; font-size: 13px; color: #555;">hello@nvyt.app</p>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: #555;">Sole Proprietor</p>
+        <p style="margin: 0; font-size: 13px; color: #555;">DTI Reg. No.: 7689268</p>
       </td>
       <td style="width: 50%; vertical-align: top; padding: 16px; border: 1px solid #ddd;">
         <p style="margin: 0 0 8px 0; font-weight: bold; font-size: 13px; color: #555; text-transform: uppercase;">Event Organizer</p>
@@ -47,7 +55,7 @@ export function generateServiceAgreementHtml(data: ServiceAgreementData): string
         <p style="margin: 0; font-size: 13px;">${data.organizerName}</p>
         <p style="margin: 0; font-size: 13px; color: #555;">${data.organizerEmail}</p>
         ${data.businessType ? `<p style="margin: 4px 0 0 0; font-size: 13px; color: #555;">${data.businessType}</p>` : ''}
-        ${data.registrationNumber ? `<p style="margin: 0; font-size: 13px; color: #555;">Reg. No.: ${data.registrationNumber}</p>` : ''}
+        ${data.registrationNumber ? `<p style="margin: 0; font-size: 13px; color: #555;">${data.businessTypeRaw === 'sole_proprietor' ? 'DTI' : 'SEC'} Reg. No.: ${data.registrationNumber}</p>` : ''}
       </td>
     </tr>
   </table>
@@ -143,14 +151,18 @@ export function generateServiceAgreementHtml(data: ServiceAgreementData): string
   <table style="width: 100%; margin: 30px 0; border-collapse: collapse;">
     <tr>
       <td style="width: 50%; vertical-align: top; padding: 20px 20px 20px 0;">
-        <p style="margin: 0 0 40px 0; font-weight: bold; font-size: 13px; color: #555; text-transform: uppercase;">Service Provider</p>
+        <p style="margin: 0 0 0 0; font-weight: bold; font-size: 13px; color: #555; text-transform: uppercase;">Service Provider</p>
+        <div style="position: relative; height: 80px; margin-bottom: 0;">
+          <img src="${data.platformUrl}/signature.jpg" alt="Signature" style="position: absolute; bottom: 0; left: 0; height: 80px; width: auto; mix-blend-mode: darken;" />
+        </div>
         <div style="border-bottom: 1px solid #333; width: 250px; margin-bottom: 8px;"></div>
-        <p style="margin: 0; font-weight: bold;">${data.platformName}</p>
-        <p style="margin: 4px 0 0 0; font-size: 13px; color: #555;">Authorized Representative</p>
-        <p style="margin: 20px 0 0 0; font-size: 13px; color: #555;">Date: ___________________</p>
+        <p style="margin: 0; font-weight: bold;">Joannes Lucero Noel</p>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: #555;">NVYT™ Events and Tickets</p>
+        <p style="margin: 20px 0 0 0; font-size: 13px; color: #555;">Date: ${data.agreementDate}</p>
       </td>
       <td style="width: 50%; vertical-align: top; padding: 20px 0 20px 20px;">
-        <p style="margin: 0 0 40px 0; font-weight: bold; font-size: 13px; color: #555; text-transform: uppercase;">Event Organizer</p>
+        <p style="margin: 0 0 0 0; font-weight: bold; font-size: 13px; color: #555; text-transform: uppercase;">Event Organizer</p>
+        <div style="height: 80px;"></div>
         <div style="border-bottom: 1px solid #333; width: 250px; margin-bottom: 8px;"></div>
         <p style="margin: 0; font-weight: bold;">${data.organizerName}</p>
         <p style="margin: 4px 0 0 0; font-size: 13px; color: #555;">${data.businessName}</p>
