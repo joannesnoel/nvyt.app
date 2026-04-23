@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
     eventDate,
     eventLocation: eventRow.location || 'To be announced',
     adminFeeRate,
-    paymentProcessingFee: '3.5',
+    paymentProcessingFee: '1.5-3.5',
     agreementDate: new Date().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
