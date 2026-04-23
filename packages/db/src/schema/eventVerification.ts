@@ -40,6 +40,9 @@ export const documentTypeEnum = pgEnum('document_type', [
   'business_registration', // Generic business registration
   'government_id', // Government-issued ID of owner
   'other', // Other supporting documents
+
+  // Service Agreement
+  'signed_service_agreement', // Signed service agreement uploaded by organizer
 ])
 
 // Country codes that require specific documents

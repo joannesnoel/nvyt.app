@@ -28,6 +28,7 @@ const VALID_DOCUMENT_TYPES = [
   'business_registration',
   'government_id',
   'other',
+  'signed_service_agreement',
 ] as const
 
 export default defineEventHandler(async (event) => {

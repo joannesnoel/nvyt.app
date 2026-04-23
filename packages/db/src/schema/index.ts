@@ -26,6 +26,9 @@ export * from './finance'
 // Event Verification (for paid events)
 export * from './eventVerification'
 
+// Service Agreements
+export * from './serviceAgreements'
+
 // PSGC (Philippine Standard Geographic Code)
 export * from './psgc'
 

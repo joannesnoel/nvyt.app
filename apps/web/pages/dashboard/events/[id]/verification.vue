@@ -343,9 +343,42 @@ async function handleFileUpload(event: Event) {
 
 // Get document type label
 function getDocTypeLabel(type: string) {
+  if (type === 'signed_service_agreement') return 'Signed Service Agreement'
   const option = documentTypeOptions.value.find(o => o.value === type)
   return option?.label || type
 }
+
+// Service Agreement
+const { data: agreementResponse } = await useFetch(
+  () => `/api/v1/events/${eventId.value}/service-agreement`,
+  { watch: [eventId] }
+)
+const serviceAgreement = computed(() => (agreementResponse.value as any)?.data ?? null)
+const showAgreementModal = ref(false)
+
+function printAgreement() {
+  const printWindow = window.open('', '_blank')
+  if (!printWindow || !serviceAgreement.value) return
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Service Agreement</title>
+      <style>
+        @media print { body { margin: 0; } }
+      </style>
+    </head>
+    <body>${serviceAgreement.value.content}</body>
+    </html>
+  `)
+  printWindow.document.close()
+  printWindow.focus()
+  printWindow.print()
+}
+
+const hasSignedAgreement = computed(() => {
+  return verification.value?.documents?.some((d: any) => d.documentType === 'signed_service_agreement')
+})
 
 // Check if document type is already uploaded
 function isDocTypeUploaded(type: string) {
@@ -432,6 +465,52 @@ function isDocTypeUploaded(type: string) {
           </div>
         </UCard>
       </div>
+
+      <!-- Service Agreement (shown whenever published, regardless of verification status) -->
+      <UCard v-if="serviceAgreement" class="mb-6">
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-white">Service Agreement</h2>
+            <UBadge v-if="hasSignedAgreement" color="green" variant="soft" size="xs">Signed Copy Uploaded</UBadge>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            A service agreement has been prepared for this event. Please review, print, sign, and upload the signed copy.
+          </p>
+
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              color="primary"
+              variant="soft"
+              icon="i-heroicons-eye"
+              @click="showAgreementModal = true"
+            >
+              View Agreement
+            </UButton>
+            <UButton
+              color="gray"
+              variant="soft"
+              icon="i-heroicons-printer"
+              @click="printAgreement"
+            >
+              Print
+            </UButton>
+            <UButton
+              v-if="canEdit && hasBusinessInfo"
+              :color="hasSignedAgreement ? 'green' : 'primary'"
+              :variant="hasSignedAgreement ? 'soft' : 'outline'"
+              :icon="hasSignedAgreement ? 'i-heroicons-check-circle' : 'i-heroicons-arrow-up-tray'"
+              :loading="isUploading && selectedDocumentType === 'signed_service_agreement'"
+              :disabled="isUploading"
+              @click="triggerFileUpload('signed_service_agreement')"
+            >
+              {{ hasSignedAgreement ? 'Re-upload Signed Copy' : 'Upload Signed Copy' }}
+            </UButton>
+          </div>
+        </div>
+      </UCard>
 
       <!-- Form / Pending / Rejected -->
       <div v-else class="space-y-6">
@@ -643,4 +722,33 @@ function isDocTypeUploaded(type: string) {
       </div>
     </div>
   </div>
+
+  <!-- Service Agreement Preview Modal -->
+  <UModal v-model="showAgreementModal" :ui="{ width: 'max-w-4xl' }">
+    <UCard>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Service Agreement</h3>
+          <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showAgreementModal = false" />
+        </div>
+      </template>
+
+      <div v-if="serviceAgreement" class="overflow-auto max-h-[70vh]">
+        <div v-html="serviceAgreement.content" />
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton color="gray" variant="soft" @click="showAgreementModal = false">Close</UButton>
+          <UButton
+            color="primary"
+            icon="i-heroicons-printer"
+            @click="printAgreement"
+          >
+            Print
+          </UButton>
+        </div>
+      </template>
+    </UCard>
+  </UModal>
 </template>
