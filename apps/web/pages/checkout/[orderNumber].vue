@@ -435,7 +435,7 @@ function goBack() {
     <!-- Mobile pay button (fixed at bottom) -->
     <div
       v-if="orderData && !loading && !loadError"
-      class="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4 safe-area-pb"
+      class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4 safe-area-pb"
     >
       <div class="flex items-center justify-between mb-3">
         <span class="text-sm text-gray-600 dark:text-gray-400">Total</span>

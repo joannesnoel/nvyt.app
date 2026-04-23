@@ -890,7 +890,7 @@ function getTierTypeColor(tierType: string) {
             <RichTextEditor
               v-model="formData.description"
               placeholder="What's included with this ticket?"
-              :max-length="500"
+              :max-length="1000"
             />
           </UFormGroup>
 

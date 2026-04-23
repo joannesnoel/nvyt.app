@@ -11,8 +11,6 @@ const toast = useToast()
 const { user } = useAuth()
 const { trackPurchase } = useAnalytics()
 
-// Track if we've already fired the purchase event (prevent duplicates)
-const hasFiredPurchaseEvent = ref(false)
 const orderNumber = computed(() => route.params.orderNumber as string)
 const token = computed(() => route.query.token as string | undefined)
 
@@ -90,9 +88,8 @@ watchEffect(() => {
 // Fetch registration status when order is paid
 watch(() => order.value?.paymentStatus, async (paymentStatus) => {
   if (paymentStatus === 'paid') {
-    // Track purchase event in Google Analytics (only once)
-    if (!hasFiredPurchaseEvent.value && order.value) {
-      hasFiredPurchaseEvent.value = true
+    // Track purchase event in Google Analytics
+    if (import.meta.client && order.value) {
       trackPurchase({
         transactionId: order.value.orderNumber,
         value: parseFloat(order.value.totalAmount),
