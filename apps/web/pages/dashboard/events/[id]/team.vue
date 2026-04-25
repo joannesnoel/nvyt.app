@@ -34,6 +34,7 @@ const invitePermissions = ref({
   canManageAttendees: false,
   canViewTickets: false,
   canViewAnalytics: true,
+  canManageFinances: false,
 })
 const isInviting = ref(false)
 
@@ -48,6 +49,7 @@ const editPermissions = ref({
   canManageAttendees: false,
   canViewTickets: false,
   canViewAnalytics: false,
+  canManageFinances: false,
 })
 const isUpdating = ref(false)
 
@@ -64,6 +66,7 @@ const permissions = [
   { key: 'canManageAttendees', label: 'Manage Attendees', description: 'Can approve, reject, or remove attendees' },
   { key: 'canViewTickets', label: 'View Tickets', description: 'Can view ticket QR codes and download tickets' },
   { key: 'canViewAnalytics', label: 'View Analytics', description: 'Can view event statistics and reports' },
+  { key: 'canManageFinances', label: 'Manage Finances', description: 'Can view earnings and request payouts' },
 ] as const
 
 function openInviteModal() {
@@ -76,6 +79,7 @@ function openInviteModal() {
     canManageAttendees: false,
     canViewTickets: false,
     canViewAnalytics: true,
+    canManageFinances: false,
   }
   showInviteModal.value = true
 }
@@ -120,6 +124,7 @@ function openEditModal(collaborator: any) {
     canManageAttendees: collaborator.canManageAttendees,
     canViewTickets: collaborator.canViewTickets,
     canViewAnalytics: collaborator.canViewAnalytics,
+    canManageFinances: collaborator.canManageFinances,
   }
   showEditModal.value = true
 }
@@ -198,6 +203,7 @@ function getPermissionBadges(collaborator: any) {
   if (collaborator.canCheckIn) badges.push('Check-in')
   if (collaborator.canManageAttendees) badges.push('Attendees')
   if (collaborator.canViewAnalytics) badges.push('Analytics')
+  if (collaborator.canManageFinances) badges.push('Finances')
   return badges
 }
 </script>

@@ -75,6 +75,13 @@ const eventNavGroups = computed(() => {
         can('canEdit') ? { label: 'FAQs', icon: 'i-heroicons-question-mark-circle', to: `/dashboard/events/${id}/faqs` } : null,
       ]
     },
+    {
+      label: 'Finances',
+      items: [
+        can('canManageFinances') ? { label: 'Earnings', icon: 'i-heroicons-chart-bar', to: '/dashboard/earnings' } : null,
+        can('canManageFinances') ? { label: 'Payouts', icon: 'i-heroicons-banknotes', to: '/dashboard/payouts' } : null,
+      ]
+    },
   ]
 
   // Filter out null items and empty groups

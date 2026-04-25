@@ -1,5 +1,5 @@
 import { eq, sql, desc, and, inArray } from 'drizzle-orm'
-import { wallets, transactions, events } from '@nvyt/db'
+import { wallets, transactions, events, orders } from '@nvyt/db'
 import { getOrCreateWallet } from '~/server/utils/wallet'
 
 export default defineEventHandler(async (event) => {
@@ -18,36 +18,32 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get earnings breakdown by event
-  // Now we only have payment_received and refund transactions
-  // Platform fees are stored in the 'fee' field of payment_received transactions
+  // Get earnings breakdown by event — calculated from orders (source of truth)
   const earningsByEvent = await db
     .select({
-      eventId: transactions.eventId,
+      eventId: orders.eventId,
       eventTitle: events.title,
       eventDate: events.startDate,
-      // Gross = sum of amounts for payment_received transactions
-      grossAmount: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'payment_received' THEN ${transactions.amount} ELSE 0 END), 0)`,
-      // Platform fees = sum of fee field for payment_received transactions
-      platformFees: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'payment_received' THEN ${transactions.fee} ELSE 0 END), 0)`,
-      // Refunds = sum of amounts for refund transactions (absolute value)
-      refunds: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'refund' THEN ABS(${transactions.amount}) ELSE 0 END), 0)`,
-      // Net = sum of netAmount for all transactions
-      netEarnings: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} IN ('payment_received', 'refund') THEN ${transactions.netAmount} ELSE 0 END), 0)`,
-      transactionCount: sql<number>`COUNT(CASE WHEN ${transactions.type} IN ('payment_received', 'refund') THEN 1 END)`,
+      grossAmount: sql<string>`COALESCE(SUM(${orders.totalAmount}::numeric), 0)`,
+      platformFees: sql<string>`COALESCE(SUM(${orders.adminFee}::numeric), 0)`,
+      processingFees: sql<string>`COALESCE(SUM(${orders.processingFee}::numeric), 0)`,
+      totalDiscounts: sql<string>`COALESCE(SUM(${orders.discountAmount}::numeric), 0)`,
+      netEarnings: sql<string>`COALESCE(SUM(${orders.subtotalAmount}::numeric - ${orders.discountAmount}::numeric), 0)`,
+      orderCount: sql<number>`COUNT(*)::int`,
     })
-    .from(transactions)
-    .innerJoin(events, eq(transactions.eventId, events.id))
+    .from(orders)
+    .innerJoin(events, eq(orders.eventId, events.id))
     .where(
       and(
-        eq(transactions.walletId, wallet.id),
-        inArray(transactions.type, ['payment_received', 'refund'])
+        eq(events.organizerId, userId),
+        eq(orders.paymentStatus, 'paid'),
+        sql`${orders.paymentMethod} is distinct from 'external'`
       )
     )
-    .groupBy(transactions.eventId, events.title, events.startDate)
+    .groupBy(orders.eventId, events.title, events.startDate)
     .orderBy(desc(events.startDate))
 
-  // Get recent transactions (exclude platform_fee type as we no longer create them)
+  // Get recent transactions for activity log (still from transactions table)
   const recentTransactions = await db
     .select({
       id: transactions.id,
@@ -63,16 +59,18 @@ export default defineEventHandler(async (event) => {
     })
     .from(transactions)
     .leftJoin(events, eq(transactions.eventId, events.id))
+    .leftJoin(orders, eq(transactions.orderId, orders.id))
     .where(
       and(
         eq(transactions.walletId, wallet.id),
-        inArray(transactions.type, ['payment_received', 'refund', 'payout'])
+        inArray(transactions.type, ['payment_received', 'refund', 'payout']),
+        sql`(${orders.paymentMethod} is distinct from 'external' OR ${transactions.type} = 'payout')`
       )
     )
     .orderBy(desc(transactions.createdAt))
     .limit(10)
 
-  // Calculate totals
+  // Calculate totals from order-based earnings
   const totals = {
     grossEarnings: 0,
     platformFees: 0,
@@ -83,7 +81,6 @@ export default defineEventHandler(async (event) => {
   for (const row of earningsByEvent) {
     totals.grossEarnings += parseFloat(row.grossAmount || '0')
     totals.platformFees += parseFloat(row.platformFees || '0')
-    totals.refunds += parseFloat(row.refunds || '0')
     totals.netEarnings += parseFloat(row.netEarnings || '0')
   }
 
@@ -102,9 +99,9 @@ export default defineEventHandler(async (event) => {
       eventDate: e.eventDate,
       grossAmount: e.grossAmount,
       platformFees: e.platformFees,
-      refunds: e.refunds,
+      refunds: '0',
       netEarnings: e.netEarnings,
-      transactionCount: e.transactionCount,
+      transactionCount: e.orderCount,
     })),
     recentTransactions,
   })

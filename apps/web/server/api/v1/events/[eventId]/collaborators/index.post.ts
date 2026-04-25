@@ -97,6 +97,7 @@ export default defineEventHandler(async (event) => {
       canManageAttendees: data.canManageAttendees,
       canViewTickets: data.canViewTickets,
       canViewAnalytics: data.canViewAnalytics,
+      canManageFinances: data.canManageFinances,
       invitedBy: user.id,
     })
     .returning()
@@ -110,6 +111,7 @@ export default defineEventHandler(async (event) => {
   if (data.canManageAttendees) permissions.push('Manage attendees')
   if (data.canViewTickets) permissions.push('View tickets')
   if (data.canViewAnalytics) permissions.push('View analytics')
+  if (data.canManageFinances) permissions.push('Manage finances (earnings & payouts)')
 
   // Build accept URL
   const appUrl = config.public?.appUrl || 'https://nvyt.app'

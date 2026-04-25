@@ -64,6 +64,7 @@ export default defineEventHandler(async (event) => {
   if (data.canManageAttendees !== undefined) updateData.canManageAttendees = data.canManageAttendees
   if (data.canViewTickets !== undefined) updateData.canViewTickets = data.canViewTickets
   if (data.canViewAnalytics !== undefined) updateData.canViewAnalytics = data.canViewAnalytics
+  if (data.canManageFinances !== undefined) updateData.canManageFinances = data.canManageFinances
 
   // Update the collaborator
   const [updated] = await db

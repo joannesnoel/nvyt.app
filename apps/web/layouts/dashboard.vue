@@ -33,6 +33,15 @@ const userMenuItems = computed(() => [
     disabled: true,
   }],
   [{
+    label: 'Earnings',
+    icon: 'i-heroicons-chart-bar',
+    to: '/dashboard/earnings',
+  }, {
+    label: 'Payouts',
+    icon: 'i-heroicons-banknotes',
+    to: '/dashboard/payouts',
+  }],
+  [{
     label: 'Settings',
     icon: 'i-heroicons-cog-6-tooth',
     to: '/settings',

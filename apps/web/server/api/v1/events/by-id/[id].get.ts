@@ -191,6 +191,7 @@ export default defineEventHandler(async (event) => {
         canManageAttendees: collaborator.canManageAttendees,
         canViewTickets: collaborator.canViewTickets,
         canViewAnalytics: collaborator.canViewAnalytics,
+        canManageFinances: collaborator.canManageFinances,
       }
     }
   }

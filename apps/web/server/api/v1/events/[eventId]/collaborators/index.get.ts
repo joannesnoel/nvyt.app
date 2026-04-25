@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
       canManageAttendees: eventCollaborators.canManageAttendees,
       canViewTickets: eventCollaborators.canViewTickets,
       canViewAnalytics: eventCollaborators.canViewAnalytics,
+      canManageFinances: eventCollaborators.canManageFinances,
       invitedBy: eventCollaborators.invitedBy,
       invitedAt: eventCollaborators.invitedAt,
       acceptedAt: eventCollaborators.acceptedAt,

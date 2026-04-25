@@ -10,6 +10,7 @@ export interface EventPermissions {
   canManageAttendees: boolean
   canViewTickets: boolean
   canViewAnalytics: boolean
+  canManageFinances: boolean
 }
 
 export interface EventAccessResult {
@@ -95,6 +96,7 @@ export async function requireEventAccess(
     canManageAttendees: collaborator.canManageAttendees,
     canViewTickets: collaborator.canViewTickets,
     canViewAnalytics: collaborator.canViewAnalytics,
+    canManageFinances: collaborator.canManageFinances,
   }
 
   // Check specific permission if required
@@ -164,6 +166,7 @@ function formatPermission(permission: EventPermission): string {
     canManageAttendees: 'manage attendees',
     canViewTickets: 'view tickets',
     canViewAnalytics: 'view analytics',
+    canManageFinances: 'manage finances for this event',
   }
   return formats[permission] || permission
 }
