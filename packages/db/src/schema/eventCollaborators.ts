@@ -24,6 +24,7 @@ export const eventCollaborators = pgTable('event_collaborators', {
   canManageAttendees: boolean('can_manage_attendees').default(false).notNull(),
   canViewTickets: boolean('can_view_tickets').default(false).notNull(),
   canViewAnalytics: boolean('can_view_analytics').default(true).notNull(),
+  canManageFinances: boolean('can_manage_finances').default(false).notNull(),
 
   // Invitation tracking
   invitedBy: uuid('invited_by')
@@ -65,6 +66,7 @@ export type EventPermission =
   | 'canManageAttendees'
   | 'canViewTickets'
   | 'canViewAnalytics'
+  | 'canManageFinances'
 
 export const ALL_PERMISSIONS: Record<EventPermission, boolean> = {
   canEdit: true,
@@ -74,4 +76,5 @@ export const ALL_PERMISSIONS: Record<EventPermission, boolean> = {
   canManageAttendees: true,
   canViewTickets: true,
   canViewAnalytics: true,
+  canManageFinances: true,
 }

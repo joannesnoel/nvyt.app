@@ -330,6 +330,13 @@
       "when": 1776906987528,
       "tag": "0046_adorable_ma_gnuci",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1777123780779,
+      "tag": "0047_strong_redwing",
+      "breakpoints": true
     }
   ]
 }

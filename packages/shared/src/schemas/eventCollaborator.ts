@@ -10,6 +10,7 @@ export const inviteCollaboratorSchema = z.object({
   canManageAttendees: z.boolean().optional().default(false),
   canViewTickets: z.boolean().optional().default(false),
   canViewAnalytics: z.boolean().optional().default(true),
+  canManageFinances: z.boolean().optional().default(false),
 })
 
 // Update collaborator permissions
@@ -21,6 +22,7 @@ export const updateCollaboratorSchema = z.object({
   canManageAttendees: z.boolean().optional(),
   canViewTickets: z.boolean().optional(),
   canViewAnalytics: z.boolean().optional(),
+  canManageFinances: z.boolean().optional(),
 })
 
 // Types

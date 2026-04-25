@@ -1,0 +1,1 @@
+ALTER TABLE "event_collaborators" ADD COLUMN "can_manage_finances" boolean DEFAULT false NOT NULL;
