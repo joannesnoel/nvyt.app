@@ -101,6 +101,7 @@ export default defineEventHandler(async (event) => {
     .where(
       and(
         eq(orders.paymentStatus, 'paid'),
+        sql`${orders.paymentMethod} is distinct from 'external'`,
         sql`NOT EXISTS (
           SELECT 1 FROM transactions t
           WHERE t.order_id = ${orders.id} AND t.type = 'payment_received'

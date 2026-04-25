@@ -1,5 +1,5 @@
 import { eq, and, sql } from 'drizzle-orm'
-import { wallets, transactions, type NewTransaction } from '@nvyt/db'
+import { wallets, transactions, orders, type NewTransaction } from '@nvyt/db'
 
 // Processing fee constants (charged to buyer)
 export const PROCESSING_FEE_RATE = 0.035 // 3.5% for PayMongo (GCash, Maya, etc.)
@@ -244,8 +244,23 @@ export async function processPaymentReceived(params: {
 }) {
   const { userId, orderId, eventId, grossAmount, totalFees, netAmount, eventTitle } = params
 
-  // Guard against duplicate transactions for the same order
   const db = useDatabase()
+
+  // External payments (cash, manual bank transfer, etc.) are collected by the organizer
+  // off-platform and must not flow through the platform wallet.
+  const [orderRecord] = await db
+    .select({ paymentMethod: orders.paymentMethod })
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1)
+
+  if (orderRecord?.paymentMethod === 'external') {
+    console.log(`[Wallet] Skipping payment_received for external-payment order ${orderId}`)
+    const wallet = await getOrCreateWallet(userId)
+    return { wallet, grossAmount, totalFees, netAmount }
+  }
+
+  // Guard against duplicate transactions for the same order
   const [existing] = await db
     .select({ id: transactions.id })
     .from(transactions)

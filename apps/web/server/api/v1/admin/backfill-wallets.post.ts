@@ -28,7 +28,12 @@ export default defineEventHandler(async (event) => {
     })
     .from(orders)
     .innerJoin(events, eq(orders.eventId, events.id))
-    .where(eq(orders.paymentStatus, 'paid'))
+    .where(
+      and(
+        eq(orders.paymentStatus, 'paid'),
+        sql`${orders.paymentMethod} is distinct from 'external'`
+      )
+    )
     .orderBy(orders.createdAt)
 
   console.log(`[Backfill] Found ${paidOrders.length} paid orders`)
