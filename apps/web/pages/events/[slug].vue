@@ -1325,7 +1325,7 @@ onBeforeUnmount(() => {
       <div v-else>
         <!-- Event Header -->
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
-          <div>
+          <div class="min-w-0 flex-1">
             <div v-if="event.visibility === 'private' || event.status === 'cancelled'" class="flex items-center gap-2 mb-2">
               <UBadge v-if="event.visibility === 'private'" color="gray" variant="soft">
                 <UIcon name="i-heroicons-lock-closed" class="w-3 h-3 mr-1" />
@@ -1335,7 +1335,7 @@ onBeforeUnmount(() => {
                 Cancelled
               </UBadge>
             </div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white break-words">
               {{ event.title }}
             </h1>
             <p class="text-gray-600 dark:text-gray-400 mt-2">
@@ -1344,7 +1344,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col gap-2">
+          <div class="flex flex-col gap-2 md:flex-shrink-0 md:w-64 [&_button]:whitespace-nowrap">
             <!-- Organizer Actions -->
             <template v-if="isOrganizer">
               <UButton
