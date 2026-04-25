@@ -7,10 +7,14 @@ import { wallets, transactions, orders, events } from '@nvyt/db'
  * 1. Delete `payment_received` transactions whose order has paymentMethod='external'.
  *    External payments are collected by the organizer off-platform and must not
  *    flow through the platform wallet.
- * 2. Insert missing `payment_received` transactions for paid, non-external orders
- *    that have no ledger entry.
- * 3. Recompute `wallets.totalEarnings` and `wallets.availableBalance` for every
- *    affected wallet from the cleaned ledger:
+ * 2. Deduplicate `payment_received` rows per order (keep the oldest, delete the rest).
+ * 3. Fix `amount`, `fee`, and `netAmount` on every remaining `payment_received` row
+ *    to match the source order: amount=totalAmount, fee=totalFees,
+ *    netAmount=(subtotalAmount - discountAmount).
+ * 4. Insert missing `payment_received` rows for paid, non-external orders that
+ *    have no ledger entry.
+ * 5. Recompute `wallets.totalEarnings` and `wallets.availableBalance` for every
+ *    wallet touched by steps 1–4:
  *      totalEarnings    = sum(payment_received.netAmount) - sum(refund.netAmount)
  *      availableBalance = totalEarnings - sum(payout.netAmount, completed)
  *
@@ -47,7 +51,62 @@ export default defineEventHandler(async (event) => {
     )
   const staleSum = staleRows.reduce((acc, r) => acc + Number(r.netAmount), 0)
 
-  // 2) Missing: paid non-external orders without a payment_received row
+  // 2) Duplicates: per-order extra payment_received rows (keep oldest)
+  const duplicates = await db.execute<{
+    id: string
+    wallet_id: string
+    net_amount: string
+  }>(sql`
+    SELECT id, wallet_id, net_amount FROM (
+      SELECT id, wallet_id, net_amount,
+             row_number() OVER (PARTITION BY order_id ORDER BY created_at ASC) AS rn
+      FROM transactions
+      WHERE type = 'payment_received' AND order_id IS NOT NULL
+    ) sub
+    WHERE rn > 1
+  `)
+  const duplicateRows = (Array.isArray(duplicates)
+    ? duplicates
+    : (duplicates as any).rows ?? []) as Array<{
+    id: string
+    wallet_id: string
+    net_amount: string
+  }>
+
+  // 3) Mismatched: payment_received rows whose stored values disagree with the order
+  //    (excluding external orders, which step 1 will delete; excluding duplicates,
+  //     which step 2 will delete)
+  const mismatched = await db
+    .select({
+      txId: transactions.id,
+      walletId: transactions.walletId,
+      txAmount: transactions.amount,
+      txFee: transactions.fee,
+      txNetAmount: transactions.netAmount,
+      orderId: orders.id,
+      orderTotalAmount: orders.totalAmount,
+      orderTotalFees: orders.totalFees,
+      orderSubtotal: orders.subtotalAmount,
+      orderDiscount: orders.discountAmount,
+    })
+    .from(transactions)
+    .innerJoin(orders, eq(orders.id, transactions.orderId))
+    .where(
+      and(
+        eq(transactions.type, 'payment_received'),
+        sql`${orders.paymentMethod} is distinct from 'external'`
+      )
+    )
+  const mismatchedToFix = mismatched.filter((m) => {
+    const truthNet = Number(m.orderSubtotal) - Number(m.orderDiscount)
+    return (
+      Number(m.txAmount) !== Number(m.orderTotalAmount) ||
+      Number(m.txFee) !== Number(m.orderTotalFees) ||
+      Number(m.txNetAmount) !== truthNet
+    )
+  })
+
+  // 4) Missing: paid non-external orders without a payment_received row
   const missingRows = await db
     .select({
       id: orders.id,
@@ -77,33 +136,71 @@ export default defineEventHandler(async (event) => {
     0
   )
 
-  if (dryRun || (staleRows.length === 0 && missingRows.length === 0)) {
+  const nothingToDo =
+    staleRows.length === 0 &&
+    duplicateRows.length === 0 &&
+    mismatchedToFix.length === 0 &&
+    missingRows.length === 0
+
+  if (dryRun || nothingToDo) {
     return successResponse({
       dryRun,
       staleCount: staleRows.length,
       staleNetSum: staleSum,
+      duplicateCount: duplicateRows.length,
+      mismatchedCount: mismatchedToFix.length,
       missingCount: missingRows.length,
       missingNetSum: missingSum,
       walletsRecomputed: 0,
-      message:
-        staleRows.length === 0 && missingRows.length === 0
-          ? 'Ledger already in sync — nothing to do.'
-          : 'Dry run — no changes applied.',
+      message: nothingToDo
+        ? 'Ledger already in sync — nothing to do.'
+        : 'Dry run — no changes applied.',
     })
   }
 
   let deleted = 0
+  let dedupedDeleted = 0
+  let updated = 0
   let inserted = 0
   let walletsRecomputed = 0
 
-  // 1) Delete stale external rows
+  // Step 1) Delete stale external rows
   if (staleRows.length > 0) {
     const ids = staleRows.map((r) => r.id)
     await db.delete(transactions).where(inArray(transactions.id, ids))
     deleted = ids.length
   }
 
-  // 2) Insert missing payment_received rows; ensure each organizer has a wallet
+  // Step 2) Delete duplicate payment_received rows
+  if (duplicateRows.length > 0) {
+    const ids = duplicateRows.map((r) => r.id)
+    await db.delete(transactions).where(inArray(transactions.id, ids))
+    dedupedDeleted = ids.length
+  }
+
+  // Step 3) Fix mismatched rows. Only update those whose order is NOT external
+  //         (already deleted) and whose tx wasn't a duplicate (already deleted).
+  const deletedIdSet = new Set([
+    ...staleRows.map((r) => r.id),
+    ...duplicateRows.map((r) => r.id),
+  ])
+  for (const m of mismatchedToFix) {
+    if (deletedIdSet.has(m.txId)) continue
+    const truthNet = (Number(m.orderSubtotal) - Number(m.orderDiscount)).toFixed(2)
+    const truthFee = Number(m.orderTotalFees).toFixed(2)
+    const truthAmount = Number(m.orderTotalAmount).toFixed(2)
+    await db
+      .update(transactions)
+      .set({
+        amount: truthAmount,
+        fee: truthFee,
+        netAmount: truthNet,
+      })
+      .where(eq(transactions.id, m.txId))
+    updated++
+  }
+
+  // Step 4) Insert missing payment_received rows; ensure each organizer has a wallet
   const ensuredWallets = new Map<string, string>()
   for (const o of missingRows) {
     if (!o.organizerId) continue
@@ -153,9 +250,11 @@ export default defineEventHandler(async (event) => {
     inserted++
   }
 
-  // 3) Recompute affected wallets
+  // Step 5) Recompute every wallet touched by any of the above steps
   const affected = new Set<string>([
     ...staleRows.map((r) => r.walletId),
+    ...duplicateRows.map((r) => r.wallet_id),
+    ...mismatchedToFix.map((r) => r.walletId),
     ...Array.from(ensuredWallets.values()),
   ])
 
@@ -219,6 +318,10 @@ export default defineEventHandler(async (event) => {
     staleCount: staleRows.length,
     staleNetSum: staleSum,
     deleted,
+    duplicateCount: duplicateRows.length,
+    dedupedDeleted,
+    mismatchedCount: mismatchedToFix.length,
+    updated,
     missingCount: missingRows.length,
     missingNetSum: missingSum,
     inserted,
