@@ -132,6 +132,14 @@ export const orders = pgTable('orders', {
   paymentStatus: paymentStatusEnum('payment_status').default('pending').notNull(),
   paidAt: timestamp('paid_at', { withTimezone: true }),
 
+  // Refund tracking
+  refundedAmount: decimal('refunded_amount', { precision: 10, scale: 2 }), // null if not refunded; amount actually returned to buyer (may be < totalAmount)
+  refundedAt: timestamp('refunded_at', { withTimezone: true }),
+  refundReason: text('refund_reason'),
+  refundedBy: uuid('refunded_by').references(() => users.id, { onDelete: 'set null' }),
+  paymongoRefundId: text('paymongo_refund_id'),
+  paypalRefundId: text('paypal_refund_id'),
+
   // Customer info
   customerName: text('customer_name').notNull(),
   customerEmail: text('customer_email').notNull(),
