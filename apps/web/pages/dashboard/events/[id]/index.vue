@@ -91,61 +91,144 @@ const ticketTypeColors = computed(() => {
   return ['#6366f1']
 })
 
-const registrationChartOptions = computed(() => {
-  const hasTicketTypes = isTicketMode.value && analytics.value?.registrations?.byTicketType?.length > 0
-
-  return {
-    chart: {
-      type: 'bar',
-      height: 200,
-      toolbar: { show: false },
-      zoom: { enabled: false },
-      background: 'transparent',
-      stacked: hasTicketTypes,
-    },
-    colors: ticketTypeColors.value,
-    plotOptions: {
-      bar: {
-        borderRadius: hasTicketTypes ? 2 : 3,
-        columnWidth: '70%',
-      },
-    },
-    dataLabels: { enabled: false },
-    legend: {
-      show: hasTicketTypes,
-      position: 'top',
-      horizontalAlign: 'left',
-      fontSize: '11px',
-      labels: {
-        colors: isDark.value ? '#9ca3af' : '#6b7280',
-      },
-      markers: {
-        size: 8,
-        shape: 'circle',
-      },
-    },
-    xaxis: {
-      categories: dateCategories.value,
-      labels: {
-        show: true,
-        style: { colors: isDark.value ? '#9ca3af' : '#6b7280', fontSize: '10px' },
-      },
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-    },
-    yaxis: {
-      show: false,
-    },
-    grid: {
-      show: false,
-    },
-    tooltip: {
-      shared: true,
-      intersect: false,
-      theme: isDark.value ? 'dark' : 'light',
-    },
-  }
+// Period totals per ticket type (for donut)
+const ticketTypeTotals = computed<{ name: string; total: number; color: string }[]>(() => {
+  const byTicketType = analytics.value?.registrations?.byTicketType
+  if (!byTicketType?.length) return []
+  return byTicketType.map((tt: { name: string; color: string; data: { count: number }[] }) => ({
+    name: tt.name,
+    color: tt.color,
+    total: tt.data.reduce((sum, d) => sum + (d.count || 0), 0),
+  }))
 })
+
+const ticketTypeDonutOptions = computed(() => ({
+  chart: {
+    type: 'donut',
+    background: 'transparent',
+  },
+  labels: ticketTypeTotals.value.map(t => t.name),
+  colors: ticketTypeTotals.value.map(t => t.color),
+  legend: {
+    position: 'bottom' as const,
+    fontSize: '11px',
+    labels: {
+      colors: isDark.value ? '#9ca3af' : '#6b7280',
+    },
+  },
+  dataLabels: { enabled: false },
+  tooltip: {
+    custom: ({ series, seriesIndex, w }: { series: number[]; seriesIndex: number; w: { config: { labels: string[]; colors: string[] } } }) => {
+      const label = w.config.labels[seriesIndex]
+      const value = series[seriesIndex]
+      const color = w.config.colors[seriesIndex]
+      const bg = isDark.value ? '#1f2937' : '#ffffff'
+      const text = isDark.value ? '#f3f4f6' : '#111827'
+      const border = isDark.value ? '#374151' : '#e5e7eb'
+      return `<div style="background:${bg};color:${text};border:1px solid ${border};padding:6px 10px;border-radius:6px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;"></span>
+        <strong>${label}</strong>: ${value}
+      </div>`
+    },
+  },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '55%',
+      },
+    },
+  },
+  stroke: { width: 0 },
+}))
+
+const ticketTypeDonutSeries = computed(() => ticketTypeTotals.value.map(t => t.total))
+
+const hasTicketTypeData = computed(() => ticketTypeDonutSeries.value.some(v => v > 0))
+
+// RSVP daily bar chart (non-ticket mode only)
+const rsvpDailySeries = computed(() => [{
+  name: 'RSVPs',
+  data: analytics.value?.registrations?.daily?.map((r: { count: number }) => r.count) || [],
+}])
+
+const hasRsvpDailyData = computed(() => rsvpDailySeries.value[0].data.some((v: number) => v > 0))
+
+const rsvpDailyOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    height: 200,
+    toolbar: { show: false },
+    zoom: { enabled: false },
+    background: 'transparent',
+  },
+  colors: ['#6366f1'],
+  plotOptions: {
+    bar: { borderRadius: 3, columnWidth: '70%' },
+  },
+  dataLabels: { enabled: false },
+  xaxis: {
+    categories: dateCategories.value,
+    labels: {
+      show: true,
+      style: { colors: isDark.value ? '#9ca3af' : '#6b7280', fontSize: '10px' },
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: { show: false },
+  grid: { show: false },
+  tooltip: { theme: isDark.value ? 'dark' : 'light' },
+}))
+
+// Daily revenue bar chart
+const revenueDailySeries = computed(() => [{
+  name: 'Revenue',
+  data: analytics.value?.revenue?.daily?.map((r: { amount: number }) => r.amount) || [],
+}])
+
+const hasRevenueDailyData = computed(() => revenueDailySeries.value[0].data.some((v: number) => v > 0))
+
+const revenueDailyOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    height: 260,
+    toolbar: { show: false },
+    zoom: { enabled: false },
+    background: 'transparent',
+  },
+  colors: ['#10b981'],
+  plotOptions: {
+    bar: {
+      borderRadius: 3,
+      columnWidth: '70%',
+    },
+  },
+  dataLabels: { enabled: false },
+  xaxis: {
+    categories: dateCategories.value,
+    labels: {
+      show: true,
+      style: { colors: isDark.value ? '#9ca3af' : '#6b7280', fontSize: '10px' },
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: {
+    labels: {
+      style: { colors: isDark.value ? '#9ca3af' : '#6b7280', fontSize: '10px' },
+      formatter: (val: number) => formatCurrency(val),
+    },
+  },
+  grid: {
+    borderColor: isDark.value ? '#374151' : '#e5e7eb',
+    strokeDashArray: 3,
+    xaxis: { lines: { show: false } },
+  },
+  tooltip: {
+    theme: isDark.value ? 'dark' : 'light',
+    y: { formatter: (val: number) => formatCurrency(val) },
+  },
+}))
 
 // Payment method display names and colors
 const paymentMethodLabels: Record<string, string> = {
@@ -219,35 +302,11 @@ const revenueChartOptions = computed(() => {
   }
 })
 
-const registrationChartSeries = computed(() => {
-  // For ticket mode with multiple ticket types, show stacked bars
-  const byTicketType = analytics.value?.registrations?.byTicketType
-  if (isTicketMode.value && byTicketType && byTicketType.length > 0) {
-    return byTicketType.map((tt: { name: string; data: { date: string; count: number }[] }) => ({
-      name: tt.name,
-      data: tt.data.map((r: { date: string; count: number }) => r.count),
-    }))
-  }
-
-  // Fallback to single series for RSVP mode or if no ticket types
-  return [{
-    name: isTicketMode.value ? 'Tickets' : 'RSVPs',
-    data: analytics.value?.registrations?.daily?.map((r: { date: string; count: number }) => r.count) || [],
-  }]
-})
-
 const revenueChartSeries = computed(() =>
   revenueByMethod.value.map((r: { amount: number }) => r.amount)
 )
 
-// Check if registration chart has any data to display
-const hasRegistrationData = computed(() => {
-  return registrationChartSeries.value.some(series =>
-    series.data.some((val: number) => val > 0)
-  )
-})
-
-// Check if revenue chart has any data to display
+// Check if revenue (by method) chart has any data to display
 const hasRevenueData = computed(() => {
   return revenueChartSeries.value.some((val: number) => val > 0)
 })
@@ -586,12 +645,41 @@ function getStatusColor(status: string) {
 
             <!-- Analytics Charts -->
             <div class="grid sm:grid-cols-2 gap-6">
-              <!-- Registrations Chart -->
+              <!-- Daily Revenue spans full row (ticket mode only) -->
+              <UCard v-if="isTicketMode" class="sm:col-span-2">
+                <template #header>
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h2 class="font-semibold text-gray-900 dark:text-white">Revenue</h2>
+                      <p class="text-2xl font-bold text-emerald-600 mt-1">
+                        {{ formatCurrency(analytics?.revenue?.periodTotal ?? 0) }}
+                      </p>
+                    </div>
+                    <p class="text-xs text-gray-500">Last {{ chartPeriod }}d</p>
+                  </div>
+                </template>
+
+                <div v-if="hasRevenueDailyData">
+                  <ClientOnly>
+                    <ApexChart
+                      type="bar"
+                      height="260"
+                      :options="revenueDailyOptions"
+                      :series="revenueDailySeries"
+                    />
+                  </ClientOnly>
+                </div>
+                <div v-else class="flex items-center justify-center h-40">
+                  <p class="text-sm text-gray-500">No revenue in last {{ chartPeriod }} days</p>
+                </div>
+              </UCard>
+
+              <!-- Registrations: donut by ticket type for ticket-mode, daily bar for RSVP -->
               <UCard>
                 <template #header>
                   <div class="flex items-center justify-between">
                     <h2 class="font-semibold text-gray-900 dark:text-white">
-                      {{ isTicketMode ? 'Ticket Sales' : 'RSVPs' }}
+                      {{ isTicketMode ? 'Tickets by Type' : 'RSVPs' }}
                     </h2>
                     <div class="text-right">
                       <p class="text-2xl font-bold text-indigo-600">
@@ -609,31 +697,49 @@ function getStatusColor(status: string) {
                         <p class="text-sm text-gray-500">Loading...</p>
                       </div>
                     </template>
-                    <ApexChart
-                      v-if="hasRegistrationData"
-                      type="bar"
-                      width="100%"
-                      :height="180"
-                      :options="registrationChartOptions"
-                      :series="registrationChartSeries"
-                    />
-                    <div v-else class="h-full flex items-center justify-center">
-                      <div class="text-center">
-                        <UIcon name="i-heroicons-chart-bar" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                        <p class="text-sm text-gray-500">No activity in last {{ chartPeriod }} days</p>
+                    <template v-if="isTicketMode">
+                      <ApexChart
+                        v-if="hasTicketTypeData"
+                        type="donut"
+                        width="100%"
+                        :height="200"
+                        :options="ticketTypeDonutOptions"
+                        :series="ticketTypeDonutSeries"
+                      />
+                      <div v-else class="h-full flex items-center justify-center">
+                        <div class="text-center">
+                          <UIcon name="i-heroicons-ticket" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p class="text-sm text-gray-500">No ticket sales in last {{ chartPeriod }} days</p>
+                        </div>
                       </div>
-                    </div>
+                    </template>
+                    <template v-else>
+                      <ApexChart
+                        v-if="hasRsvpDailyData"
+                        type="bar"
+                        width="100%"
+                        :height="180"
+                        :options="rsvpDailyOptions"
+                        :series="rsvpDailySeries"
+                      />
+                      <div v-else class="h-full flex items-center justify-center">
+                        <div class="text-center">
+                          <UIcon name="i-heroicons-chart-bar" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                          <p class="text-sm text-gray-500">No activity in last {{ chartPeriod }} days</p>
+                        </div>
+                      </div>
+                    </template>
                   </ClientOnly>
                 </div>
                 <p class="text-xs text-gray-400 text-center mt-2">Last {{ chartPeriod }} days</p>
               </UCard>
 
-              <!-- Revenue Chart (for ticket events) or Check-ins -->
+              <!-- Revenue by payment method (ticket mode) or Check-ins -->
               <UCard>
                 <template #header>
                   <div class="flex items-center justify-between">
                     <h2 class="font-semibold text-gray-900 dark:text-white">
-                      {{ isTicketMode ? 'Revenue' : 'Check-ins' }}
+                      {{ isTicketMode ? 'Revenue by Method' : 'Check-ins' }}
                     </h2>
                     <div class="text-right">
                       <p class="text-2xl font-bold text-emerald-600">

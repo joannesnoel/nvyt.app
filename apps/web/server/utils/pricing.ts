@@ -85,7 +85,7 @@ export async function getActivePrice(
 /**
  * Check if a tier is currently active based on its type and constraints
  */
-function isTierActive(tier: typeof ticketPriceTiers.$inferSelect, now: Date): boolean {
+export function isTierActive(tier: typeof ticketPriceTiers.$inferSelect, now: Date): boolean {
   const tierType = tier.tierType as PriceTierType
 
   if (tierType === 'time') {

@@ -49,6 +49,7 @@ export default defineEventHandler(async (event) => {
   let periodTotal = 0
   let periodRevenue = 0
   let revenueByMethod: { method: string; amount: number }[] = []
+  let revenueByDay: { date: string; amount: number }[] = []
   let ticketTypesSeries: { id: string; name: string; color: string; data: { date: string; count: number }[] }[] = []
 
   if (isTicketMode) {
@@ -150,6 +151,30 @@ export default defineEventHandler(async (event) => {
       .groupBy(sql`DATE(${tickets.createdAt})`)
       .orderBy(sql`DATE(${tickets.createdAt})`)
 
+    // Daily revenue (net = subtotal - discount), aligned to dateLabels
+    const dailyRevenueStats = await db
+      .select({
+        date: sql<string>`DATE(${orders.paidAt})::text`.as('date'),
+        amount: sql<number>`COALESCE(SUM(${orders.subtotalAmount}::numeric - ${orders.discountAmount}::numeric), 0)`.as('amount'),
+      })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.eventId, eventId),
+          eq(orders.paymentStatus, 'paid'),
+          gte(orders.paidAt, startDate),
+          sql`${orders.paymentMethod} is distinct from 'external'`,
+        )
+      )
+      .groupBy(sql`DATE(${orders.paidAt})`)
+      .orderBy(sql`DATE(${orders.paidAt})`)
+
+    const revenueByDayMap = new Map(dailyRevenueStats.map(r => [r.date, Number(r.amount)]))
+    revenueByDay = dateLabels.map(date => ({
+      date,
+      amount: revenueByDayMap.get(date) || 0,
+    }))
+
     // Get revenue grouped by payment method (scoped to period)
     const revenueByMethodStats = await db
       .select({
@@ -224,6 +249,7 @@ export default defineEventHandler(async (event) => {
       },
       revenue: isTicketMode ? {
         periodTotal: periodRevenue,
+        daily: revenueByDay,
         byMethod: revenueByMethod,
       } : null,
     },

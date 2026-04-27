@@ -694,6 +694,14 @@ const hasTicketsOnSale = computed(() => {
   return event.value.ticketTypes.some((t: any) => isTicketOnSale(t))
 })
 
+// Check if event has already ended (endDate, or startDate when no endDate, is in the past)
+const isEventEnded = computed(() => {
+  if (!event.value) return false
+  const end = event.value.endDate ?? event.value.startDate
+  if (!end) return false
+  return new Date(end) < new Date()
+})
+
 // Check if event is sold out (capacity reached)
 const isEventSoldOut = computed(() => {
   if (!event.value) return false
@@ -1415,7 +1423,17 @@ onBeforeUnmount(() => {
 
               <!-- Registration Mode: Tickets -->
               <template v-else-if="event.registrationMode === 'tickets'">
-                <template v-if="isEventSoldOut">
+                <template v-if="isEventEnded">
+                  <UButton
+                    color="gray"
+                    size="lg"
+                    disabled
+                  >
+                    <UIcon name="i-heroicons-clock" class="w-5 h-5 mr-2" />
+                    Event Ended
+                  </UButton>
+                </template>
+                <template v-else-if="isEventSoldOut">
                   <UButton
                     color="gray"
                     size="lg"
@@ -1939,7 +1957,15 @@ onBeforeUnmount(() => {
               </div>
               <template #footer>
                 <UButton
-                  v-if="isEventSoldOut"
+                  v-if="isEventEnded"
+                  color="gray"
+                  block
+                  disabled
+                >
+                  Event Ended
+                </UButton>
+                <UButton
+                  v-else-if="isEventSoldOut"
                   color="gray"
                   block
                   disabled

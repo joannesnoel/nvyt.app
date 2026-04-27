@@ -81,6 +81,15 @@ function formatDate(date: string) {
             <div v-else class="absolute inset-0 flex items-center justify-center">
               <UIcon name="i-heroicons-photo" class="w-12 h-12 text-gray-400" />
             </div>
+            <UBadge
+              v-if="event.status && event.status.code !== 'none'"
+              :color="event.status.color"
+              :variant="event.status.variant"
+              size="sm"
+              class="absolute top-3 left-3 shadow-md"
+            >
+              {{ event.status.label }}
+            </UBadge>
           </div>
           <div class="p-4">
             <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">

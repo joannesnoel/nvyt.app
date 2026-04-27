@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const ApexChart = defineAsyncComponent(() => import('vue3-apexcharts'))
+
 definePageMeta({
   layout: 'admin',
   middleware: ['admin'],
@@ -6,6 +8,8 @@ definePageMeta({
 
 const route = useRoute()
 const toast = useToast()
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
 const eventId = computed(() => route.params.id as string)
 
 // Fetch event detail
@@ -23,6 +27,83 @@ const ticketTypes = computed(() => data.value?.data?.ticketTypes || [])
 const verification = computed(() => data.value?.data?.verification)
 
 const isTicketMode = computed(() => event.value?.registrationMode === 'tickets')
+
+// Revenue chart
+const chartPeriod = ref(7)
+const periodOptions = [7, 14, 30, 90] as const
+
+const { data: analyticsResponse } = await useFetch(
+  () => `/api/v1/admin/events/${eventId.value}/analytics`,
+  {
+    query: { days: chartPeriod },
+    watch: [chartPeriod, eventId],
+  },
+)
+const analytics = computed(() => analyticsResponse.value?.data)
+
+const dateCategories = computed(() => {
+  const useShortFormat = chartPeriod.value >= 30
+  return (analytics.value?.dateLabels || []).map((d: string) => {
+    const date = new Date(d + 'T00:00:00')
+    if (useShortFormat) {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+    return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
+  })
+})
+
+const revenueChartSeries = computed(() => [{
+  name: 'Revenue',
+  data: analytics.value?.revenue?.daily?.map((r: { amount: number }) => r.amount) || [],
+}])
+
+const hasRevenueChartData = computed(() =>
+  revenueChartSeries.value[0].data.some((val: number) => val > 0),
+)
+
+const revenueChartOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    height: 260,
+    toolbar: { show: false },
+    zoom: { enabled: false },
+    background: 'transparent',
+  },
+  colors: ['#10b981'],
+  plotOptions: {
+    bar: {
+      borderRadius: 3,
+      columnWidth: '70%',
+    },
+  },
+  dataLabels: { enabled: false },
+  xaxis: {
+    categories: dateCategories.value,
+    labels: {
+      show: true,
+      style: { colors: isDark.value ? '#9ca3af' : '#6b7280', fontSize: '10px' },
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  },
+  yaxis: {
+    labels: {
+      style: { colors: isDark.value ? '#9ca3af' : '#6b7280', fontSize: '10px' },
+      formatter: (val: number) => formatCurrency(val),
+    },
+  },
+  grid: {
+    borderColor: isDark.value ? '#374151' : '#e5e7eb',
+    strokeDashArray: 3,
+    xaxis: { lines: { show: false } },
+  },
+  tooltip: {
+    theme: isDark.value ? 'dark' : 'light',
+    y: {
+      formatter: (val: number) => formatCurrency(val),
+    },
+  },
+}))
 
 function formatDate(date: string | Date) {
   return new Date(date).toLocaleString('en-US', {
@@ -223,6 +304,48 @@ async function impersonateOrganizer() {
           color="yellow"
         />
       </div>
+
+      <!-- Revenue Chart -->
+      <UCard v-if="isTicketMode" class="mb-8">
+        <template #header>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                Revenue ({{ chartPeriod }}d)
+              </h3>
+              <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                {{ formatCurrency(analytics?.revenue?.periodTotal ?? 0) }}
+              </p>
+            </div>
+            <div class="flex gap-1">
+              <UButton
+                v-for="opt in periodOptions"
+                :key="opt"
+                :color="chartPeriod === opt ? 'primary' : 'gray'"
+                :variant="chartPeriod === opt ? 'solid' : 'ghost'"
+                size="xs"
+                @click="chartPeriod = opt"
+              >
+                {{ opt }}d
+              </UButton>
+            </div>
+          </div>
+        </template>
+
+        <div v-if="hasRevenueChartData">
+          <ClientOnly>
+            <ApexChart
+              type="bar"
+              height="260"
+              :options="revenueChartOptions"
+              :series="revenueChartSeries"
+            />
+          </ClientOnly>
+        </div>
+        <div v-else class="flex items-center justify-center h-40">
+          <p class="text-sm text-gray-500">No revenue in this period</p>
+        </div>
+      </UCard>
 
       <!-- Main Content Grid -->
       <div class="grid lg:grid-cols-3 gap-6">
