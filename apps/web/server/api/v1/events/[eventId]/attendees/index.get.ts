@@ -1,4 +1,5 @@
-import { eq, and, ilike, sql, desc, inArray } from 'drizzle-orm'
+import { eq, and, or, ilike, sql, desc, inArray } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { events, attendees, users, tickets, ticketTypes, orders } from '@nvyt/db'
 import { attendeeFiltersSchema } from '@nvyt/shared'
 
@@ -56,15 +57,31 @@ export default defineEventHandler(async (event) => {
   }
 
   // RSVP mode: Use attendees table
-  // Build conditions
+  // Build conditions (search is applied in SQL so pagination + total reflect it)
   const conditions = [eq(attendees.eventId, eventId)]
 
   if (status) {
     conditions.push(eq(attendees.status, status))
   }
 
-  // Get attendees with user info
-  let attendeeQuery = db
+  if (search) {
+    const s = `%${search}%`
+    conditions.push(
+      or(ilike(users.name, s), ilike(users.email, s))!,
+    )
+  }
+
+  // Get total count (must mirror the same joins so search conditions resolve)
+  const countResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(attendees)
+    .leftJoin(users, eq(attendees.userId, users.id))
+    .where(and(...conditions))
+
+  const total = Number(countResult[0]?.count ?? 0)
+
+  // Get paginated attendees with user info
+  const attendeesList = await db
     .select({
       id: attendees.id,
       status: attendees.status,
@@ -86,25 +103,6 @@ export default defineEventHandler(async (event) => {
     .orderBy(desc(attendees.createdAt))
     .limit(limit)
     .offset(offset)
-
-  // Get total count
-  const countResult = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(attendees)
-    .where(and(...conditions))
-
-  const total = Number(countResult[0]?.count ?? 0)
-
-  // Get attendees
-  let attendeesList = await attendeeQuery
-
-  // Filter by search if provided (search in user name/email)
-  if (search) {
-    attendeesList = attendeesList.filter(a =>
-      a.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      a.user?.email?.toLowerCase().includes(search.toLowerCase())
-    )
-  }
 
   // Get stats for RSVP mode
   const statsResult = await db
@@ -168,6 +166,9 @@ async function getTicketStats(
 ) {
   const { status, search, page, limit, offset } = options
 
+  // Aliased user table for the attendee's user record (separate from the purchaser join)
+  const attendeeUsers = alias(users, 'attendee_users')
+
   // Build conditions for tickets (only from paid/pending orders)
   const conditions = [
     eq(tickets.eventId, eventId),
@@ -187,8 +188,24 @@ async function getTicketStats(
     // Note: waitlisted and declined don't apply to tickets
   }
 
-  // Get tickets with user and ticket type info (as "attendees")
-  // Join both purchaser (userId) and attendee (attendeeUserId) user records
+  // Push search into SQL so pagination + total reflect filtered results
+  if (search) {
+    const s = `%${search}%`
+    conditions.push(
+      or(
+        ilike(tickets.attendeeName, s),
+        ilike(tickets.ticketNumber, s),
+        ilike(orders.customerName, s),
+        ilike(orders.customerEmail, s),
+        ilike(users.name, s),
+        ilike(users.email, s),
+        ilike(attendeeUsers.name, s),
+        ilike(attendeeUsers.email, s),
+      )!,
+    )
+  }
+
+  // Get tickets with user, attendee user, ticket type, and order customer info
   const ticketsList = await db
     .select({
       id: tickets.id,
@@ -210,6 +227,13 @@ async function getTicketStats(
         email: users.email,
         avatarUrl: users.avatarUrl,
       },
+      // Attendee user record (may differ from purchaser when ticket transferred)
+      attendeeUser: {
+        id: attendeeUsers.id,
+        name: attendeeUsers.name,
+        email: attendeeUsers.email,
+        avatarUrl: attendeeUsers.avatarUrl,
+      },
       // Order customer info (from checkout form - more accurate than user record)
       customer: {
         name: orders.customerName,
@@ -220,61 +244,24 @@ async function getTicketStats(
     .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
     .innerJoin(orders, eq(tickets.orderId, orders.id))
     .leftJoin(users, eq(tickets.userId, users.id))
+    .leftJoin(attendeeUsers, eq(tickets.attendeeUserId, attendeeUsers.id))
     .where(and(...conditions))
     .orderBy(desc(tickets.createdAt))
     .limit(limit)
     .offset(offset)
 
-  // Fetch attendee user records separately for tickets that have attendeeUserId
-  const attendeeUserIds = ticketsList
-    .map(t => t.attendeeUserId)
-    .filter((id): id is string => id !== null)
-
-  const attendeeUsersMap = new Map<string, { id: string; name: string | null; email: string; avatarUrl: string | null }>()
-
-  if (attendeeUserIds.length > 0) {
-    const attendeeUsers = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        avatarUrl: users.avatarUrl,
-      })
-      .from(users)
-      .where(inArray(users.id, attendeeUserIds))
-
-    for (const user of attendeeUsers) {
-      attendeeUsersMap.set(user.id, user)
-    }
-  }
-
-  // Get total count
+  // Get total count (mirror the same joins so search/where conditions resolve)
   const countResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(tickets)
     .innerJoin(orders, eq(tickets.orderId, orders.id))
+    .leftJoin(users, eq(tickets.userId, users.id))
+    .leftJoin(attendeeUsers, eq(tickets.attendeeUserId, attendeeUsers.id))
     .where(and(...conditions))
 
   const total = Number(countResult[0]?.count ?? 0)
 
-  // Filter by search if provided
-  let filteredList = ticketsList
-  if (search) {
-    const searchLower = search.toLowerCase()
-    filteredList = ticketsList.filter(t => {
-      const attendeeUser = t.attendeeUserId ? attendeeUsersMap.get(t.attendeeUserId) : null
-      return (
-        t.purchaser?.name?.toLowerCase().includes(searchLower) ||
-        t.purchaser?.email?.toLowerCase().includes(searchLower) ||
-        t.customer?.name?.toLowerCase().includes(searchLower) ||
-        t.customer?.email?.toLowerCase().includes(searchLower) ||
-        attendeeUser?.name?.toLowerCase().includes(searchLower) ||
-        attendeeUser?.email?.toLowerCase().includes(searchLower) ||
-        t.attendeeName?.toLowerCase().includes(searchLower) ||
-        t.ticketNumber?.toLowerCase().includes(searchLower)
-      )
-    })
-  }
+  const filteredList = ticketsList
 
   // Get stats for tickets (only from paid/pending orders)
   const statsResult = await db
@@ -313,7 +300,7 @@ async function getTicketStats(
   // Transform tickets to attendee-like format for frontend compatibility
   // Priority: attendeeName > attendeeUserId user > order customer > purchaser user
   const attendeesList = filteredList.map(t => {
-    const attendeeUser = t.attendeeUserId ? attendeeUsersMap.get(t.attendeeUserId) : null
+    const attendeeUser = t.attendeeUserId ? t.attendeeUser : null
 
     return {
       id: t.id,

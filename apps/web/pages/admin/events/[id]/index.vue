@@ -463,7 +463,12 @@ async function impersonateOrganizer() {
           <!-- Recent Orders (ticket events) -->
           <UCard v-if="isTicketMode">
             <template #header>
-              <h2 class="font-semibold text-gray-900 dark:text-white">Recent Orders</h2>
+              <div class="flex items-center justify-between">
+                <h2 class="font-semibold text-gray-900 dark:text-white">Recent Orders</h2>
+                <NuxtLink :to="`/admin/events/${eventId}/orders`" class="text-xs text-primary hover:underline">
+                  View all →
+                </NuxtLink>
+              </div>
             </template>
 
             <div v-if="recentOrders.length === 0" class="text-center py-8">
