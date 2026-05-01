@@ -18,6 +18,8 @@ const navItems = [
   { label: 'Verifications', icon: 'i-heroicons-shield-check', to: '/admin/verifications' },
   { label: 'Payouts', icon: 'i-heroicons-banknotes', to: '/admin/payouts' },
   { label: 'Reconcile', icon: 'i-heroicons-arrow-path', to: '/admin/reconcile-payments' },
+  { label: 'Troubleshoot Orders', icon: 'i-heroicons-wrench-screwdriver', to: '/admin/troubleshoot-orders' },
+  { label: 'Orphan Intents', icon: 'i-heroicons-exclamation-triangle', to: '/admin/orphan-intents' },
 ]
 
 function isActive(to: string) {
