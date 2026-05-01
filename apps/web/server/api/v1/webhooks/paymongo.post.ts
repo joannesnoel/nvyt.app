@@ -22,6 +22,34 @@ const HANDLED_EVENTS = [
   'payment.failed',                  // Payment failed
 ]
 
+// Look up an order by payment_intent_id first, falling back to order_number from
+// webhook metadata. The fallback handles cases where retry-payment minted a new PI
+// and overwrote orders.paymongo_payment_intent_id, but PayMongo fires the webhook
+// against an older PI we no longer have on the order row.
+async function findOrderForWebhook(
+  db: ReturnType<typeof useDatabase>,
+  paymentIntentId: string | null | undefined,
+  orderNumber: string | null | undefined
+) {
+  if (paymentIntentId) {
+    const [byPI] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.paymongoPaymentIntentId, paymentIntentId))
+      .limit(1)
+    if (byPI) return { order: byPI, matchedBy: 'payment_intent_id' as const }
+  }
+  if (orderNumber) {
+    const [byOrderNumber] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.orderNumber, orderNumber))
+      .limit(1)
+    if (byOrderNumber) return { order: byOrderNumber, matchedBy: 'order_number' as const }
+  }
+  return { order: null, matchedBy: null }
+}
+
 export default defineEventHandler(async (event) => {
   const db = useDatabase()
 
@@ -299,26 +327,26 @@ export default defineEventHandler(async (event) => {
 
     const orderNumber = attributes.metadata?.orderNumber
 
-    if (!orderNumber) {
-      console.error('No order number found in payment intent metadata')
-      return { received: true, error: 'No order number' }
-    }
-
-    // Find order by payment intent ID
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.paymongoPaymentIntentId, paymentIntentId))
-      .limit(1)
+    const { order, matchedBy } = await findOrderForWebhook(db, paymentIntentId, orderNumber)
 
     if (!order) {
-      console.error(`Order not found for payment intent: ${paymentIntentId}`)
+      console.error(
+        `Order not found for payment_intent.succeeded (intent=${paymentIntentId}, orderNumber=${orderNumber})`
+      )
       return { received: true, error: 'Order not found' }
+    }
+
+    if (matchedBy === 'order_number') {
+      console.warn(
+        `[PayMongo PI] PI drift detected: matched order ${order.orderNumber} by orderNumber. ` +
+          `DB had paymongoPaymentIntentId=${order.paymongoPaymentIntentId}, payload PI=${paymentIntentId}. ` +
+          `Reconciling DB to payload PI.`
+      )
     }
 
     // Skip if already processed
     if (order.paymentStatus === 'paid') {
-      console.log(`Order ${orderNumber} already marked as paid`)
+      console.log(`Order ${order.orderNumber} already marked as paid`)
       return { received: true, handled: true, skipped: true }
     }
 
@@ -328,7 +356,8 @@ export default defineEventHandler(async (event) => {
       paymentMethod = attributes.payments[0].attributes?.source?.type || null
     }
 
-    // Update order status
+    // Update order status. When matched via fallback, also reconcile the stored
+    // PI so the DB reflects the PI PayMongo actually charged.
     await db
       .update(orders)
       .set({
@@ -336,6 +365,7 @@ export default defineEventHandler(async (event) => {
         paidAt: new Date(),
         paymentMethod: paymentMethod,
         updatedAt: new Date(),
+        ...(matchedBy === 'order_number' ? { paymongoPaymentIntentId: paymentIntentId } : {}),
       })
       .where(eq(orders.id, order.id))
 
@@ -348,7 +378,7 @@ export default defineEventHandler(async (event) => {
       })
       .where(eq(tickets.orderId, order.id))
 
-    console.log(`Order ${orderNumber} marked as paid via Payment Intent`)
+    console.log(`Order ${order.orderNumber} marked as paid via Payment Intent`)
 
     // Record financial transaction for the event organizer
     try {
@@ -438,7 +468,7 @@ export default defineEventHandler(async (event) => {
           timeZone: eventData.timezone || 'Asia/Manila',
         })
 
-        const orderUrl = `${config.public.appUrl}/orders/${orderNumber}`
+        const orderUrl = `${config.public.appUrl}/orders/${order.orderNumber}`
 
         // Format total amount
         const totalAmount = new Intl.NumberFormat('en-PH', {
@@ -471,7 +501,7 @@ export default defineEventHandler(async (event) => {
           eventTitle: eventData.title,
           eventDate,
           eventLocation: eventData.location || undefined,
-          orderNumber,
+          orderNumber: order.orderNumber,
           ticketCount: orderTickets.length,
           ticketSummary,
           totalAmount,
@@ -481,13 +511,13 @@ export default defineEventHandler(async (event) => {
         })
 
         await sendEmail({ to: customer.email, ...emailContent })
-        console.log(`[PayMongo PI] Sent payment confirmation email for order ${orderNumber}`)
+        console.log(`[PayMongo PI] Sent payment confirmation email for order ${order.orderNumber}`)
       }
     } catch (emailErr) {
       console.error('[PayMongo PI] Failed to send confirmation email:', emailErr)
     }
 
-    return { received: true, handled: true, orderNumber }
+    return { received: true, handled: true, orderNumber: order.orderNumber }
   }
 
   // Handle generic payment.paid (fires for Payment Intent flow alongside or instead of payment_intent.succeeded)
@@ -506,24 +536,21 @@ export default defineEventHandler(async (event) => {
       return { received: true, error: 'No order identifier' }
     }
 
-    // Prefer payment intent ID match (most reliable); fall back to orderNumber
-    const [order] = paymentIntentId
-      ? await db
-          .select()
-          .from(orders)
-          .where(eq(orders.paymongoPaymentIntentId, paymentIntentId))
-          .limit(1)
-      : await db
-          .select()
-          .from(orders)
-          .where(eq(orders.orderNumber, orderNumber!))
-          .limit(1)
+    const { order, matchedBy } = await findOrderForWebhook(db, paymentIntentId, orderNumber)
 
     if (!order) {
       console.error(
         `Order not found for payment.paid (intent=${paymentIntentId}, orderNumber=${orderNumber})`
       )
       return { received: true, error: 'Order not found' }
+    }
+
+    if (matchedBy === 'order_number') {
+      console.warn(
+        `[PayMongo Pay] PI drift detected: matched order ${order.orderNumber} by orderNumber. ` +
+          `DB had paymongoPaymentIntentId=${order.paymongoPaymentIntentId}, payload PI=${paymentIntentId}. ` +
+          `Reconciling DB to payload PI.`
+      )
     }
 
     // Skip if already processed (handles overlap with payment_intent.succeeded)
@@ -534,7 +561,8 @@ export default defineEventHandler(async (event) => {
 
     const paymentMethod = attributes.source?.type ?? null
 
-    // Update order status
+    // Update order status. When matched via fallback, also reconcile the stored
+    // PI so the DB reflects the PI PayMongo actually charged.
     await db
       .update(orders)
       .set({
@@ -542,6 +570,9 @@ export default defineEventHandler(async (event) => {
         paidAt: new Date(),
         paymentMethod: paymentMethod,
         updatedAt: new Date(),
+        ...(matchedBy === 'order_number' && paymentIntentId
+          ? { paymongoPaymentIntentId: paymentIntentId }
+          : {}),
       })
       .where(eq(orders.id, order.id))
 
