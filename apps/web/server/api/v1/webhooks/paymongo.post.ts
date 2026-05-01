@@ -490,6 +490,202 @@ export default defineEventHandler(async (event) => {
     return { received: true, handled: true, orderNumber }
   }
 
+  // Handle generic payment.paid (fires for Payment Intent flow alongside or instead of payment_intent.succeeded)
+  if (eventType === 'payment.paid') {
+    const attributes = webhookEvent.attributes.data.attributes as {
+      payment_intent_id?: string
+      metadata?: { orderNumber?: string }
+      source?: { type?: string }
+    }
+
+    const paymentIntentId = attributes.payment_intent_id
+    const orderNumber = attributes.metadata?.orderNumber
+
+    if (!paymentIntentId && !orderNumber) {
+      console.error('No payment_intent_id or orderNumber in payment.paid payload')
+      return { received: true, error: 'No order identifier' }
+    }
+
+    // Prefer payment intent ID match (most reliable); fall back to orderNumber
+    const [order] = paymentIntentId
+      ? await db
+          .select()
+          .from(orders)
+          .where(eq(orders.paymongoPaymentIntentId, paymentIntentId))
+          .limit(1)
+      : await db
+          .select()
+          .from(orders)
+          .where(eq(orders.orderNumber, orderNumber!))
+          .limit(1)
+
+    if (!order) {
+      console.error(
+        `Order not found for payment.paid (intent=${paymentIntentId}, orderNumber=${orderNumber})`
+      )
+      return { received: true, error: 'Order not found' }
+    }
+
+    // Skip if already processed (handles overlap with payment_intent.succeeded)
+    if (order.paymentStatus === 'paid') {
+      console.log(`Order ${order.orderNumber} already marked as paid`)
+      return { received: true, handled: true, skipped: true }
+    }
+
+    const paymentMethod = attributes.source?.type ?? null
+
+    // Update order status
+    await db
+      .update(orders)
+      .set({
+        paymentStatus: 'paid',
+        paidAt: new Date(),
+        paymentMethod: paymentMethod,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, order.id))
+
+    // Confirm all tickets in this order
+    await db
+      .update(tickets)
+      .set({
+        status: 'confirmed',
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.orderId, order.id))
+
+    console.log(`Order ${order.orderNumber} marked as paid via payment.paid`)
+
+    // Record financial transaction for the event organizer
+    try {
+      const [eventInfo] = await db
+        .select({
+          id: events.id,
+          title: events.title,
+          organizerId: events.organizerId,
+        })
+        .from(events)
+        .where(eq(events.id, order.eventId))
+        .limit(1)
+
+      if (eventInfo && eventInfo.organizerId) {
+        const grossAmount = Number(order.totalAmount)
+
+        const walletResult = await processPaymentReceived({
+          userId: eventInfo.organizerId,
+          orderId: order.id,
+          eventId: order.eventId,
+          grossAmount,
+          totalFees: Number(order.totalFees),
+          netAmount: Number(order.subtotalAmount) - Number(order.discountAmount),
+          eventTitle: eventInfo.title,
+        })
+
+        console.log(
+          `[PayMongo Pay] Recorded transaction for organizer ${eventInfo.organizerId}: ` +
+            `Gross=${grossAmount}, Fees=${walletResult.totalFees}, Net=${walletResult.netAmount}`
+        )
+      }
+    } catch (walletErr) {
+      console.error('[PayMongo Pay] Failed to record wallet transaction:', walletErr)
+    }
+
+    // Send payment confirmation email
+    try {
+      const config = useRuntimeConfig()
+
+      const orderTickets = await db
+        .select({
+          id: tickets.id,
+          ticketTypeId: tickets.ticketTypeId,
+          ticketTypeName: ticketTypes.name,
+        })
+        .from(tickets)
+        .innerJoin(ticketTypes, eq(tickets.ticketTypeId, ticketTypes.id))
+        .where(eq(tickets.orderId, order.id))
+
+      const [eventData] = await db
+        .select()
+        .from(events)
+        .where(eq(events.id, order.eventId))
+        .limit(1)
+
+      const [customer] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, order.userId))
+        .limit(1)
+
+      const [registrationFieldCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(ticketRegistrationFields)
+        .where(
+          and(
+            eq(ticketRegistrationFields.eventId, order.eventId),
+            eq(ticketRegistrationFields.isActive, true)
+          )
+        )
+      const requiresRegistration = (registrationFieldCount?.count ?? 0) > 0
+
+      if (eventData && customer) {
+        const eventDate = new Date(eventData.startDate).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          timeZone: eventData.timezone || 'Asia/Manila',
+        })
+
+        const orderUrl = `${config.public.appUrl}/orders/${order.orderNumber}`
+
+        const totalAmount = new Intl.NumberFormat('en-PH', {
+          style: 'currency',
+          currency: 'PHP',
+        }).format(Number(order.totalAmount))
+
+        let setupToken: string | undefined
+        if (!customer.passwordHash) {
+          const existingToken = await getExistingSetupToken(customer.id)
+          setupToken = existingToken ?? undefined
+        }
+
+        const ticketSummaryMap = new Map<string, { ticketType: string; quantity: number }>()
+        for (const t of orderTickets) {
+          const existing = ticketSummaryMap.get(t.ticketTypeId)
+          if (existing) {
+            existing.quantity++
+          } else {
+            ticketSummaryMap.set(t.ticketTypeId, { ticketType: t.ticketTypeName, quantity: 1 })
+          }
+        }
+        const ticketSummary = Array.from(ticketSummaryMap.values())
+
+        const emailContent = paymentSuccessfulEmail({
+          userName: customer.name || 'there',
+          eventTitle: eventData.title,
+          eventDate,
+          eventLocation: eventData.location || undefined,
+          orderNumber: order.orderNumber,
+          ticketCount: orderTickets.length,
+          ticketSummary,
+          totalAmount,
+          orderUrl,
+          setupToken,
+          requiresRegistration,
+        })
+
+        await sendEmail({ to: customer.email, ...emailContent })
+        console.log(`[PayMongo Pay] Sent payment confirmation email for order ${order.orderNumber}`)
+      }
+    } catch (emailErr) {
+      console.error('[PayMongo Pay] Failed to send confirmation email:', emailErr)
+    }
+
+    return { received: true, handled: true, orderNumber: order.orderNumber }
+  }
+
   // Handle payment failed
   if (eventType === 'payment.failed') {
     const attributes = webhookEvent.attributes.data.attributes as {
