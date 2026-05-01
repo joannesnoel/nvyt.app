@@ -1,6 +1,9 @@
 import { orders, tickets, ticketTypes, ticketPriceTiers, discountCodes } from '@nvyt/db'
 import { eq, and, sql } from 'drizzle-orm'
 
+type DB = ReturnType<typeof useDatabase>
+export type DBTx = Parameters<Parameters<DB['transaction']>[0]>[0]
+
 /**
  * Cancel a pending order and release all reserved inventory.
  * All operations run inside a single database transaction to ensure consistency.
@@ -111,4 +114,110 @@ export async function cancelPendingOrder(pendingOrder: {
       }
     }
   })
+}
+
+/**
+ * Inverse of cancelPendingOrder's inventory side effects: re-increment
+ * ticketTypes.quantitySold, ticketPriceTiers.quantitySold, and
+ * discountCodes.usageCount based on the order's tickets.
+ *
+ * Called from webhook success handlers when a delayed payment.paid /
+ * payment_intent.succeeded arrives after cancelPendingOrder already released
+ * inventory. Must run inside the same transaction as the order/ticket status
+ * updates so revival is atomic.
+ *
+ * Idempotency: relies on the caller checking `paymentStatus !== 'paid'` before
+ * invoking — once the order is flipped to paid in the same transaction, a
+ * re-delivered webhook will short-circuit at the existing "already paid" guard.
+ */
+export async function restoreOrderInventory(
+  tx: DBTx,
+  orderId: string,
+  discountCodeId: string | null
+): Promise<void> {
+  const orderTickets = await tx
+    .select({
+      ticketTypeId: tickets.ticketTypeId,
+      priceTierName: tickets.priceTierName,
+    })
+    .from(tickets)
+    .where(eq(tickets.orderId, orderId))
+
+  const ticketTypeCountMap = new Map<string, number>()
+  for (const t of orderTickets) {
+    ticketTypeCountMap.set(t.ticketTypeId, (ticketTypeCountMap.get(t.ticketTypeId) || 0) + 1)
+  }
+  for (const [ttId, count] of ticketTypeCountMap) {
+    await tx
+      .update(ticketTypes)
+      .set({
+        quantitySold: sql`${ticketTypes.quantitySold} + ${count}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(ticketTypes.id, ttId))
+  }
+
+  const tierCountMap = new Map<
+    string,
+    { ticketTypeId: string; priceTierName: string; count: number }
+  >()
+  for (const t of orderTickets) {
+    if (!t.priceTierName) continue
+    const key = `${t.ticketTypeId}:${t.priceTierName}`
+    const existing = tierCountMap.get(key)
+    if (existing) {
+      existing.count++
+    } else {
+      tierCountMap.set(key, {
+        ticketTypeId: t.ticketTypeId,
+        priceTierName: t.priceTierName,
+        count: 1,
+      })
+    }
+  }
+  for (const { ticketTypeId, priceTierName, count } of tierCountMap.values()) {
+    await tx
+      .update(ticketPriceTiers)
+      .set({
+        quantitySold: sql`${ticketPriceTiers.quantitySold} + ${count}`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(ticketPriceTiers.ticketTypeId, ticketTypeId),
+          eq(ticketPriceTiers.name, priceTierName)
+        )
+      )
+  }
+
+  if (discountCodeId) {
+    const [discountCode] = await tx
+      .select({ ticketTypeIds: discountCodes.ticketTypeIds })
+      .from(discountCodes)
+      .where(eq(discountCodes.id, discountCodeId))
+      .limit(1)
+
+    if (discountCode) {
+      const applicableTicketTypeIds = discountCode.ticketTypeIds as string[] | null
+      let applicableTicketCount = 0
+      for (const t of orderTickets) {
+        if (
+          !applicableTicketTypeIds ||
+          applicableTicketTypeIds.length === 0 ||
+          applicableTicketTypeIds.includes(t.ticketTypeId)
+        ) {
+          applicableTicketCount++
+        }
+      }
+      if (applicableTicketCount > 0) {
+        await tx
+          .update(discountCodes)
+          .set({
+            usageCount: sql`${discountCodes.usageCount} + ${applicableTicketCount}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(discountCodes.id, discountCodeId))
+      }
+    }
+  }
 }

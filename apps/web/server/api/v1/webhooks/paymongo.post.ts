@@ -13,6 +13,7 @@ import {
 } from '~/server/utils/email'
 import { getExistingSetupToken } from '~/server/utils/auth'
 import { processPaymentReceived } from '~/server/utils/wallet'
+import { restoreOrderInventory } from '~/server/utils/orderCleanup'
 
 // PayMongo webhook event types we handle
 const HANDLED_EVENTS = [
@@ -20,6 +21,7 @@ const HANDLED_EVENTS = [
   'payment_intent.succeeded',        // Payment Intent flow (new)
   'payment.paid',                    // General payment success
   'payment.failed',                  // Payment failed
+  'qrph.expired',                    // QR Ph source expired without payment
 ]
 
 // Look up an order by payment_intent_id first, falling back to order_number from
@@ -149,25 +151,40 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Update order status
-    await db
-      .update(orders)
-      .set({
-        paymentStatus: 'paid',
-        paidAt: new Date(),
-        paymentMethod: paymentMethod,
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, order.id))
+    // Update order + tickets atomically. If the order was previously marked
+    // 'failed' by the cleanup script, also restore the inventory and coupon
+    // usage that cleanup released.
+    const wasFailed = order.paymentStatus === 'failed'
+    await db.transaction(async (tx) => {
+      await tx
+        .update(orders)
+        .set({
+          paymentStatus: 'paid',
+          paidAt: new Date(),
+          paymentMethod: paymentMethod,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, order.id))
 
-    // Confirm all tickets in this order
-    await db
-      .update(tickets)
-      .set({
-        status: 'confirmed',
-        updatedAt: new Date(),
-      })
-      .where(eq(tickets.orderId, order.id))
+      await tx
+        .update(tickets)
+        .set({
+          status: 'confirmed',
+          updatedAt: new Date(),
+        })
+        .where(eq(tickets.orderId, order.id))
+
+      if (wasFailed) {
+        await restoreOrderInventory(tx, order.id, order.discountCodeId)
+      }
+    })
+
+    if (wasFailed) {
+      console.warn(
+        `[PayMongo CS] Revived previously-failed order ${orderNumber}; restored inventory and coupon usage. ` +
+          `Check ticket type capacity for potential overselling.`
+      )
+    }
 
     console.log(`Order ${orderNumber} marked as paid`)
 
@@ -356,27 +373,41 @@ export default defineEventHandler(async (event) => {
       paymentMethod = attributes.payments[0].attributes?.source?.type || null
     }
 
-    // Update order status. When matched via fallback, also reconcile the stored
-    // PI so the DB reflects the PI PayMongo actually charged.
-    await db
-      .update(orders)
-      .set({
-        paymentStatus: 'paid',
-        paidAt: new Date(),
-        paymentMethod: paymentMethod,
-        updatedAt: new Date(),
-        ...(matchedBy === 'order_number' ? { paymongoPaymentIntentId: paymentIntentId } : {}),
-      })
-      .where(eq(orders.id, order.id))
+    // Update order + tickets atomically. When matched via fallback, also
+    // reconcile the stored PI. If the order was previously 'failed' (cleanup
+    // script ran first), restore inventory and coupon usage in the same tx.
+    const wasFailed = order.paymentStatus === 'failed'
+    await db.transaction(async (tx) => {
+      await tx
+        .update(orders)
+        .set({
+          paymentStatus: 'paid',
+          paidAt: new Date(),
+          paymentMethod: paymentMethod,
+          updatedAt: new Date(),
+          ...(matchedBy === 'order_number' ? { paymongoPaymentIntentId: paymentIntentId } : {}),
+        })
+        .where(eq(orders.id, order.id))
 
-    // Confirm all tickets in this order
-    await db
-      .update(tickets)
-      .set({
-        status: 'confirmed',
-        updatedAt: new Date(),
-      })
-      .where(eq(tickets.orderId, order.id))
+      await tx
+        .update(tickets)
+        .set({
+          status: 'confirmed',
+          updatedAt: new Date(),
+        })
+        .where(eq(tickets.orderId, order.id))
+
+      if (wasFailed) {
+        await restoreOrderInventory(tx, order.id, order.discountCodeId)
+      }
+    })
+
+    if (wasFailed) {
+      console.warn(
+        `[PayMongo PI] Revived previously-failed order ${order.orderNumber}; restored inventory and coupon usage. ` +
+          `Check ticket type capacity for potential overselling.`
+      )
+    }
 
     console.log(`Order ${order.orderNumber} marked as paid via Payment Intent`)
 
@@ -561,29 +592,43 @@ export default defineEventHandler(async (event) => {
 
     const paymentMethod = attributes.source?.type ?? null
 
-    // Update order status. When matched via fallback, also reconcile the stored
-    // PI so the DB reflects the PI PayMongo actually charged.
-    await db
-      .update(orders)
-      .set({
-        paymentStatus: 'paid',
-        paidAt: new Date(),
-        paymentMethod: paymentMethod,
-        updatedAt: new Date(),
-        ...(matchedBy === 'order_number' && paymentIntentId
-          ? { paymongoPaymentIntentId: paymentIntentId }
-          : {}),
-      })
-      .where(eq(orders.id, order.id))
+    // Update order + tickets atomically. When matched via fallback, also
+    // reconcile the stored PI. If the order was previously 'failed' (cleanup
+    // script ran first), restore inventory and coupon usage in the same tx.
+    const wasFailed = order.paymentStatus === 'failed'
+    await db.transaction(async (tx) => {
+      await tx
+        .update(orders)
+        .set({
+          paymentStatus: 'paid',
+          paidAt: new Date(),
+          paymentMethod: paymentMethod,
+          updatedAt: new Date(),
+          ...(matchedBy === 'order_number' && paymentIntentId
+            ? { paymongoPaymentIntentId: paymentIntentId }
+            : {}),
+        })
+        .where(eq(orders.id, order.id))
 
-    // Confirm all tickets in this order
-    await db
-      .update(tickets)
-      .set({
-        status: 'confirmed',
-        updatedAt: new Date(),
-      })
-      .where(eq(tickets.orderId, order.id))
+      await tx
+        .update(tickets)
+        .set({
+          status: 'confirmed',
+          updatedAt: new Date(),
+        })
+        .where(eq(tickets.orderId, order.id))
+
+      if (wasFailed) {
+        await restoreOrderInventory(tx, order.id, order.discountCodeId)
+      }
+    })
+
+    if (wasFailed) {
+      console.warn(
+        `[PayMongo Pay] Revived previously-failed order ${order.orderNumber}; restored inventory and coupon usage. ` +
+          `Check ticket type capacity for potential overselling.`
+      )
+    }
 
     console.log(`Order ${order.orderNumber} marked as paid via payment.paid`)
 
@@ -758,6 +803,48 @@ export default defineEventHandler(async (event) => {
     }
 
     return { received: true, handled: true, orderNumber }
+  }
+
+  // Handle QR Ph source expiration (customer didn't complete the QR scan in time)
+  if (eventType === 'qrph.expired') {
+    const attributes = webhookEvent.attributes.data.attributes as {
+      payment_intent_id?: string
+    }
+
+    const paymentIntentId = attributes.payment_intent_id
+    if (!paymentIntentId) {
+      console.error('No payment_intent_id in qrph.expired payload')
+      return { received: true, handled: false, error: 'No payment_intent_id' }
+    }
+
+    const { order } = await findOrderForWebhook(db, paymentIntentId, undefined)
+
+    if (!order) {
+      console.log(`Order not found for qrph.expired (intent=${paymentIntentId}); ignoring`)
+      return { received: true, handled: false, error: 'Order not found' }
+    }
+
+    if (order.paymentStatus === 'pending') {
+      await db
+        .update(orders)
+        .set({
+          paymentStatus: 'failed',
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, order.id))
+
+      await db
+        .update(tickets)
+        .set({
+          status: 'cancelled',
+          updatedAt: new Date(),
+        })
+        .where(eq(tickets.orderId, order.id))
+
+      console.log(`Order ${order.orderNumber} marked as failed (qrph.expired)`)
+    }
+
+    return { received: true, handled: true, orderNumber: order.orderNumber }
   }
 
   return { received: true, handled: false }
