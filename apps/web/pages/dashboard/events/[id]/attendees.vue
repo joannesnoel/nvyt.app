@@ -117,12 +117,14 @@ async function exportAttendees(format: 'csv' | 'json') {
   if (format === 'csv') {
     window.open(url, '_blank')
   } else {
-    const data = await $fetch(url)
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const res = await $fetch<{ success: boolean; data: unknown }>(url)
+    const payload = res?.data ?? res
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `attendees-${eventId.value}.json`
     link.click()
+    URL.revokeObjectURL(link.href)
   }
 }
 
