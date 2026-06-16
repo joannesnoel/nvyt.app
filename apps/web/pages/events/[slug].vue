@@ -297,6 +297,107 @@ useSeoMeta({
   twitterDescription: ogDescription,
   twitterImage: ogImage,
 })
+
+// Canonical URL (strip query strings like ?token=, ?invite=, UTM tags)
+useHead(() => ({
+  link: [{ rel: 'canonical', href: ogUrl.value }],
+  // Block indexing of private events or non-published statuses
+  meta: event.value && (event.value.visibility !== 'public' || event.value.status !== 'published')
+    ? [{ name: 'robots', content: 'noindex, nofollow' }]
+    : [],
+}))
+
+// JSON-LD structured data (schema.org Event) for Google Events rich results
+const eventJsonLd = computed(() => {
+  const e = event.value
+  if (!e || e.visibility !== 'public' || e.status !== 'published') return null
+
+  const locDetails = (e.locationDetails ?? {}) as {
+    type?: 'physical' | 'online'
+    address?: string
+    coordinates?: { lat?: number; lng?: number }
+    meetingUrl?: string
+  }
+  const isOnline = locDetails.type === 'online'
+
+  const location = isOnline
+    ? {
+        '@type': 'VirtualLocation',
+        url: locDetails.meetingUrl || ogUrl.value,
+      }
+    : {
+        '@type': 'Place',
+        name: e.location || locDetails.address || 'Venue',
+        ...(locDetails.address ? { address: locDetails.address } : {}),
+        ...(locDetails.coordinates?.lat && locDetails.coordinates?.lng
+          ? {
+              geo: {
+                '@type': 'GeoCoordinates',
+                latitude: locDetails.coordinates.lat,
+                longitude: locDetails.coordinates.lng,
+              },
+            }
+          : {}),
+      }
+
+  type TT = { id: string; name: string; price: string | number; salesStart?: string | null; salesEnd?: string | null; status: string }
+  const ticketList = (e.ticketTypes ?? []) as TT[]
+  const offers = ticketList
+    .filter((t) => t.status !== 'disabled')
+    .map((t) => {
+      const price = Number(t.price ?? 0)
+      return {
+        '@type': 'Offer',
+        name: t.name,
+        price: price.toFixed(2),
+        priceCurrency: 'PHP',
+        availability:
+          t.status === 'sold_out'
+            ? 'https://schema.org/SoldOut'
+            : 'https://schema.org/InStock',
+        url: ogUrl.value,
+        ...(t.salesStart ? { validFrom: new Date(t.salesStart).toISOString() } : {}),
+        ...(t.salesEnd ? { validThrough: new Date(t.salesEnd).toISOString() } : {}),
+      }
+    })
+
+  const data: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: e.title,
+    description: ogDescription.value,
+    startDate: new Date(e.startDate).toISOString(),
+    ...(e.endDate ? { endDate: new Date(e.endDate).toISOString() } : {}),
+    eventStatus:
+      e.status === 'cancelled'
+        ? 'https://schema.org/EventCancelled'
+        : 'https://schema.org/EventScheduled',
+    eventAttendanceMode: isOnline
+      ? 'https://schema.org/OnlineEventAttendanceMode'
+      : 'https://schema.org/OfflineEventAttendanceMode',
+    location,
+    url: ogUrl.value,
+    ...(ogImage.value ? { image: [ogImage.value] } : {}),
+    ...(offers.length ? { offers } : {}),
+    organizer: {
+      '@type': 'Organization',
+      name: e.organizationName || e.organizer?.name || 'nvyt',
+      url: config.public.appUrl,
+    },
+  }
+  return data
+})
+
+useHead(() => ({
+  script: eventJsonLd.value
+    ? [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(eventJsonLd.value),
+        },
+      ]
+    : [],
+}))
 const userAttendee = computed(() => event.value?.userAttendee)
 
 // YouTube embed URL helper

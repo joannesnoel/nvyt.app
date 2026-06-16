@@ -3,11 +3,19 @@ definePageMeta({
   layout: 'default',
 })
 
-useHead({ title: 'Refund Policy - NVYT' })
+const runtimeConfig = useRuntimeConfig()
+const pageTitle = 'Refund Policy — nvyt'
+const pageDescription = 'Refund policy for ticket purchases on nvyt event management and ticketing platform.'
 
 useSeoMeta({
-  title: 'Refund Policy - NVYT',
-  description: 'Refund policy for ticket purchases on NVYT event management and ticketing platform.',
+  title: pageTitle,
+  description: pageDescription,
+  ogTitle: pageTitle,
+  ogDescription: pageDescription,
+  ogType: 'website',
+})
+useHead({
+  link: [{ rel: 'canonical', href: `${runtimeConfig.public.appUrl}/refunds` }],
 })
 </script>
 

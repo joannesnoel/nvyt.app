@@ -3,11 +3,19 @@ definePageMeta({
   layout: 'default',
 })
 
-useHead({ title: 'Terms of Service - NVYT' })
+const runtimeConfig = useRuntimeConfig()
+const pageTitle = 'Terms of Service — nvyt'
+const pageDescription = 'Terms of Service for nvyt event management and ticketing platform.'
 
 useSeoMeta({
-  title: 'Terms of Service - NVYT',
-  description: 'Terms of Service for NVYT event management and ticketing platform.',
+  title: pageTitle,
+  description: pageDescription,
+  ogTitle: pageTitle,
+  ogDescription: pageDescription,
+  ogType: 'website',
+})
+useHead({
+  link: [{ rel: 'canonical', href: `${runtimeConfig.public.appUrl}/terms` }],
 })
 </script>
 

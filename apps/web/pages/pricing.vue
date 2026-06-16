@@ -3,9 +3,21 @@ definePageMeta({
   layout: 'default',
 })
 
+const runtimeConfig = useRuntimeConfig()
+const pricingTitle = 'Pricing — nvyt'
+const pricingDescription = 'Simple, transparent pricing for event organizers. As low as 2% platform fee plus payment processing fees.'
+
 useSeoMeta({
-  title: 'Pricing - NVYT',
-  description: 'Simple, transparent pricing for event organizers. As low as 2% platform fee plus payment processing fees.',
+  title: pricingTitle,
+  description: pricingDescription,
+  ogTitle: pricingTitle,
+  ogDescription: pricingDescription,
+  ogType: 'website',
+  twitterTitle: pricingTitle,
+  twitterDescription: pricingDescription,
+})
+useHead({
+  link: [{ rel: 'canonical', href: `${runtimeConfig.public.appUrl}/pricing` }],
 })
 </script>
 

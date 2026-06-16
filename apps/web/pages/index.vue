@@ -3,6 +3,23 @@ definePageMeta({
   layout: 'default',
 })
 
+const runtimeConfig = useRuntimeConfig()
+const homeTitle = 'nvyt — Create Events, Sell Tickets, Track RSVPs'
+const homeDescription = 'Launch beautiful event pages in minutes. Sell tickets, manage RSVPs, collect contributions, and check in attendees — all in one platform built for organizers in the Philippines.'
+
+useSeoMeta({
+  title: homeTitle,
+  description: homeDescription,
+  ogTitle: homeTitle,
+  ogDescription: homeDescription,
+  ogType: 'website',
+  twitterTitle: homeTitle,
+  twitterDescription: homeDescription,
+})
+useHead({
+  link: [{ rel: 'canonical', href: `${runtimeConfig.public.appUrl}/` }],
+})
+
 // Color mode for lazy loading hero images
 const colorMode = useColorMode()
 

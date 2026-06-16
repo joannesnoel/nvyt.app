@@ -3,7 +3,22 @@ definePageMeta({
   layout: 'default',
 })
 
-useHead({ title: 'Explore Events - NVYT' })
+const runtimeConfig = useRuntimeConfig()
+const listingTitle = 'Explore Events — nvyt'
+const listingDescription = 'Discover upcoming events, concerts, conferences, and meetups. Browse, RSVP, and book tickets on nvyt.'
+
+useSeoMeta({
+  title: listingTitle,
+  description: listingDescription,
+  ogTitle: listingTitle,
+  ogDescription: listingDescription,
+  ogType: 'website',
+  twitterTitle: listingTitle,
+  twitterDescription: listingDescription,
+})
+useHead({
+  link: [{ rel: 'canonical', href: `${runtimeConfig.public.appUrl}/events` }],
+})
 
 const { getEventImage } = useYoutubeThumbnail()
 

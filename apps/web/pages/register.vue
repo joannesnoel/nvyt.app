@@ -5,7 +5,20 @@ definePageMeta({
   layout: 'default',
 })
 
-useHead({ title: 'Register - NVYT' })
+const runtimeConfig = useRuntimeConfig()
+const pageTitle = 'Sign up — nvyt'
+const pageDescription = 'Create your free nvyt account and start hosting events, selling tickets, and tracking RSVPs in minutes.'
+
+useSeoMeta({
+  title: pageTitle,
+  description: pageDescription,
+  ogTitle: pageTitle,
+  ogDescription: pageDescription,
+  ogType: 'website',
+})
+useHead({
+  link: [{ rel: 'canonical', href: `${runtimeConfig.public.appUrl}/register` }],
+})
 
 const route = useRoute()
 const { register, isAuthenticated } = useAuth()

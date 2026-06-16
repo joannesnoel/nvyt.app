@@ -3,11 +3,19 @@ definePageMeta({
   layout: 'default',
 })
 
-useHead({ title: 'Privacy Policy - NVYT' })
+const runtimeConfig = useRuntimeConfig()
+const pageTitle = 'Privacy Policy — nvyt'
+const pageDescription = 'Privacy Policy for nvyt event management and ticketing platform.'
 
 useSeoMeta({
-  title: 'Privacy Policy - NVYT',
-  description: 'Privacy Policy for NVYT event management and ticketing platform.',
+  title: pageTitle,
+  description: pageDescription,
+  ogTitle: pageTitle,
+  ogDescription: pageDescription,
+  ogType: 'website',
+})
+useHead({
+  link: [{ rel: 'canonical', href: `${runtimeConfig.public.appUrl}/privacy` }],
 })
 </script>
 
