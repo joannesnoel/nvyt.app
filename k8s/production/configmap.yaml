@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvyt-config
+  namespace: nvyt-production
+  labels:
+    environment: production
+data:
+  APP_URL: "https://nvyt.app"
+  NODE_ENV: "production"
+  # Disable SSL for internal PostgreSQL (no SSL support)
+  DB_SSL: "false"
+  # Comma-separated list of admin emails
+  ADMIN_EMAILS: "jon@creativelogik.net,hello@nvyt.app"
+  NUXT_ADMIN_EMAILS: "jon@creativelogik.net,hello@nvyt.app"
+  # PayMongo payment methods (comma-separated, leave empty for defaults: gcash,paymaya,grab_pay,qrph,shopee_pay)
+  # Available: gcash, paymaya, card, grab_pay, qrph, shopee_pay, dob, dob_ubp (some methods require PayMongo activation)
+  PAYMONGO_PAYMENT_METHODS: ""

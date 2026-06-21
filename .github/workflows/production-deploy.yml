@@ -8,20 +8,35 @@ on:
 jobs:
   deploy:
     name: Build and Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, k3s, nvyt-staging]
     environment: production
 
     env:
-      AWS_REGION: ap-southeast-1
+      REGISTRY: 192.168.0.20:30500
       WEB_IMAGE: nvyt-web
       MIGRATE_IMAGE: nvyt-migrate
-      ECS_CLUSTER: nvyt-production-cluster
-      ECS_SERVICE: nvyt-production-web
-      MIGRATION_TASK_FAMILY: nvyt-production-migrate
+      NAMESPACE: nvyt-production
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+          kubectl version --client
+
+      - name: Configure kubectl
+        run: |
+          # Use in-cluster ServiceAccount credentials
+          kubectl config set-cluster k3s --server=https://kubernetes.default.svc --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          kubectl config set-credentials github-runner --token=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+          kubectl config set-context default --cluster=k3s --user=github-runner
+          kubectl config use-context default
+          # Verify access to nvyt-production namespace
+          kubectl get pods -n ${{ env.NAMESPACE }} --no-headers | head -1
 
       - name: Generate image tag
         id: tag
@@ -32,178 +47,85 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "Generated image tag: ${TAG}"
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push web image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/Dockerfile
-          push: true
-          tags: |
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.WEB_IMAGE }}:${{ steps.tag.outputs.tag }}
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.WEB_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push migrate image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/Dockerfile.migrate
-          push: true
-          tags: |
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.MIGRATE_IMAGE }}:${{ steps.tag.outputs.tag }}
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.MIGRATE_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Get migration task network configuration
-        id: network
+      - name: Build web image
         run: |
-          # Get the VPC and subnets from the ECS service
-          SERVICE_CONFIG=$(aws ecs describe-services \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }} \
-            --query 'services[0].networkConfiguration.awsvpcConfiguration' \
-            --output json)
+          docker build \
+            -f docker/Dockerfile \
+            -t ${{ env.REGISTRY }}/${{ env.WEB_IMAGE }}:${{ steps.tag.outputs.tag }} \
+            .
 
-          SUBNETS=$(echo $SERVICE_CONFIG | jq -r '.subnets | join(",")')
-          SECURITY_GROUPS=$(echo $SERVICE_CONFIG | jq -r '.securityGroups | join(",")')
-
-          echo "subnets=${SUBNETS}" >> $GITHUB_OUTPUT
-          echo "security_groups=${SECURITY_GROUPS}" >> $GITHUB_OUTPUT
-
-      - name: Update migration task definition with new image
-        id: migrate-task-def
+      - name: Push web image
         run: |
-          # Get current task definition
-          TASK_DEF=$(aws ecs describe-task-definition \
-            --task-definition ${{ env.MIGRATION_TASK_FAMILY }} \
-            --query 'taskDefinition' \
-            --output json)
+          # Push only the immutable tag — do NOT push :latest. The local
+          # registry's nvyt-web:latest is shared with staging.
+          docker push ${{ env.REGISTRY }}/${{ env.WEB_IMAGE }}:${{ steps.tag.outputs.tag }}
 
-          # Update image in container definition
-          NEW_TASK_DEF=$(echo $TASK_DEF | jq \
-            --arg IMAGE "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.MIGRATE_IMAGE }}:${{ steps.tag.outputs.tag }}" \
-            '.containerDefinitions[0].image = $IMAGE |
-             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+      - name: Build migrate image
+        run: |
+          docker build \
+            -f docker/Dockerfile.migrate \
+            -t ${{ env.REGISTRY }}/${{ env.MIGRATE_IMAGE }}:${{ steps.tag.outputs.tag }} \
+            .
 
-          # Register new task definition
-          NEW_TASK_ARN=$(aws ecs register-task-definition \
-            --cli-input-json "$NEW_TASK_DEF" \
-            --query 'taskDefinition.taskDefinitionArn' \
-            --output text)
-
-          echo "task_arn=${NEW_TASK_ARN}" >> $GITHUB_OUTPUT
+      - name: Push migrate image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.MIGRATE_IMAGE }}:${{ steps.tag.outputs.tag }}
 
       - name: Run database migrations
-        id: migrate
         run: |
-          echo "Starting migration task..."
+          # Delete any existing migration job
+          kubectl delete job db-migrate -n ${{ env.NAMESPACE }} --ignore-not-found=true
 
-          # Run the migration task
-          TASK_ARN=$(aws ecs run-task \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --task-definition ${{ steps.migrate-task-def.outputs.task_arn }} \
-            --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[${{ steps.network.outputs.subnets }}],securityGroups=[${{ steps.network.outputs.security_groups }}],assignPublicIp=ENABLED}" \
-            --query 'tasks[0].taskArn' \
-            --output text)
+          # Apply migration job with new image tag
+          kubectl apply -f - <<EOF
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: db-migrate
+            namespace: ${{ env.NAMESPACE }}
+            labels:
+              app: nvyt-migrate
+              environment: production
+          spec:
+            ttlSecondsAfterFinished: 300
+            backoffLimit: 0
+            template:
+              metadata:
+                labels:
+                  app: nvyt-migrate
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: migrate
+                    image: ${{ env.REGISTRY }}/${{ env.MIGRATE_IMAGE }}:${{ steps.tag.outputs.tag }}
+                    imagePullPolicy: Always
+                    envFrom:
+                      - configMapRef:
+                          name: nvyt-config
+                      - secretRef:
+                          name: nvyt-secrets
+                    resources:
+                      requests:
+                        memory: "256Mi"
+                        cpu: "100m"
+                      limits:
+                        memory: "512Mi"
+                        cpu: "250m"
+          EOF
 
-          echo "Migration task started: ${TASK_ARN}"
-          echo "task_arn=${TASK_ARN}" >> $GITHUB_OUTPUT
+          # Wait for migration to complete
+          echo "Waiting for migration job to complete..."
+          kubectl wait --for=condition=complete job/db-migrate -n ${{ env.NAMESPACE }} --timeout=300s
 
-          # Wait for task to complete
-          echo "Waiting for migration to complete..."
-          aws ecs wait tasks-stopped \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --tasks "${TASK_ARN}"
-
-          # Check exit code
-          EXIT_CODE=$(aws ecs describe-tasks \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --tasks "${TASK_ARN}" \
-            --query 'tasks[0].containers[0].exitCode' \
-            --output text)
-
-          if [ "$EXIT_CODE" != "0" ]; then
-            echo "Migration failed with exit code: ${EXIT_CODE}"
-
-            # Get logs for debugging
-            TASK_ID=$(echo "${TASK_ARN}" | awk -F'/' '{print $NF}')
-            echo "Fetching logs..."
-            aws logs get-log-events \
-              --log-group-name "/ecs/nvyt-migrate" \
-              --log-stream-name "ecs/migrate/${TASK_ID}" \
-              --limit 100 \
-              --query 'events[*].message' \
-              --output text || echo "Could not fetch logs"
-
-            exit 1
-          fi
-
-          echo "Migration completed successfully!"
-
-      - name: Update ECS service task definition
-        id: web-task-def
+      - name: Deploy to k3s
         run: |
-          # Get current task definition for web service
-          CURRENT_TASK=$(aws ecs describe-services \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }} \
-            --query 'services[0].taskDefinition' \
-            --output text)
+          # Update the deployment with the new immutable image tag
+          kubectl set image deployment/nvyt-web \
+            web=${{ env.REGISTRY }}/${{ env.WEB_IMAGE }}:${{ steps.tag.outputs.tag }} \
+            -n ${{ env.NAMESPACE }}
 
-          TASK_DEF=$(aws ecs describe-task-definition \
-            --task-definition "${CURRENT_TASK}" \
-            --query 'taskDefinition' \
-            --output json)
-
-          # Update image in container definition
-          NEW_TASK_DEF=$(echo $TASK_DEF | jq \
-            --arg IMAGE "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.WEB_IMAGE }}:${{ steps.tag.outputs.tag }}" \
-            '.containerDefinitions[0].image = $IMAGE |
-             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
-
-          # Register new task definition
-          NEW_TASK_ARN=$(aws ecs register-task-definition \
-            --cli-input-json "$NEW_TASK_DEF" \
-            --query 'taskDefinition.taskDefinitionArn' \
-            --output text)
-
-          echo "task_arn=${NEW_TASK_ARN}" >> $GITHUB_OUTPUT
-
-      - name: Deploy to ECS
-        run: |
-          echo "Updating ECS service with new task definition..."
-
-          aws ecs update-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service ${{ env.ECS_SERVICE }} \
-            --task-definition ${{ steps.web-task-def.outputs.task_arn }} \
-            --force-new-deployment \
-            --query 'service.serviceName' \
-            --output text
-
-          echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }}
-
-          echo "Deployment complete!"
+          # Wait for rollout to complete
+          kubectl rollout status deployment/nvyt-web -n ${{ env.NAMESPACE }} --timeout=300s
 
       - name: Verify health check
         run: |

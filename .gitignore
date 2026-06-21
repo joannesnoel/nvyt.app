@@ -38,6 +38,9 @@ coverage/
 *.local
 db-dump/
 
+# Production k8s secrets (live keys — never commit; use secret.example.yaml)
+k8s/production/secret.yaml
+
 # Terraform
 infra/terraform/.terraform/
 infra/terraform/*.tfstate

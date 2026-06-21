@@ -1,0 +1,31 @@
+# Public read access to production uploads stored in Garage.
+# End-user file URLs (NUXT_PUBLIC_S3_PUBLIC_URL) must be reachable from the
+# public internet, so we expose Garage's S3 API via Cloudflare at
+# https://uploads.nvyt.app/<bucket>/<key>  (path-style requests).
+#
+# NOTE: this Ingress lives in the `garage` namespace because that is where the
+# garage-s3 Service runs. Garage is shared across environments; production uses
+# a separate bucket (nvyt-uploads-prod) with its own access key.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nvyt-uploads-ingress
+  namespace: garage
+  labels:
+    environment: production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # Allow large file uploads/downloads through the proxy.
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  rules:
+    - host: uploads.nvyt.app
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: garage-s3
+                port:
+                  number: 3900
