@@ -41,6 +41,9 @@ db-dump/
 # Production k8s secrets (live keys — never commit; use secret.example.yaml)
 k8s/production/secret.yaml
 
+# Garage credentials used by the data-migration script (live keys)
+infra/migration/.garage-creds
+
 # Terraform
 infra/terraform/.terraform/
 infra/terraform/*.tfstate

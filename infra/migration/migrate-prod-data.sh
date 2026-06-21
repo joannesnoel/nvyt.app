@@ -148,8 +148,10 @@ cmd_db_restore() {
   [[ -f "$WORKDIR/nvyt-db.sql.gz" ]] || die "Run db-download first."
 
   # Safety: refuse to restore over a non-empty database.
+  # NOTE: no -i here — this command reads no stdin, and `kubectl exec -i` with a
+  # non-EOF stdin (e.g. a background job) hangs after psql exits.
   local existing
-  existing="$(kubectl exec -i -n "$K8S_NS" "$PG_DEPLOY" -- \
+  existing="$(kubectl exec -n "$K8S_NS" "$PG_DEPLOY" -- \
     psql -U "$PG_USER" -d "$PG_DB" -At \
     -c "SELECT count(*) FROM pg_tables WHERE schemaname='public'" 2>/dev/null || echo 0)"
   if [[ "${existing:-0}" -gt 0 ]]; then
@@ -158,7 +160,12 @@ cmd_db_restore() {
   fi
 
   log "Restoring dump into $K8S_NS/$PG_DEPLOY ($PG_DB)..."
+  # The dump may be produced by a newer pg_dump (17/18) than the target server
+  # (16), which emits GUCs the older server rejects. Strip those harmless
+  # preamble SETs so ON_ERROR_STOP doesn't abort the whole restore.
+  # (transaction_timeout = 0 is the PG16 default behaviour anyway.)
   gunzip -c "$WORKDIR/nvyt-db.sql.gz" \
+    | grep -v -E '^SET (transaction_timeout)' \
     | kubectl exec -i -n "$K8S_NS" "$PG_DEPLOY" -- \
         psql -U "$PG_USER" -d "$PG_DB" -v ON_ERROR_STOP=1 --single-transaction
   log "Restore complete."
@@ -170,14 +177,19 @@ cmd_db_verify() {
 
   log "Collecting per-table counts from the restored DB..."
   kubectl exec -i -n "$K8S_NS" "$PG_DEPLOY" -- \
-    psql -U "$PG_USER" -d "$PG_DB" -At -F'|' <<'SQL' | sort > "$WORKDIR/local-counts.txt"
+    psql -U "$PG_USER" -d "$PG_DB" -At -F'|' <<'SQL' > "$WORKDIR/local-counts.txt"
 SELECT format('SELECT %L, count(*) FROM %I', tablename, tablename)
 FROM pg_tables WHERE schemaname = 'public' ORDER BY 1
 \gexec
 SQL
 
+  # Re-sort both sides with a fixed locale before diffing — the RDS counts were
+  # sorted inside an Alpine container (C locale) and the local ones on the host,
+  # so relying on the pre-sorted order yields false mismatches (underscores vs
+  # letters collate differently).
   log "Diffing RDS vs restored (left = RDS, right = k3s):"
-  if diff -u "$WORKDIR/rds-counts.txt" "$WORKDIR/local-counts.txt"; then
+  if diff -u <(LC_ALL=C sort "$WORKDIR/rds-counts.txt") \
+            <(LC_ALL=C sort "$WORKDIR/local-counts.txt"); then
     log "✅ Row counts match exactly."
   else
     die "❌ Row counts differ — investigate before cutover."

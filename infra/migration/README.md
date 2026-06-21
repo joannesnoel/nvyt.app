@@ -23,8 +23,8 @@ k3s node (192.168.0.20)
 - `session-manager-plugin` (required for ECS Exec during the DB dump)
 - Access to the live secret values: pull from AWS Secrets Manager before teardown
   ```sh
-  aws --profile nvyt-prod secretsmanager get-secret-value --secret-id nvyt-production/app-secrets --query SecretString --output text
-  aws --profile nvyt-prod secretsmanager get-secret-value --secret-id nvyt-production/db-password --query SecretString --output text
+  aws --profile nvyt-prod --region ap-southeast-1 secretsmanager get-secret-value --secret-id nvyt-production/app-secrets --query SecretString --output text
+  aws --profile nvyt-prod --region ap-southeast-1 secretsmanager get-secret-value --secret-id nvyt-production/db-password --query SecretString --output text
   ```
 
 ---
@@ -205,6 +205,7 @@ aws s3 cp s3://nvyt-db-backups/nvyt-YYYYMMDD-HHMMSS.sql.gz - \
   | kubectl exec -i -n nvyt-production deploy/postgres -- psql -U nvyt -d nvyt
 ```
 
-> Single-node caveat: Postgres, Garage, and the node share one box. For real
-> off-site durability, periodically replicate `nvyt-db-backups` off the node
-> (e.g. `rclone` to remote storage).
+> Durability caveat: the cluster has 3 nodes, but Postgres and Garage each run
+> as a single replica, and `nvyt-db-backups` lives in the same on-prem Garage.
+> For real off-site durability, periodically replicate `nvyt-db-backups` off the
+> cluster (e.g. `rclone` to remote storage).
