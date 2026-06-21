@@ -46,6 +46,40 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 
 ---
+# Role for accessing nvyt-production namespace resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-runner-role
+  namespace: nvyt-production
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch"]
+
+---
+# RoleBinding to bind the role to the service account in nvyt-production
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-runner-binding
+  namespace: nvyt-production
+subjects:
+  - kind: ServiceAccount
+    name: github-runner
+    namespace: github-actions
+roleRef:
+  kind: Role
+  name: github-runner-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
 # Deployment for the self-hosted runner with Docker-in-Docker
 apiVersion: apps/v1
 kind: Deployment

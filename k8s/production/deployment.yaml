@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nvyt-web
+  namespace: nvyt-production
+  labels:
+    app: nvyt-web
+    environment: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nvyt-web
+  template:
+    metadata:
+      labels:
+        app: nvyt-web
+    spec:
+      containers:
+        - name: web
+          # Image is set by CI to an immutable tag (<timestamp>-<sha>).
+          # Never rely on :latest here — the local registry's nvyt-web:latest
+          # is shared with staging and would race between environments.
+          image: 192.168.0.20:30500/nvyt-web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: nvyt-config
+            - secretRef:
+                name: nvyt-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5

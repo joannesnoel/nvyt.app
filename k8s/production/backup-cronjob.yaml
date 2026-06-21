@@ -1,0 +1,98 @@
+# Automated Postgres backups for production.
+#
+# Dumps the in-cluster database every 6h and pushes the gzipped dump to Garage
+# object storage (separate from the Postgres PVC, so a volume failure doesn't
+# take the backups with it). Keeps the most recent BACKUP_KEEP dumps.
+#
+# Prereqs (one-time, see infra/migration/README.md):
+#   - Garage bucket `nvyt-db-backups`
+#   - The prod Garage key (NUXT_S3_ACCESS_KEY_ID/SECRET in nvyt-secrets) granted
+#     read+write on that bucket.
+#
+# The image installs aws-cli at runtime (~once per run). If you prefer a baked
+# image, build one from postgres:16-alpine + aws-cli and swap it in here.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: nvyt-production
+  labels:
+    app: nvyt-backup
+    environment: production
+spec:
+  schedule: "0 */6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: nvyt-backup
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: backup
+              image: postgres:16-alpine
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: nvyt-secrets
+                      key: DATABASE_URL
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: nvyt-secrets
+                      key: NUXT_S3_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: nvyt-secrets
+                      key: NUXT_S3_SECRET_ACCESS_KEY
+                - name: S3_ENDPOINT
+                  value: "http://garage-s3.garage:3900"
+                - name: AWS_REGION
+                  value: "garage"
+                - name: BACKUP_BUCKET
+                  value: "nvyt-db-backups"
+                - name: BACKUP_KEEP
+                  value: "28" # 7 days at 4 dumps/day
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  apk add --no-cache aws-cli >/dev/null
+
+                  TS=$(date +%Y%m%d-%H%M%S)
+                  KEY="nvyt-${TS}.sql.gz"
+                  echo "Backing up to s3://${BACKUP_BUCKET}/${KEY}"
+                  pg_dump --no-owner --no-privileges "$DATABASE_URL" \
+                    | gzip \
+                    | aws s3 cp - "s3://${BACKUP_BUCKET}/${KEY}" \
+                        --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION"
+
+                  echo "Pruning to the most recent ${BACKUP_KEEP} backups..."
+                  FILES=$(aws s3 ls "s3://${BACKUP_BUCKET}/" \
+                            --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" \
+                          | awk '{print $4}' | grep -E '^nvyt-.*\.sql\.gz$' | sort)
+                  TOTAL=$(printf '%s\n' "$FILES" | grep -c . || true)
+                  DEL=$((TOTAL - BACKUP_KEEP))
+                  if [ "$DEL" -gt 0 ]; then
+                    printf '%s\n' "$FILES" | head -n "$DEL" | while read -r f; do
+                      echo "  rm $f"
+                      aws s3 rm "s3://${BACKUP_BUCKET}/${f}" \
+                        --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION"
+                    done
+                  fi
+                  echo "Backup complete."
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"

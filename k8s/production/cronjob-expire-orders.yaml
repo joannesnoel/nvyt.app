@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: expire-stale-orders
+  namespace: nvyt-production
+  labels:
+    app: nvyt-cron
+    environment: production
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app: nvyt-cron
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: curl
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  curl -sf -X POST \
+                    -H "Authorization: Bearer $CRON_SECRET" \
+                    http://nvyt-web-service.nvyt-production.svc.cluster.local/api/v1/cron/expire-orders
+              env:
+                - name: CRON_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: nvyt-secrets
+                      key: CRON_SECRET
