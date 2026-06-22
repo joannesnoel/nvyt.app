@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'infra/**'
+      - '**.md'
+      - '.gitignore'
+      - '.claude/**'
+      - 'LICENSE'
 
 jobs:
   deploy:

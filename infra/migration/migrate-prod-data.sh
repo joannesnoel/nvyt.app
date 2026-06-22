@@ -99,12 +99,17 @@ ecs_exec() {
   [[ "$task" != "None" && -n "$task" ]] || die "No RUNNING task in $ECS_SERVICE."
   log "ECS Exec into task: ${task##*/}"
   b64="$(printf '%s' "$remote_script" | base64 | tr -d '\n')"
+  # Keep local stdin open (a silent sleep) so the SSM data channel isn't torn
+  # down with EOF before the remote command finishes. Process substitution feeds
+  # stdin without blocking: when the remote shell exits the session closes, aws
+  # returns, and we move on (the orphaned sleep harmlessly expires on its own).
   "${AWS[@]}" ecs execute-command \
     --cluster "$ECS_CLUSTER" \
     --task "$task" \
     --container "$ECS_CONTAINER" \
     --interactive \
-    --command "/bin/sh -c \"echo $b64 | base64 -d | /bin/sh\""
+    --command "/bin/sh -c \"echo $b64 | base64 -d | /bin/sh\"" \
+    < <(sleep 600)
 }
 
 cmd_db_export() {
@@ -113,24 +118,29 @@ cmd_db_export() {
   log "Dumping RDS -> s3://$PROD_BUCKET/$DUMP_KEY and writing row counts."
   # NOTE: runs inside the container; $DATABASE_URL and $S3_BUCKET are its env.
   # --no-owner/--no-privileges so it restores cleanly into the k3s 'nvyt' role.
+  # Counts FIRST, dump LAST: the dump is what we verify below, so if it landed
+  # the counts must already be there too — robust against the SSM session being
+  # torn down early.
   ecs_exec "$(cat <<REMOTE
 set -e
-echo 'Streaming pg_dump to S3...'
-pg_dump --no-owner --no-privileges --format=plain "\$DATABASE_URL" \
-  | gzip \
-  | aws s3 cp - "s3://\$S3_BUCKET/$DUMP_KEY"
 echo 'Capturing per-table row counts...'
 psql "\$DATABASE_URL" -At -F'|' <<'SQL' | sort | aws s3 cp - "s3://\$S3_BUCKET/$COUNTS_KEY"
 SELECT format('SELECT %L, count(*) FROM %I', tablename, tablename)
 FROM pg_tables WHERE schemaname = 'public' ORDER BY 1
 \gexec
 SQL
+echo 'Streaming pg_dump to S3...'
+pg_dump --no-owner --no-privileges --format=plain "\$DATABASE_URL" \
+  | gzip \
+  | aws s3 cp - "s3://\$S3_BUCKET/$DUMP_KEY"
 echo 'Export complete.'
 REMOTE
 )"
-  log "Verifying the dump landed in S3..."
-  "${AWS[@]}" s3 ls "s3://$PROD_BUCKET/$DUMP_KEY" \
-    || die "Dump object not found — check the Exec output above."
+  log "Verifying export landed in S3 (dump is written last)..."
+  "${AWS[@]}" s3 ls "s3://$PROD_BUCKET/$DUMP_KEY"   >/dev/null \
+    || die "Dump object not found — the export did not complete."
+  "${AWS[@]}" s3 ls "s3://$PROD_BUCKET/$COUNTS_KEY" >/dev/null \
+    || die "Counts object not found — the export did not complete."
 }
 
 cmd_db_download() {
