@@ -128,6 +128,35 @@ async function exportAttendees(format: 'csv' | 'json') {
   }
 }
 
+// Resend the check-in QR email to confirmed attendees (all, or a selected subset)
+const resendLoading = ref(false)
+async function resendQrEmails(attendeeIds?: string[]) {
+  const scope = attendeeIds && attendeeIds.length > 0
+    ? `${attendeeIds.length} selected attendee(s)`
+    : 'all confirmed attendees'
+  if (!window.confirm(`Send the check-in QR email to ${scope}?`)) return
+
+  resendLoading.value = true
+  try {
+    const res = await $fetch<{ data?: { sent?: number; failed?: number } }>(
+      `/api/v1/events/${eventId.value}/attendees/resend-qr`,
+      { method: 'POST', body: attendeeIds && attendeeIds.length > 0 ? { attendeeIds } : {} }
+    )
+    const sent = res?.data?.sent ?? 0
+    const failed = res?.data?.failed ?? 0
+    toast.add({
+      title: 'QR Emails Sent',
+      description: `Sent ${sent}${failed ? `, ${failed} failed` : ''}`,
+      color: failed ? 'orange' : 'green',
+    })
+    if (attendeeIds && attendeeIds.length > 0) selectedIds.value = []
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e.data?.message || 'Failed to send QR emails', color: 'red' })
+  } finally {
+    resendLoading.value = false
+  }
+}
+
 // Status helpers
 function getStatusColor(status: string) {
   switch (status) {
@@ -221,6 +250,18 @@ async function downloadTicketPdf(ticketId: string) {
               <span class="hidden sm:inline">Export</span>
             </UButton>
           </UDropdown>
+
+          <UButton
+            v-if="!isTicketMode"
+            color="gray"
+            variant="outline"
+            icon="i-heroicons-envelope"
+            :loading="resendLoading"
+            @click="resendQrEmails()"
+          >
+            <span class="hidden sm:inline">Resend QR emails</span>
+            <span class="sm:hidden">Resend QR</span>
+          </UButton>
 
           <UButton
             :to="`/dashboard/events/${eventId}/check-in`"
@@ -323,6 +364,17 @@ async function downloadTicketPdf(ticketId: string) {
             @click="bulkUpdateStatus('declined')"
           >
             Decline
+          </UButton>
+          <UButton
+            v-if="!isTicketMode"
+            color="gray"
+            variant="soft"
+            size="sm"
+            icon="i-heroicons-envelope"
+            :loading="resendLoading"
+            @click="resendQrEmails(selectedIds)"
+          >
+            Resend QR
           </UButton>
         </div>
       </div>

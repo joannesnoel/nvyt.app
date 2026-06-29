@@ -142,6 +142,22 @@ export function isEmailConfigured(): boolean {
 
 // Email Templates
 
+// Renders a scannable QR-code block (image + code-text fallback) for check-in.
+// Mirrors the ticket-email QR styling (api.qrserver.com) so RSVP and ticket
+// emails are visually consistent. The light box behind the image guarantees a
+// clean quiet zone so the code scans reliably.
+function qrCodeBlock(qrCode: string): string {
+  return `
+        <div style="background: #6366f1; color: white; border-radius: 8px; padding: 24px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0 0 14px 0; font-size: 14px;">Your QR Code for Check-in</p>
+          <div style="background: #ffffff; border-radius: 8px; padding: 12px; display: inline-block;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}" alt="QR Code" width="200" height="200" style="display: block; width: 200px; height: 200px; border-radius: 4px;" />
+          </div>
+          <p style="margin: 14px 0 0 0; font-family: monospace; font-size: 13px; letter-spacing: 1px; word-break: break-all;">${qrCode}</p>
+        </div>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">Show this QR code at the door to check in. It's unique to your registration — please don't share it.</p>`
+}
+
 export function rsvpConfirmationEmail(data: {
   userName: string
   eventTitle: string
@@ -178,11 +194,64 @@ export function rsvpConfirmationEmail(data: {
           ${data.eventLocation ? `<p style="margin: 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
         </div>
 
-        <div style="background: #6366f1; color: white; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0 0 10px 0; font-size: 14px;">Your QR Code for Check-in</p>
-          <p style="margin: 0; font-family: monospace; font-size: 18px; letter-spacing: 2px;">${data.qrCode}</p>
+        ${qrCodeBlock(data.qrCode)}
+
+        <p style="text-align: center;">
+          <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+        <p style="color: #666; font-size: 14px;">
+          See you there!<br>
+          The NVYT&trade; Team
+        </p>
+      </body>
+      </html>
+    `,
+  }
+}
+
+// Resend-flavoured email used to (re)deliver an attendee's check-in QR code,
+// e.g. backfilling attendees who only received the old text-only code. Framed
+// as a QR delivery rather than a duplicate "You're going!" confirmation.
+export function rsvpQrEmail(data: {
+  userName: string
+  eventTitle: string
+  eventDate: string
+  eventLocation?: string
+  qrCode: string
+  eventUrl: string
+}): { subject: string; html: string } {
+  return {
+    subject: `Here's your check-in QR for ${data.eventTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <a href="https://nvyt.app" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <img src="https://nvyt.app/logo.png" alt="nvyt" style="height: 56px; width: auto;" />
+            <span style="font-size: 28px; font-weight: 700; color: #111; padding-top: 4px;">nvyt<sup style="font-size: 12px; font-weight: 400; vertical-align: super;">&trade;</sup></span>
+          </a>
         </div>
-        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
+
+        <h2 style="color: #111; margin-bottom: 10px;">Your check-in QR code</h2>
+
+        <p>Hi ${data.userName},</p>
+
+        <p>Here's your QR code for <strong>${data.eventTitle}</strong>. Present it at the door to check in.</p>
+
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 10px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+          ${data.eventLocation ? `<p style="margin: 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
+        </div>
+
+        ${qrCodeBlock(data.qrCode)}
 
         <p style="text-align: center;">
           <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
@@ -329,11 +398,7 @@ export function waitlistPromotedEmail(data: {
           ${data.eventLocation ? `<p style="margin: 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
         </div>
 
-        <div style="background: #6366f1; color: white; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0 0 10px 0; font-size: 14px;">Your QR Code for Check-in</p>
-          <p style="margin: 0; font-family: monospace; font-size: 18px; letter-spacing: 2px;">${data.qrCode}</p>
-        </div>
-        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
+        ${qrCodeBlock(data.qrCode)}
 
         <p style="text-align: center;">
           <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
@@ -387,11 +452,7 @@ export function rsvpApprovedEmail(data: {
           ${data.eventLocation ? `<p style="margin: 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
         </div>
 
-        <div style="background: #6366f1; color: white; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0 0 10px 0; font-size: 14px;">Your QR Code for Check-in</p>
-          <p style="margin: 0; font-family: monospace; font-size: 18px; letter-spacing: 2px;">${data.qrCode}</p>
-        </div>
-        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
+        ${qrCodeBlock(data.qrCode)}
 
         <p style="text-align: center;">
           <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
@@ -491,11 +552,7 @@ export function eventReminderEmail(data: {
           ${data.eventLocation ? `<p style="margin: 0;"><strong>Location:</strong> ${data.eventLocation}</p>` : ''}
         </div>
 
-        <div style="background: #6366f1; color: white; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0 0 10px 0; font-size: 14px;">Your QR Code for Check-in</p>
-          <p style="margin: 0; font-family: monospace; font-size: 18px; letter-spacing: 2px;">${data.qrCode}</p>
-        </div>
-        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 8px 0 0 0;">This QR code is unique to this ticket and can only be scanned once. Do not share it — once used, it becomes invalid.</p>
+        ${qrCodeBlock(data.qrCode)}
 
         <p style="text-align: center;">
           <a href="${data.eventUrl}" style="display: inline-block; background: #6366f1; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500;">View Event Details</a>
